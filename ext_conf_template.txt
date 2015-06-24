@@ -2,7 +2,7 @@
 pageNotFound_handling =
 
 # cat=basic/enable/020; type=string; label=Configuration file:Path to configuration file with TypoScript object to resolve the request
-configFile = FILE:EXT:cps_shortnr/Resources//cps_shortnr.txt
+configFile = FILE:EXT:cps_shortnr/Resources/cps_shortnr.txt
 
 # cat=basic/enable/030; type=string; label=Regular expression:Expression to apply to the current url path. Result will be sent to the TypoScript configuration
 regExp = ([a-zA-Z]+)(\d+)(-\d+)?
