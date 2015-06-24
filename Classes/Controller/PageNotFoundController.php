@@ -62,12 +62,17 @@ class PageNotFoundController {
 		$this->init();
 
 		// If no config file was defined return to original pageNotFound_handling
-		if (!file_exists(PATH_site . $this->configuration['configFile'])) {
+		if (substr($this->configuration['configFile'], 0, 5) !== 'FILE:') {
+			$configurationFile = PATH_site . $this->configuration['configFile'];
+		} else {
+			$configurationFile = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
+		}
+		if (!file_exists($configurationFile)) {
 			$this->executePageNotFoundHandling();
 		}
 
 		// Convert file content to TypoScript array
-		$this->getTypoScriptArray();
+		$this->getTypoScriptArray($configurationFile);
 		if (!isset($this->typoScriptArray['cps_shortnr'])) {
 			$this->executePageNotFoundHandling();
 		}
@@ -104,10 +109,11 @@ class PageNotFoundController {
 	}
 
 	/**
+	 * @param string $configurationFile
 	 * @return void
 	 */
-	protected function getTypoScriptArray() {
-		$file = \TYPO3\CMS\Core\Utility\GeneralUtility::getURL(PATH_site . $this->configuration['configFile']);
+	protected function getTypoScriptArray($configurationFile) {
+		$file = \TYPO3\CMS\Core\Utility\GeneralUtility::getURL($configurationFile);
 		if (empty($file)) {
 			$this->executePageNotFoundHandling();
 		} else {
