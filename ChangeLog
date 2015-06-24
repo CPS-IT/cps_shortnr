@@ -1,3 +1,7 @@
+2015-06-24         [RELEASE] Release of cps_shortnr 0.2.0 (Nicole Cordes)
+2015-06-24 9073b6e [TASK] Add default configFile (Nicole Cordes)
+2015-06-24 83e44b8 [BUGFIX] Support EXT: prefix within configFile (Nicole Cordes)
+
 2013-01-10 Nicole Cordes <cordes@cps-it.de>
 
 	* Initial release
