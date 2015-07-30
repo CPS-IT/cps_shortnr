@@ -32,11 +32,6 @@ class PageNotFoundController {
 	var $configuration = array();
 
 	/**
-	 * @var tslib_fe|NULL
-	 */
-	var $pObj = NULL;
-
-	/**
 	 * @var array
 	 */
 	var $params = array();
@@ -58,7 +53,6 @@ class PageNotFoundController {
 	 */
 	public function resolvePath($params, $pObj) {
 		$this->params = $params;
-		$this->pObj = $pObj;
 		$this->init();
 
 		// If no config file was defined return to original pageNotFound_handling
@@ -94,6 +88,24 @@ class PageNotFoundController {
 	}
 
 	/**
+	 * @param string $content
+	 * @param array $configuration
+	 * @return int
+	 */
+	public function checkPidInRootline($content, $configuration) {
+		$content = (int)$content;
+		$GLOBALS['TSFE']->id = $content;
+		$GLOBALS['TSFE']->domainStartPage = $GLOBALS['TSFE']->findDomainRecord($GLOBALS['TSFE']->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
+		$GLOBALS['TSFE']->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
+		if (!empty($GLOBALS['TSFE']->pageNotFound)) {
+			$this->init();
+			$this->executePageNotFoundHandling('ID was outside the domain');
+		}
+
+		return $content;
+	}
+
+	/**
 	 * @return void
 	 */
 	protected function init() {
@@ -101,10 +113,12 @@ class PageNotFoundController {
 	}
 
 	/**
+	 * @param string $reason
 	 * @return void
 	 */
-	protected function executePageNotFoundHandling() {
-		$this->pObj->pageNotFoundHandler($this->configuration['pageNotFound_handling'], '', $this->params['reasonText']);
+	protected function executePageNotFoundHandling($reason = '') {
+		$reason = $reason ?: $this->params['reasonText'];
+		$GLOBALS['TSFE']->pageNotFoundHandler($this->configuration['pageNotFound_handling'], '', $reason);
 		exit;
 	}
 
