@@ -3,7 +3,10 @@ cps_shortnr {
 	10 = LOAD_REGISTER
 	10 {
 		match_1.data = register:tx_cpsshortnr_match_1
-		match_2.data = register:tx_cpsshortnr_match_2
+		match_2 {
+			data = register:tx_cpsshortnr_match_2
+			postUserFunc = PageNotFoundController->checkPidInRootline
+		}
 		match_3 {
 			data = register:tx_cpsshortnr_match_3
 			substring = 1
@@ -22,6 +25,7 @@ cps_shortnr {
 				returnLast = url
 				additionalParams.wrap = &L=|
 				additionalParams.data = register:match_3
+				additionalParams.required = 1
 			}
 		}
 		p < .P
