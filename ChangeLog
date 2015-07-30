@@ -1,3 +1,8 @@
+2015-07-30         [RELEASE] Release of cps_shortnr 0.3.0 (Nicole Cordes)
+2015-07-30 aed9d06 [TASK] Improve example configuration (Nicole Cordes)
+2015-07-30 d4ae4f2 [FEATURE] Add check if page id is in current domain rootline (Nicole Cordes)
+2015-07-30 5f18ab7 [TASK] Set extension version to 0.3.0-dev (Nicole Cordes)
+
 2015-06-24         [RELEASE] Release of cps_shortnr 0.2.0 (Nicole Cordes)
 2015-06-24 9073b6e [TASK] Add default configFile (Nicole Cordes)
 2015-06-24 83e44b8 [BUGFIX] Support EXT: prefix within configFile (Nicole Cordes)
