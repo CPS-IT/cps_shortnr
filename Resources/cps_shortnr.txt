@@ -25,6 +25,7 @@ cps_shortnr {
 				returnLast = url
 				additionalParams.wrap = &L=|
 				additionalParams.data = register:match_3
+				additionalParams.required = 1
 			}
 		}
 		p < .P
