@@ -24,7 +24,7 @@
  * @package TYPO3
  * @subpackage cps_shortnr
  */
-class PageNotFoundController {
+class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface {
 
 	/**
 	 * @var array
@@ -46,6 +46,10 @@ class PageNotFoundController {
 	 */
 	var $typoScriptArray = array();
 
+	public function __construct() {
+		$this->init();
+	}
+
 	/**
 	 * @param array $params
 	 * @param tslib_fe $pObj
@@ -53,7 +57,6 @@ class PageNotFoundController {
 	 */
 	public function resolvePath($params, $pObj) {
 		$this->params = $params;
-		$this->init();
 
 		// If no config file was defined return to original pageNotFound_handling
 		if (substr($this->configuration['configFile'], 0, 5) !== 'FILE:') {
@@ -98,7 +101,6 @@ class PageNotFoundController {
 		$GLOBALS['TSFE']->domainStartPage = $GLOBALS['TSFE']->findDomainRecord($GLOBALS['TSFE']->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
 		$GLOBALS['TSFE']->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
 		if (!empty($GLOBALS['TSFE']->pageNotFound)) {
-			$this->init();
 			$this->executePageNotFoundHandling('ID was outside the domain');
 		}
 
