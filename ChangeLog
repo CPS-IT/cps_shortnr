@@ -1,3 +1,9 @@
+2015-08-12         [RELEASE] Release of cps_shortnr 0.3.1 (Nicole Cordes)
+2015-08-12 cb41a20 [TASK] Add configuration for news extension (Nicole Cordes)
+2015-08-12 3b505e1 [HOTFIX] Resolve page id according to record type (Nicole Cordes)
+2015-08-12 29bec83 [HOTFIX] Use correct class name to initialize ContentObjectRenderer (Nicole Cordes)
+2015-08-12 4982629 [HOTFIX] Implement SingletonInterface (Nicole Cordes)
+
 2015-07-30         [RELEASE] Release of cps_shortnr 0.3.0 (Nicole Cordes)
 2015-07-30 aed9d06 [TASK] Improve example configuration (Nicole Cordes)
 2015-07-30 d4ae4f2 [FEATURE] Add check if page id is in current domain rootline (Nicole Cordes)
