@@ -24,7 +24,7 @@
  * @package TYPO3
  * @subpackage cps_shortnr
  */
-class PageNotFoundController {
+class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface {
 
 	/**
 	 * @var array
@@ -46,6 +46,10 @@ class PageNotFoundController {
 	 */
 	var $typoScriptArray = array();
 
+	public function __construct() {
+		$this->init();
+	}
+
 	/**
 	 * @param array $params
 	 * @param tslib_fe $pObj
@@ -53,7 +57,6 @@ class PageNotFoundController {
 	 */
 	public function resolvePath($params, $pObj) {
 		$this->params = $params;
-		$this->init();
 
 		// If no config file was defined return to original pageNotFound_handling
 		if (substr($this->configuration['configFile'], 0, 5) !== 'FILE:') {
@@ -80,7 +83,7 @@ class PageNotFoundController {
 
 		// Parse url and try to resolve any redirect
 		/** @var tslib_cObj $contentObject */
-		$contentObject = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('tslib_cObj');
+		$contentObject = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
 
 		$path = $contentObject->cObjGetSingle($this->typoScriptArray['cps_shortnr'], $this->typoScriptArray['cps_shortnr.']);
 
@@ -94,11 +97,26 @@ class PageNotFoundController {
 	 */
 	public function checkPidInRootline($content, $configuration) {
 		$content = (int)$content;
-		$GLOBALS['TSFE']->id = $content;
+		if (empty($configuration['table']) || empty($configuration['table.'])) {
+			$table = 'pages';
+		} else {
+			$contentObjectRenderer = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
+			$table = $contentObjectRenderer->cObjGetSingle($configuration['table'], $configuration['table.']);
+		}
+
+		if (empty($table) || $table === 'pages') {
+			$pid = $content;
+		} else {
+			$record = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord($table, $content, 'pid');
+			if (empty($record)) {
+				$this->executePageNotFoundHandling('No record found');
+			}
+			$pid = $record['pid'];
+		}
+		$GLOBALS['TSFE']->id = $pid;
 		$GLOBALS['TSFE']->domainStartPage = $GLOBALS['TSFE']->findDomainRecord($GLOBALS['TSFE']->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
 		$GLOBALS['TSFE']->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
 		if (!empty($GLOBALS['TSFE']->pageNotFound)) {
-			$this->init();
 			$this->executePageNotFoundHandling('ID was outside the domain');
 		}
 
