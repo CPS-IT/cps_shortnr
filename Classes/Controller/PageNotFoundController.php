@@ -97,7 +97,23 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface {
 	 */
 	public function checkPidInRootline($content, $configuration) {
 		$content = (int)$content;
-		$GLOBALS['TSFE']->id = $content;
+		if (empty($configuration['table']) || empty($configuration['table.'])) {
+			$table = 'pages';
+		} else {
+			$contentObjectRenderer = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
+			$table = $contentObjectRenderer->cObjGetSingle($configuration['table'], $configuration['table.']);
+		}
+
+		if (empty($table) || $table === 'pages') {
+			$pid = $content;
+		} else {
+			$record = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord($table, $content, 'pid');
+			if (empty($record)) {
+				$this->executePageNotFoundHandling('No record found');
+			}
+			$pid = $record['pid'];
+		}
+		$GLOBALS['TSFE']->id = $pid;
 		$GLOBALS['TSFE']->domainStartPage = $GLOBALS['TSFE']->findDomainRecord($GLOBALS['TSFE']->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
 		$GLOBALS['TSFE']->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
 		if (!empty($GLOBALS['TSFE']->pageNotFound)) {

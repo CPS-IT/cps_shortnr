@@ -5,7 +5,18 @@ cps_shortnr {
 		match_1.data = register:tx_cpsshortnr_match_1
 		match_2 {
 			data = register:tx_cpsshortnr_match_2
-			postUserFunc = PageNotFoundController->checkPidInRootline
+			postUserFunc = tx_cpsshortnr_pagenotfoundcontroller->checkPidInRootline
+			postUserFunc {
+				table = CASE
+				table {
+					key.data = register:match_1
+					P = TEXT
+					P {
+						value = pages
+					}
+					p < .P
+				}
+			}
 		}
 		match_3 {
 			data = register:tx_cpsshortnr_match_3
