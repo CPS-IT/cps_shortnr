@@ -83,7 +83,7 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface {
 
 		// Parse url and try to resolve any redirect
 		/** @var tslib_cObj $contentObject */
-		$contentObject = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('tslib_cObj');
+		$contentObject = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
 
 		$path = $contentObject->cObjGetSingle($this->typoScriptArray['cps_shortnr'], $this->typoScriptArray['cps_shortnr.']);
 
