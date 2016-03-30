@@ -1,3 +1,7 @@
+2016-03-30         [RELEASE] Release of cps_shortnr 0.4.0 (Nicole Cordes)
+2016-03-30 d729b23 [FEATURE] Add matcher object to support TypoScript conditions (Nicole Cordes)
+2015-07-30 ce6ed22 [TASK] Set extension version to 0.4.0-dev (Nicole Cordes)
+
 2015-08-12         [RELEASE] Release of cps_shortnr 0.3.1 (Nicole Cordes)
 2015-08-12 cb41a20 [TASK] Add configuration for news extension (Nicole Cordes)
 2015-08-12 3b505e1 [HOTFIX] Resolve page id according to record type (Nicole Cordes)
