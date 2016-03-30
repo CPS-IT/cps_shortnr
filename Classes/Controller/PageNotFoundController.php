@@ -151,7 +151,8 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface {
 		} else {
 			/** @var t3lib_TSparser $typoScriptParser */
 			$typoScriptParser = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('t3lib_TSparser');
-			$typoScriptParser->parse($file, '');
+			$conditionMatcher = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('t3lib_matchCondition_frontend');
+			$typoScriptParser->parse($file, $conditionMatcher);
 
 			$this->typoScriptArray = $typoScriptParser->setup;
 		}
