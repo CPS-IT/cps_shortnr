@@ -4,7 +4,7 @@ if (!defined('TYPO3_MODE')) {
 }
 
 // Store old pageNotFound handling
-$pageNotFound_handling = 'USER_FUNCTION:EXT:cps_shortnr/Classes/Controller/PageNotFoundController.php:tx_cpsshortnr_pagenotfoundcontroller->resolvePath';
+$pageNotFound_handling = 'USER_FUNCTION:CPSIT\\CpsShortnr\\Controller\\PageNotFoundController->resolvePath';
 if (!isset($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['cps_shortnr'])) {
 	// Store current handler in extension configuration
 	$extConfiguration = [

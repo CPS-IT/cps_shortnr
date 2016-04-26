@@ -1,4 +1,6 @@
 <?php
+namespace CPSIT\CpsShortnr\Controller;
+
 /***************************************************************
  *  Copyright notice
  *  (c) 2012 Nicole Cordes <cordes@cps-it.de>
@@ -17,6 +19,16 @@
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+use TYPO3\CMS\Backend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\SingletonInterface;
+use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
+use TYPO3\CMS\Core\TypoScript\TemplateService;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
+use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
+use TYPO3\CMS\Frontend\Page\PageRepository;
+
 /**
  * Evaluates if the given url is a short link and redirects to parent page
  *
@@ -24,7 +36,7 @@
  * @package TYPO3
  * @subpackage cps_shortnr
  */
-class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
+class PageNotFoundController implements SingletonInterface
 {
 
     /**
@@ -38,7 +50,7 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
     var $params = [];
 
     /**
-     * @var tslib_fe|NULL
+     * @var TypoScriptFrontendController|NULL
      */
     var $tempTSFE = null;
 
@@ -54,10 +66,9 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
 
     /**
      * @param array $params
-     * @param tslib_fe $pObj
      * @return void
      */
-    public function resolvePath($params, $pObj)
+    public function resolvePath($params)
     {
         $this->params = $params;
 
@@ -65,7 +76,7 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
         if (substr($this->configuration['configFile'], 0, 5) !== 'FILE:') {
             $configurationFile = PATH_site . $this->configuration['configFile'];
         } else {
-            $configurationFile = \TYPO3\CMS\Core\Utility\GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
+            $configurationFile = GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
         }
         if (!file_exists($configurationFile)) {
             $this->executePageNotFoundHandling();
@@ -85,8 +96,8 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
         $this->writeRegisterMatches();
 
         // Parse url and try to resolve any redirect
-        /** @var tslib_cObj $contentObject */
-        $contentObject = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
+        /** @var ContentObjectRenderer $contentObject */
+        $contentObject = GeneralUtility::makeInstance(ContentObjectRenderer::class);
 
         $path = $contentObject->cObjGetSingle($this->typoScriptArray['cps_shortnr'], $this->typoScriptArray['cps_shortnr.']);
 
@@ -104,14 +115,14 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
         if (empty($configuration['table']) || empty($configuration['table.'])) {
             $table = 'pages';
         } else {
-            $contentObjectRenderer = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Frontend\\ContentObject\\ContentObjectRenderer');
+            $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
             $table = $contentObjectRenderer->cObjGetSingle($configuration['table'], $configuration['table.']);
         }
 
         if (empty($table) || $table === 'pages') {
             $pid = $content;
         } else {
-            $record = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord($table, $content, 'pid');
+            $record = BackendUtility::getRecord($table, $content, 'pid');
             if (empty($record)) {
                 $this->executePageNotFoundHandling('No record found');
             }
@@ -152,13 +163,13 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
      */
     protected function getTypoScriptArray($configurationFile)
     {
-        $file = \TYPO3\CMS\Core\Utility\GeneralUtility::getURL($configurationFile);
+        $file = GeneralUtility::getUrl($configurationFile);
         if (empty($file)) {
             $this->executePageNotFoundHandling();
         } else {
-            /** @var t3lib_TSparser $typoScriptParser */
-            $typoScriptParser = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('t3lib_TSparser');
-            $conditionMatcher = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('t3lib_matchCondition_frontend');
+            /** @var TypoScriptParser $typoScriptParser */
+            $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
+            $conditionMatcher = GeneralUtility::makeInstance(ConditionMatcher::class);
             $typoScriptParser->parse($file, $conditionMatcher);
 
             $this->typoScriptArray = $typoScriptParser->setup;
@@ -180,13 +191,13 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
         $GLOBALS['TSFE']->config['config']['tx_realurl_enable'] = 1;
 
         // Initialize the page select object
-        $GLOBALS['TSFE']->sys_page = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('t3lib_pageSelect');
+        $GLOBALS['TSFE']->sys_page = GeneralUtility::makeInstance(PageRepository::class);
         $GLOBALS['TSFE']->sys_page->versioningPreview = false;
         $GLOBALS['TSFE']->sys_page->versioningWorkspaceId = false;
         $GLOBALS['TSFE']->sys_page->init(false);
 
         // Initialize the template object
-        $GLOBALS['TSFE']->tmpl = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance('t3lib_TStemplate');
+        $GLOBALS['TSFE']->tmpl = GeneralUtility::makeInstance(TemplateService::class);
         $GLOBALS['TSFE']->tmpl->init();
         $GLOBALS['TSFE']->tmpl->tt_track = 0;
 
@@ -222,7 +233,7 @@ class PageNotFoundController implements \TYPO3\CMS\Core\SingletonInterface
         if (!empty($path)) {
             $GLOBALS['TSFE']->hook_eofe();
             header('HTTP/1.0 301 TYPO3 cps_shortnr redirect');
-            header('Location: ' . \TYPO3\CMS\Core\Utility\GeneralUtility::locationHeaderUrl($path));
+            header('Location: ' . GeneralUtility::locationHeaderUrl($path));
             exit;
         } else {
             $this->executePageNotFoundHandling();
