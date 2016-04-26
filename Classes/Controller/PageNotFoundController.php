@@ -241,10 +241,6 @@ class PageNotFoundController implements SingletonInterface
     }
 }
 
-class tx_cpsshortnr_pagenotfoundcontroller extends PageNotFoundController
-{
-}
-
 if (defined('TYPO3_MODE') && $GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['XCLASS']['ext/cps_shortnr/Classes/Controller/PageNotFoundController.php']) {
     include_once($GLOBALS['TYPO3_CONF_VARS'][TYPO3_MODE]['XCLASS']['ext/cps_shortnr/Classes/Controller/PageNotFoundController.php']);
 }
