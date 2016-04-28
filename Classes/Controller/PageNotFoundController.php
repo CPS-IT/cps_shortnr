@@ -200,8 +200,6 @@ class PageNotFoundController implements SingletonInterface
         $GLOBALS['TSFE']->tmpl = GeneralUtility::makeInstance(TemplateService::class);
         $GLOBALS['TSFE']->tmpl->init();
         $GLOBALS['TSFE']->tmpl->tt_track = 0;
-
-        $GLOBALS['TSFE']->getCompressedTCarray();
     }
 
     /**
