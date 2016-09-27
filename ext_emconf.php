@@ -33,6 +33,7 @@ $EM_CONF[$_EXTKEY] = array (
 		),
 		'suggests' => 
 		array (
+		    'pagenotfoundhandling' => '',
 		),
 	),
 	'_md5_values_when_last_written' => 'a:6:{s:9:"ChangeLog";s:4:"091d";s:21:"ext_conf_template.txt";s:4:"9d51";s:12:"ext_icon.gif";s:4:"5349";s:17:"ext_localconf.php";s:4:"b582";s:45:"Classes/Controller/PageNotFoundController.php";s:4:"8ecf";s:25:"Resources/cps_shortnr.txt";s:4:"e87d";}',
