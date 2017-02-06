@@ -1,3 +1,12 @@
+2017-02-06         [RELEASE] Release of cps_shortnr 1.0.0 (Nicole Cordes)
+2016-04-28 66489f8 [BUGFIX] Remove deprecated TypoScriptFrontendController function (Nicole Cordes)
+2016-04-26 2cae62c [TASK] Remove old XClass code (Nicole Cordes)
+2016-04-26 8963ab1 [TASK] Remove legacy class (Nicole Cordes)
+2016-04-26 82eaea0 [TASK] Add namespace (Nicole Cordes)
+2016-04-26 f062786 [TASK] Switch to psr-1/psr-2 coding standard (Nicole Cordes)
+2016-04-26 86a3161 [TASK] Set dependency to TYPO3 7 (Nicole Cordes)
+2016-03-30 92d7de6 [TASK] Set extension version to 0.5.0-dev (Nicole Cordes)
+
 2016-09-27         [RELEASE] Release of cps_shortnr 0.4.1 (Nicole Cordes)
 2016-09-27 bfba0d0 [HOTFIX] Add pagenotfoundhandling to suggested extensions (Nicole Cordes)
 
