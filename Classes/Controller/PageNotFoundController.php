@@ -91,43 +91,9 @@ class PageNotFoundController implements SingletonInterface
 
         $shortLinkConfiguration = $this->getShortLinkConfiguration();
 
-        $path = $contentObject->cObjGetSingle($this->typoScriptArray['cps_shortnr'], $this->typoScriptArray['cps_shortnr.']);
+        $path = $this->getPathFromShortLinkConfiguration($shortLinkConfiguration);
 
         $this->shutdown($path);
-    }
-
-    /**
-     * @param string $content
-     * @param array $configuration
-     * @return int
-     */
-    public function checkPidInRootline($content, $configuration)
-    {
-        $content = (int)$content;
-        if (empty($configuration['table']) || empty($configuration['table.'])) {
-            $table = 'pages';
-        } else {
-            $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-            $table = $contentObjectRenderer->cObjGetSingle($configuration['table'], $configuration['table.']);
-        }
-
-        if (empty($table) || $table === 'pages') {
-            $pid = $content;
-        } else {
-            $record = BackendUtility::getRecord($table, $content, 'pid');
-            if (empty($record)) {
-                $this->executePageNotFoundHandling('No record found');
-            }
-            $pid = $record['pid'];
-        }
-        $GLOBALS['TSFE']->id = $pid;
-        $GLOBALS['TSFE']->domainStartPage = $GLOBALS['TSFE']->findDomainRecord($GLOBALS['TSFE']->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
-        $GLOBALS['TSFE']->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
-        if (!empty($GLOBALS['TSFE']->pageNotFound)) {
-            $this->executePageNotFoundHandling('ID was outside the domain');
-        }
-
-        return $content;
     }
 
     /**
@@ -147,6 +113,49 @@ class PageNotFoundController implements SingletonInterface
         $reason = $reason ?: $this->params['reasonText'];
         $GLOBALS['TSFE']->pageNotFoundHandler($this->configuration['pageNotFound_handling'], '', $reason);
         exit;
+    }
+
+    /**
+     * @param array $shortLinkConfiguration
+     * @return string
+     */
+    protected function getPathFromShortLinkConfiguration(array $shortLinkConfiguration)
+    {
+        if (empty($shortLinkConfiguration['source.'])
+            || (empty($shortLinkConfiguration['source.']['record']) && empty($shortLinkConfiguration['source.']['record.']))
+            || empty($shortLinkConfiguration['source.']['table'])
+            || empty($shortLinkConfiguration['path.'])
+        ) {
+            $this->executePageNotFoundHandling('Invalid shortlink configuration');
+        }
+
+        $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
+
+        // Get record
+        if (empty($shortLinkConfiguration['source.']['record.'])) {
+            $recordUid = (int)$shortLinkConfiguration['source.']['record'];
+        } else {
+            $recordUid = (int)$contentObjectRenderer->stdWrap(
+                isset($shortLinkConfiguration['source.']['record']) ? $shortLinkConfiguration['source.']['record'] : '',
+                $shortLinkConfiguration['source.']['record.']
+            );
+        }
+        $table = $shortLinkConfiguration['source.']['table'];
+
+        $record = BackendUtility::getRecord($table, $recordUid);
+
+        // Check if record is in current rootline
+        $tsfe = $this->getTypoScriptFrontendController();
+        $tsfe->id = $table === 'pages' ? $record['uid'] : $record['pid'];
+        $tsfe->domainStartPage = $tsfe->findDomainRecord($tsfe->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
+        $tsfe->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
+        if (!empty($tsfe->pageNotFound)) {
+            $this->executePageNotFoundHandling('ID was outside the domain');
+        }
+
+        $contentObjectRenderer->start($record, $table);
+
+        return $contentObjectRenderer->stdWrap('', $shortLinkConfiguration['path.']);
     }
 
     /**
@@ -202,6 +211,14 @@ class PageNotFoundController implements SingletonInterface
 
             $this->typoScriptArray = $typoScriptArray['cps_shortnr.'];
         }
+    }
+
+    /**
+     * @return TypoScriptFrontendController
+     */
+    protected function getTypoScriptFrontendController()
+    {
+        return $GLOBALS['TSFE'];
     }
 
     /**
