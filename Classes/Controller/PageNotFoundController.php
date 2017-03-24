@@ -33,31 +33,28 @@ use TYPO3\CMS\Frontend\Page\PageRepository;
  * Evaluates if the given url is a short link and redirects to parent page
  *
  * @author Nicole Cordes <cordes@cps-it.de>
- * @package TYPO3
- * @subpackage cps_shortnr
  */
 class PageNotFoundController implements SingletonInterface
 {
+    /**
+     * @var array
+     */
+    public $configuration = [];
 
     /**
      * @var array
      */
-    var $configuration = [];
+    public $params = [];
+
+    /**
+     * @var TypoScriptFrontendController|null
+     */
+    public $tempTSFE = null;
 
     /**
      * @var array
      */
-    var $params = [];
-
-    /**
-     * @var TypoScriptFrontendController|NULL
-     */
-    var $tempTSFE = null;
-
-    /**
-     * @var array
-     */
-    var $typoScriptArray = [];
+    public $typoScriptArray = [];
 
     public function __construct()
     {
@@ -233,10 +230,7 @@ class PageNotFoundController implements SingletonInterface
             header('HTTP/1.0 301 TYPO3 cps_shortnr redirect');
             header('Location: ' . GeneralUtility::locationHeaderUrl($path));
             exit;
-        } else {
-            $this->executePageNotFoundHandling();
         }
+        $this->executePageNotFoundHandling();
     }
 }
-
-?>
