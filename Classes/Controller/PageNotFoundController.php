@@ -76,25 +76,20 @@ class PageNotFoundController implements SingletonInterface
             $configurationFile = GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
         }
         if (!file_exists($configurationFile)) {
-            $this->executePageNotFoundHandling();
+            $this->executePageNotFoundHandling('Configuration file not found');
         }
 
         // Convert file content to TypoScript array
         $this->getTypoScriptArray($configurationFile);
-        if (!isset($this->typoScriptArray['cps_shortnr'])) {
-            $this->executePageNotFoundHandling();
-        }
 
-        // Manipulate TSFE object
+        // Initialize new TSFE object
         $this->initTSFE();
 
         // Write register
         array_push($GLOBALS['TSFE']->registerStack, $GLOBALS['TSFE']->register);
         $this->writeRegisterMatches();
 
-        // Parse url and try to resolve any redirect
-        /** @var ContentObjectRenderer $contentObject */
-        $contentObject = GeneralUtility::makeInstance(ContentObjectRenderer::class);
+        $shortLinkConfiguration = $this->getShortLinkConfiguration();
 
         $path = $contentObject->cObjGetSingle($this->typoScriptArray['cps_shortnr'], $this->typoScriptArray['cps_shortnr.']);
 
@@ -155,6 +150,36 @@ class PageNotFoundController implements SingletonInterface
     }
 
     /**
+     * @return array
+     */
+    protected function getShortLinkConfiguration()
+    {
+        // Get key and configuration
+        if (empty($this->typoScriptArray['key'])
+            && empty($this->typoScriptArray['key.'])
+        ) {
+            $this->executePageNotFoundHandling('Missing key configuration');
+        }
+
+        $contentObject = GeneralUtility::makeInstance(ContentObjectRenderer::class);
+
+        if (empty($this->typoScriptArray['key.'])) {
+            $key = strtolower($this->typoScriptArray['key']);
+        } else {
+            $key = strtolower($contentObject->stdWrap(
+                isset($this->typoScriptArray['key']) ? $this->typoScriptArray['key'] : '',
+                $this->typoScriptArray['key.']
+            ));
+        }
+
+        if (empty($this->typoScriptArray[$key . '.'])) {
+            $this->executePageNotFoundHandling('Missing shortlink configuration for key "' . $key . '"');
+        }
+
+        return $this->typoScriptArray[$key . '.'];
+    }
+
+    /**
      * @param string $configurationFile
      * @return void
      */
@@ -162,14 +187,20 @@ class PageNotFoundController implements SingletonInterface
     {
         $file = GeneralUtility::getUrl($configurationFile);
         if (empty($file)) {
-            $this->executePageNotFoundHandling();
+            $this->executePageNotFoundHandling('Configuration file could not be read');
         } else {
             /** @var TypoScriptParser $typoScriptParser */
             $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
             $conditionMatcher = GeneralUtility::makeInstance(ConditionMatcher::class);
             $typoScriptParser->parse($file, $conditionMatcher);
 
-            $this->typoScriptArray = $typoScriptParser->setup;
+            $typoScriptArray = $typoScriptParser->setup;
+
+            if (!isset($typoScriptArray['cps_shortnr.'])) {
+                $this->executePageNotFoundHandling('No "cps_shortnr" configuration found');
+            }
+
+            $this->typoScriptArray = $typoScriptArray['cps_shortnr.'];
         }
     }
 
@@ -212,7 +243,6 @@ class PageNotFoundController implements SingletonInterface
             foreach ($matches as $key => $value) {
                 $GLOBALS['TSFE']->register['tx_cpsshortnr_match_' . $key] = $value;
             }
-            unset($key, $value);
         }
     }
 
