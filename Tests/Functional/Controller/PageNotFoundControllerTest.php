@@ -36,7 +36,7 @@ class PageNotFoundControllerTest extends FunctionalTestCase
     protected $configurationToUseInTestInstance = [
         'EXT' => [
             'extConf' => [
-                'cps_shortnr' => 'a:3:{s:21:"pageNotFound_handling";s:0:"";s:10:"configFile";s:46:"FILE:EXT:cps_shortnr/Resources/cps_shortnr.txt";s:6:"regExp";s:23:"([a-zA-Z]+)(\\d+)(-\\d+)?";}',
+                'cps_shortnr' => 'a:3:{s:21:"pageNotFound_handling";s:0:"";s:10:"configFile";s:46:"FILE:EXT:cps_shortnr/Resources/cps_shortnr.txt";s:6:"regExp";s:25:"([a-zA-Z]+)(\\d+)(-(\\d+))?";}',
             ],
         ],
     ];
@@ -53,6 +53,8 @@ class PageNotFoundControllerTest extends FunctionalTestCase
         parent::setUp();
 
         $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages.xml');
+        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages_language_overlay.xml');
+        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/sys_language.xml');
 
         $frontendController = new TypoScriptFrontendController($GLOBALS['TYPO3_CONF_VARS'], 1, 0);
         $GLOBALS['TSFE'] = $frontendController;
@@ -67,6 +69,10 @@ class PageNotFoundControllerTest extends FunctionalTestCase
             'Page' => [
                 'P6',
                 'index.php?id=6',
+            ],
+            'Page with language uid 1' => [
+                'P1-1',
+                'index.php?id=1&L=1',
             ],
         ];
     }

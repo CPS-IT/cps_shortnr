@@ -12,7 +12,7 @@ cps_shortnr {
                 addQueryString = 1
                 returnLast = url
                 additionalParams.wrap = &L=|
-                additionalParams.data = register:tx_cpsshortnr_match_3
+                additionalParams.data = register:tx_cpsshortnr_match_4
                 additionalParams.required = 1
             }
         }
@@ -39,7 +39,7 @@ cps_shortnr {
                     20 {
                         wrap = &L=|
                         required = 1
-                        data = register:tx_cpsshortnr_match_3
+                        data = register:tx_cpsshortnr_match_4
                     }
                 }
                 returnLast = url
