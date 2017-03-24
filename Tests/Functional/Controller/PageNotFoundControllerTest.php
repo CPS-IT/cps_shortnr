@@ -46,6 +46,7 @@ class PageNotFoundControllerTest extends FunctionalTestCase
      */
     protected $testExtensionsToLoad = [
         'typo3conf/ext/cps_shortnr',
+        'typo3conf/ext/news',
     ];
 
     protected function setUp()
@@ -55,6 +56,9 @@ class PageNotFoundControllerTest extends FunctionalTestCase
         $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages.xml');
         $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages_language_overlay.xml');
         $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/sys_language.xml');
+
+        $fixturePath = ORIGINAL_ROOT . 'typo3conf/ext/cps_shortnr/Tests/Functional/Fixtures/';
+        $this->importDataSet($fixturePath . 'tx_news_domain_model_news.xml');
 
         $frontendController = new TypoScriptFrontendController($GLOBALS['TYPO3_CONF_VARS'], 1, 0);
         $GLOBALS['TSFE'] = $frontendController;
@@ -73,6 +77,10 @@ class PageNotFoundControllerTest extends FunctionalTestCase
             'Page with language uid 1' => [
                 'P1-1',
                 'index.php?id=1&L=1',
+            ],
+            'News' => [
+                'N456',
+                'index.php?id=1&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bnews%5D=456',
             ],
         ];
     }
