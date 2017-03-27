@@ -1,5 +1,5 @@
 cps_shortnr {
-    key.data = register:tx_cpsshortnr_match_1
+    decoder.data = register:tx_cpsshortnr_match_1
 
     p {
         source {
