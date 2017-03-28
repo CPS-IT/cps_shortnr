@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <dataset>
     <tx_news_domain_model_news>
+        <uid>42</uid>
+        <pid>1</pid>
+        <title>Internal note</title>
+        <type>1</type>
+    </tx_news_domain_model_news>
+    <tx_news_domain_model_news>
         <uid>456</uid>
         <pid>1</pid>
         <title>News 1</title>
