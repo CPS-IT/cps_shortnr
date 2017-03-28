@@ -100,4 +100,27 @@ class PageNotFoundControllerTest extends FunctionalTestCase
             'currentUrl' => $currentUrl,
         ]);
     }
+
+    /**
+     * @test
+     */
+    public function invalidPathCallsPageNotFoundHandler()
+    {
+        $frontendController = $this->getMock(
+            TypoScriptFrontendController::class,
+            ['pageNotFoundHandler'],
+            [
+                $GLOBALS['TYPO3_CONF_VARS'],
+                1,
+                0,
+            ]
+        );
+        $frontendController->expects($this->once())->method('pageNotFoundHandler')->with('', '', 'No record for "42" found');
+        $GLOBALS['TSFE'] = $frontendController;
+
+        $subject = new PageNotFoundController();
+        $subject->resolvePath([
+            'currentUrl' => 'P42',
+        ]);
+    }
 }
