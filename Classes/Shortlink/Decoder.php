@@ -189,11 +189,10 @@ class Decoder
             throw new \RuntimeException('Missing key configuration', 1490608877);
         }
 
-        $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-
         if (empty($this->configuration['decoder.'])) {
             $this->decodeIdentifier = strtolower($this->configuration['decoder']);
         } else {
+            $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
             $this->decodeIdentifier = strtolower($contentObjectRenderer->stdWrap(
                 isset($this->configuration['decoder']) ? $this->configuration['decoder'] : '',
                 $this->configuration['decoder.']
