@@ -50,6 +50,10 @@ class PageNotFoundControllerTest extends AbstractShortnrTestCase
                 'N456',
                 'index.php?id=1&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bnews%5D=456',
             ],
+            'News with language uid 2' => [
+                'N456-2',
+                'index.php?id=1&tx_news_pi1%5Bcontroller%5D=News&tx_news_pi1%5Baction%5D=detail&tx_news_pi1%5Bnews%5D=456&L=2',
+            ],
         ];
     }
 
