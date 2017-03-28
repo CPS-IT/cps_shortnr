@@ -24,46 +24,14 @@ namespace CPSIT\CpsShortnr\Tests\Functional\Controller;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+require_once __DIR__ . '/../AbstractShortnrTestCase.php';
+
 use CPSIT\CpsShortnr\Controller\PageNotFoundController;
-use TYPO3\CMS\Core\Tests\FunctionalTestCase;
+use CPSIT\CpsShortnr\Tests\Functional\AbstractShortnrTestCase;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
-class PageNotFoundControllerTest extends FunctionalTestCase
+class PageNotFoundControllerTest extends AbstractShortnrTestCase
 {
-    /**
-     * @var array
-     */
-    protected $configurationToUseInTestInstance = [
-        'EXT' => [
-            'extConf' => [
-                'cps_shortnr' => 'a:3:{s:21:"pageNotFound_handling";s:0:"";s:10:"configFile";s:46:"FILE:EXT:cps_shortnr/Resources/cps_shortnr.txt";s:6:"regExp";s:25:"([a-zA-Z]+)(\\d+)(-(\\d+))?";}',
-            ],
-        ],
-    ];
-
-    /**
-     * @var array
-     */
-    protected $testExtensionsToLoad = [
-        'typo3conf/ext/cps_shortnr',
-        'typo3conf/ext/news',
-    ];
-
-    protected function setUp()
-    {
-        parent::setUp();
-
-        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages.xml');
-        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages_language_overlay.xml');
-        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/sys_language.xml');
-
-        $fixturePath = ORIGINAL_ROOT . 'typo3conf/ext/cps_shortnr/Tests/Functional/Fixtures/';
-        $this->importDataSet($fixturePath . 'tx_news_domain_model_news.xml');
-
-        $frontendController = new TypoScriptFrontendController($GLOBALS['TYPO3_CONF_VARS'], 1, 0);
-        $GLOBALS['TSFE'] = $frontendController;
-    }
-
     /**
      * @return array
      */
