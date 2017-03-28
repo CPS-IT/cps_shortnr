@@ -1,6 +1,13 @@
 cps_shortnr {
     decoder.data = register:tx_cpsshortnr_match_1
 
+    encoder {
+        field = tx_cpsshortnr_language_parent
+        dataWrap = {field:tx_cpsshortnr_identifier_upper}|
+        dataWrap.override = {field:tx_cpsshortnr_identifier_upper}|-{field:tx_cpsshortnr_language}
+        dataWrap.override.if.isTrue.field = tx_cpsshortnr_language
+    }
+
     p {
         source {
             record.data = register:tx_cpsshortnr_match_2
@@ -46,4 +53,7 @@ cps_shortnr {
             }
         }
     }
+
+    m < .n
+    m.source.encodeMatchFields.type = 1
 }
