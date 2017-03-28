@@ -64,9 +64,6 @@ class PageNotFoundController implements SingletonInterface
         } else {
             $configurationFile = GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
         }
-        if (!file_exists($configurationFile)) {
-            $this->executePageNotFoundHandling('Configuration file not found');
-        }
 
         try {
             $shortlinkDecoder = Decoder::createFromConfigurationFile($configurationFile, $params['currentUrl'], $this->configuration['regExp']);

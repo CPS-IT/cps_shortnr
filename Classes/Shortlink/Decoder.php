@@ -78,12 +78,16 @@ class Decoder
      */
     public static function createFromConfigurationFile($configurationFile, $shortlink, $pattern)
     {
+        if (!file_exists($configurationFile)) {
+            throw new \RuntimeException('Configuration file not found', 1490608823);
+        }
+
         $file = GeneralUtility::getUrl($configurationFile);
         if (empty($file)) {
             throw new \RuntimeException('Configuration file could not be read', 1490608852);
         }
-            /** @var TypoScriptParser $typoScriptParser */
-            $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
+
+        $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
         $conditionMatcher = GeneralUtility::makeInstance(ConditionMatcher::class);
         $typoScriptParser->parse($file, $conditionMatcher);
 
