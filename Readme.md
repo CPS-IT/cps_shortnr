@@ -17,6 +17,13 @@ Default:
 cps_shortnr {
     decoder.data = register:tx_cpsshortnr_match_1
 
+    encoder {
+        field = tx_cpsshortnr_language_parent
+        dataWrap = {field:tx_cpsshortnr_identifier_upper}|
+        dataWrap.override = {field:tx_cpsshortnr_identifier_upper}|-{field:tx_cpsshortnr_language}
+        dataWrap.override.if.isTrue.field = tx_cpsshortnr_language
+    }
+
     p {
         source {
             record.data = register:tx_cpsshortnr_match_2
@@ -62,6 +69,9 @@ cps_shortnr {
             }
         }
     }
+
+    m < .n
+    m.source.encodeMatchFields.type = 1
 }
 ```
 
@@ -69,11 +79,17 @@ cps_shortnr {
 
 The configuration has to be wrapped in a cps_shortnr object.
 
-**decoder**
+#### decoder
 
 | Property | Data type | Description                            |
 | ------   | --------- | -------------------------------------- |
 | decoder  | stdWrap   | The identifier for the decode process. | 
+
+#### encoder
+
+| Property | Data type | Description                            |
+| ------   | --------- | -------------------------------------- |
+| encoder  | stdWrap   | The instruction how shortlinks are built. The current record is available as well as four internal fields: *tx_cpsshortnr_identifier_lower* (determined identifier in lower case), *tx_cpsshortnr_identifier_upper* (determined identifier in upper case), *tx_cpsshortnr_language* (either current language or language of the record if available) and *tx_cpsshortnr_language_parent* (either uid of the record or its language parent if available). | 
 
 #### Identifier configuration
 
@@ -82,10 +98,11 @@ aware this should be a short identifier though.
 
 **source**
 
-| Property | Data type | Description                                       |
-| ------   | --------- | ------------------------------------------------- |
-| record   | stdWrap   | The uid of the record that should be displayed.   |
-| table    | stdWrap   | The table of the record that should be displayed. |
+| Property          | Data type | Description                                       |
+| ----------------- | --------- | ------------------------------------------------- |
+| record            | stdWrap   | The uid of the record that should be displayed.                                               |
+| table             | text      | The table of the record that should be displayed.                                             |
+| encodeMatchFields | text      | Additional field => value assignment that the current record has to match for encode process. |
 
 **path**
 
@@ -107,3 +124,31 @@ tx_cpsshortnr_match_1, tx_cpsshortnr_match_2).
 ## PageNotFound_handling
 
 For a detailed description see Install Tool > All configuration > FE > pageNotFound_handling. 
+
+## TypoScript API
+
+Example:
+```
+lib.shortlink = USER
+lib.shortlink {
+    userFunc = CPSIT\CpsShortnr\Shortlink\Shortlink->create
+    record.data = TSFE:id
+    table = pages
+}
+
+lib.newslink = USER
+lib.newslink {
+    userFunc = CPSIT\CpsShortnr\Shortlink\Shortlink->create
+    record.data = GP:tx_news_pi1|news
+    record.intval = 1
+    table = tx_news_domain_model_news
+}
+```
+
+**userFunc**
+
+| Property | Data type     | Description                                     |
+| -------- | ------------- | ----------------------------------------------- |
+| userFunc | function name | CPSIT\CpsShortnr\Shortlink\Shortlink->create    |
+| record   | stdWrap       | The uid of the record that should be encoded.   |
+| table    | text          | The table of the record that should be encoded. |
