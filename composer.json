@@ -51,16 +51,10 @@
       "*": "dist"
     }
   },
-  "scripts": {
-    "post-autoload-dump": [
-      "mkdir -p .Build/typo3conf/ext/",
-      "[ -L .Build/typo3conf/ext/cps_shortnr ] || ln -snvf ../../../ .Build/typo3conf/ext/cps_shortnr"
-    ]
-  },
   "extra": {
     "typo3/cms": {
       "cms-package-dir": "{$vendor-dir}/typo3/cms",
-      "web-dir": ".Build"
+      "web-dir": ".Build/Web"
     }
   }
 }
