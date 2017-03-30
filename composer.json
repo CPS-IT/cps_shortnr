@@ -25,6 +25,9 @@
     "typo3/cms": "^7.6",
     "georgringer/news": "^5.3"
   },
+  "suggest": {
+    "friendsofphp/php-cs-fixer": "Tool to automatically fix PHP coding standards issues"
+  },
   "autoload": {
     "psr-4": {
       "CPSIT\\CpsShortnr\\": "Classes/"
