@@ -58,12 +58,12 @@ class ShortlinkTest extends AbstractShortnrTestCase
                 ],
                 'N456-2',
             ],
-            'Message' => [
+            'Internal news' => [
                 [
                     'record' => 42,
                     'table' => 'tx_news_domain_model_news',
                 ],
-                'M42',
+                'IN42',
             ],
         ];
     }

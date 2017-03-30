@@ -54,6 +54,6 @@ cps_shortnr {
         }
     }
 
-    m < .n
-    m.source.encodeMatchFields.type = 1
+    in < .n
+    in.source.encodeMatchFields.type = 1
 }

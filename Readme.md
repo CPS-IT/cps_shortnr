@@ -24,6 +24,7 @@ cps_shortnr {
         dataWrap.override.if.isTrue.field = tx_cpsshortnr_language
     }
 
+    # Page
     p {
         source {
             record.data = register:tx_cpsshortnr_match_2
@@ -41,6 +42,7 @@ cps_shortnr {
         }
     }
 
+    # News
     n {
         source {
             record.data = register:tx_cpsshortnr_match_2
@@ -70,8 +72,9 @@ cps_shortnr {
         }
     }
 
-    m < .n
-    m.source.encodeMatchFields.type = 1
+    # Internal news
+    in < .n
+    in.source.encodeMatchFields.type = 1
 }
 ```
 
