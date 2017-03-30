@@ -163,9 +163,6 @@ class Encoder
         $defaultIdentifier = array_filter($availableIdentifier, function ($configuration) {
             return !isset($configuration['encodeMatchFields']);
         });
-        if (count($defaultIdentifier) > 1) {
-            $defaultIdentifier = array_shift($defaultIdentifier);
-        }
 
         $conditionalIdentifier = array_diff_key($availableIdentifier, $defaultIdentifier);
 
