@@ -1,81 +1,59 @@
-cps_shortnr = COA
 cps_shortnr {
-	10 = LOAD_REGISTER
-	10 {
-		match_1.data = register:tx_cpsshortnr_match_1
-		match_2 {
-			data = register:tx_cpsshortnr_match_2
-			postUserFunc = tx_cpsshortnr_pagenotfoundcontroller->checkPidInRootline
-			postUserFunc {
-				table = CASE
-				table {
-					key.data = register:match_1
-					P = TEXT
-					P {
-						value = pages
-					}
-					p < .P
+    decoder.data = register:tx_cpsshortnr_match_1
 
-					N = TEXT
-					N {
-						value = tx_news_domain_model_news
-					}
-					n < .N
-				}
-			}
-		}
-		match_3 {
-			data = register:tx_cpsshortnr_match_3
-			substring = 1
-		}
-	}
+    encoder {
+        field = tx_cpsshortnr_language_parent
+        dataWrap = {field:tx_cpsshortnr_identifier_upper}|
+        dataWrap.override = {field:tx_cpsshortnr_identifier_upper}|-{field:tx_cpsshortnr_language}
+        dataWrap.override.if.isTrue.field = tx_cpsshortnr_language
+    }
 
-	20 = CASE
-	20 {
-		key.data = register:match_1
+    p {
+        source {
+            record.data = register:tx_cpsshortnr_match_2
+            table = pages
+        }
+        path {
+            typolink {
+                parameter.field = uid
+                addQueryString = 1
+                returnLast = url
+                additionalParams.wrap = &L=|
+                additionalParams.data = register:tx_cpsshortnr_match_4
+                additionalParams.required = 1
+            }
+        }
+    }
 
-		P = TEXT
-		P {
-			typolink {
-				parameter.data = register:match_2
-				addQueryString = 1
-				returnLast = url
-				additionalParams.wrap = &L=|
-				additionalParams.data = register:match_3
-				additionalParams.required = 1
-			}
-		}
-		p < .P
+    n {
+        source {
+            record.data = register:tx_cpsshortnr_match_2
+            table = tx_news_domain_model_news
+        }
+        path {
+            typolink {
+                parameter = 1
+                addQueryString = 1
+                additionalParams.cObject = COA
+                additionalParams.cObject {
+                    10 = TEXT
+                    10 {
+                        value = &tx_news_pi1[controller]=News&tx_news_pi1[action]=detail&tx_news_pi1[news]={field:uid}
+                        insertData = 1
+                    }
 
-		N = RECORDS
-		N {
-			source.data = register:match_2
-			tables = tx_news_domain_model_news
-			dontCheckPid = 1
-			conf.tx_news_domain_model_news = TEXT
-			conf.tx_news_domain_model_news {
-				typolink {
-					parameter = 1
-					addQueryString = 1
-					additionalParams.cObject = COA
-					additionalParams.cObject {
-						10 = TEXT
-						10 {
-							value = &tx_news_pi1[controller]=News&tx_news_pi1[action]=detail&tx_news_pi1[news]={field:uid}
-							insertData = 1
-						}
+                    20 = TEXT
+                    20 {
+                        wrap = &L=|
+                        required = 1
+                        data = register:tx_cpsshortnr_match_4
+                    }
+                }
+                returnLast = url
+            }
+        }
+    }
 
-						20 = TEXT
-						20 {
-							wrap = &L=|
-							required = 1
-							data = register:match_3
-						}
-					}
-					returnLast = url
-				}
-			}
-		}
-		n < .N
-	}
+    in < .n
+    in.source.encodeMatchFields.type = 1
 }
