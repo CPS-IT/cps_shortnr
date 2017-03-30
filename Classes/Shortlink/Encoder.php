@@ -156,6 +156,10 @@ class Encoder
             return '';
         }
 
+        if (count($availableIdentifier) === 1) {
+            return key($availableIdentifier);
+        }
+
         $defaultIdentifier = array_filter($availableIdentifier, function ($configuration) {
             return !isset($configuration['encodeMatchFields']);
         });
