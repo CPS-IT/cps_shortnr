@@ -1,5 +1,9 @@
 # cps_shortnr
 
+[![Latest Stable Version](https://img.shields.io/packagist/v/cpsit/cps-shortnr.svg)](https://packagist.org/packages/cpsit/cps-shortnr)
+[![Build Status](https://img.shields.io/travis/CPS-IT/cps_shortnr/master.svg)](https://travis-ci.org/CPS-IT/cps_shortnr)
+[![StyleCI](https://styleci.io/repos/86745116/shield?branch=master)](https://styleci.io/repos/86745116)
+
 ## Installation
 
 - activate the extension in the Extension Manager
