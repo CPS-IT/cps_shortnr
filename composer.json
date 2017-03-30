@@ -4,9 +4,12 @@
   "type": "typo3-cms-extension",
   "keywords": [
     "TYPO3",
-    "extension"
+    "extension",
+    "Url",
+    "Shortener",
+    "Permanent"
   ],
-  "homepage": "https://gitlab.cps-projects.de/cps-it/cps_shortnr",
+  "homepage": "https://github.com/CPS-IT/cps_shortnr",
   "license": "GPL-2.0+",
   "authors": [
     {
