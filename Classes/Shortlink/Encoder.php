@@ -109,7 +109,7 @@ class Encoder
      */
     public function getShortlink($recordUid, $table)
     {
-        $record = BackendUtility::getRecord($table, $recordUid);
+        $record = BackendUtility::getRecordWSOL($table, $recordUid);
         if ($record === null) {
             return '';
         }
