@@ -29,6 +29,7 @@ use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
+use TYPO3\CMS\Frontend\Page\PageRepository;
 
 class Encoder
 {
@@ -114,14 +115,22 @@ class Encoder
             return '';
         }
 
+        $language = $this->getLanguage();
+        if (!empty($GLOBALS['TCA'][$table]['ctrl']['languageField'])) {
+            if (!empty($record[$GLOBALS['TCA'][$table]['ctrl']['languageField']])) {
+                $language = $record[$GLOBALS['TCA'][$table]['ctrl']['languageField']];
+            } elseif ($language > 0) {
+                $pageRepository = GeneralUtility::makeInstance(PageRepository::class);
+                $record = $pageRepository->getRecordOverlay($table, $record, $language);
+                if ($record === null) {
+                    return '';
+                }
+            }
+        }
+
         $identifier = $this->findIdentifier($table, $record);
         if ($identifier === '') {
             return '';
-        }
-
-        $language = GeneralUtility::_GP('L');
-        if (!empty($GLOBALS['TCA'][$table]['ctrl']['languageField'])) {
-            $language = $record[$GLOBALS['TCA'][$table]['ctrl']['languageField']];
         }
 
         $languageParent = $record['uid'];
@@ -188,5 +197,17 @@ class Encoder
         }
 
         return '';
+    }
+
+    /**
+     * @return int
+     */
+    private function getLanguage()
+    {
+        if (is_object($GLOBALS['TSFE'])) {
+            return (int)$GLOBALS['TSFE']->sys_language_uid;
+        }
+
+        return (int)GeneralUtility::_GP('L');
     }
 }
