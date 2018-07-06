@@ -129,6 +129,7 @@ class PageNotFoundController implements SingletonInterface
 
         // Enable realurl
         $GLOBALS['TSFE']->config['config']['tx_realurl_enable'] = 1;
+        $GLOBALS['TSFE']->config['config']['tx_hellurl_enable'] = 1;
 
         // Initialize the page select object
         $GLOBALS['TSFE']->sys_page = GeneralUtility::makeInstance(PageRepository::class);
