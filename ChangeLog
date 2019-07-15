@@ -1,3 +1,6 @@
+2019-07-15         [RELEASE] Release of cps_shortnr 2.0.2 (Erik Rauchstein)
+2018-07-06 813fdde [TASK] Add hellurl support (Steffen Mevius)
+
 2017-04-06         [RELEASE] Release of cps_shortnr 2.0.1 (Nicole Cordes)
 2017-04-06 a59b22f [TASK] Raise compatibility to TYPO3 8.7 (Nicole Cordes)
 2017-04-06 0d4f8a2 [TASK] Add and merge language tests (Nicole Cordes)
