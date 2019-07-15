@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\CpsShortnr\Tests\Shortlink;
+namespace CPSIT\CpsShortnr\Tests\Functional\Shortlink;
 
 /***************************************************************
  *  Copyright notice

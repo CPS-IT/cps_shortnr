@@ -97,7 +97,7 @@ class Decoder
             throw new \RuntimeException('No "cps_shortnr" configuration found', 1490608923);
         }
 
-        return new Decoder($typoScriptArray['cps_shortnr.'], $shortlink, $pattern);
+        return new self($typoScriptArray['cps_shortnr.'], $shortlink, $pattern);
     }
 
     /**

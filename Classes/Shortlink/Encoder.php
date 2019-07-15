@@ -99,7 +99,7 @@ class Encoder
             }
         }
 
-        return new Encoder($configuration, $typoScriptArray['cps_shortnr.']['encoder.']);
+        return new self($configuration, $typoScriptArray['cps_shortnr.']['encoder.']);
     }
 
     /**
