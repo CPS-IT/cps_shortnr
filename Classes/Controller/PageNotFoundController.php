@@ -19,13 +19,10 @@ namespace CPSIT\CpsShortnr\Controller;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-use TYPO3\CMS\Backend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
-use TYPO3\CMS\Backend\Utility\BackendUtility;
+use CPSIT\CpsShortnr\Shortlink\Decoder;
 use TYPO3\CMS\Core\SingletonInterface;
-use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
 use TYPO3\CMS\Core\TypoScript\TemplateService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Frontend\Page\PageRepository;
 
@@ -33,35 +30,26 @@ use TYPO3\CMS\Frontend\Page\PageRepository;
  * Evaluates if the given url is a short link and redirects to parent page
  *
  * @author Nicole Cordes <cordes@cps-it.de>
- * @package TYPO3
- * @subpackage cps_shortnr
  */
 class PageNotFoundController implements SingletonInterface
 {
-
     /**
      * @var array
      */
-    var $configuration = [];
+    private $configuration = [];
 
     /**
-     * @var array
+     * @var TypoScriptFrontendController
      */
-    var $params = [];
+    private $tempTSFE = null;
 
     /**
-     * @var TypoScriptFrontendController|NULL
+     * @param array $configuration
      */
-    var $tempTSFE = null;
-
-    /**
-     * @var array
-     */
-    var $typoScriptArray = [];
-
-    public function __construct()
+    public function __construct(array $configuration = null)
     {
-        $this->init();
+        $this->configuration = ($configuration !== null) ? $configuration
+            : unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['cps_shortnr']);
     }
 
     /**
@@ -70,110 +58,62 @@ class PageNotFoundController implements SingletonInterface
      */
     public function resolvePath($params)
     {
-        $this->params = $params;
-
         // If no config file was defined return to original pageNotFound_handling
         if (substr($this->configuration['configFile'], 0, 5) !== 'FILE:') {
             $configurationFile = PATH_site . $this->configuration['configFile'];
         } else {
             $configurationFile = GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
         }
-        if (!file_exists($configurationFile)) {
-            $this->executePageNotFoundHandling();
-        }
 
-        // Convert file content to TypoScript array
-        $this->getTypoScriptArray($configurationFile);
-        if (!isset($this->typoScriptArray['cps_shortnr'])) {
-            $this->executePageNotFoundHandling();
+        try {
+            $shortlinkDecoder = Decoder::createFromConfigurationFile($configurationFile, $params['currentUrl'], $this->configuration['regExp']);
+        } catch (\RuntimeException $exception) {
+            $this->executePageNotFoundHandling($exception->getMessage());
         }
-
-        // Manipulate TSFE object
-        $this->initTSFE();
 
         // Write register
         array_push($GLOBALS['TSFE']->registerStack, $GLOBALS['TSFE']->register);
-        $this->writeRegisterMatches();
-
-        // Parse url and try to resolve any redirect
-        /** @var ContentObjectRenderer $contentObject */
-        $contentObject = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-
-        $path = $contentObject->cObjGetSingle($this->typoScriptArray['cps_shortnr'], $this->typoScriptArray['cps_shortnr.']);
-
-        $this->shutdown($path);
-    }
-
-    /**
-     * @param string $content
-     * @param array $configuration
-     * @return int
-     */
-    public function checkPidInRootline($content, $configuration)
-    {
-        $content = (int)$content;
-        if (empty($configuration['table']) || empty($configuration['table.'])) {
-            $table = 'pages';
-        } else {
-            $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-            $table = $contentObjectRenderer->cObjGetSingle($configuration['table'], $configuration['table.']);
+        $this->initTSFE();
+        $shortlinkParts = $shortlinkDecoder->getShortlinkParts();
+        foreach ($shortlinkParts as $key => $value) {
+            $GLOBALS['TSFE']->register['tx_cpsshortnr_match_' . $key] = $value;
         }
 
-        if (empty($table) || $table === 'pages') {
-            $pid = $content;
-        } else {
-            $record = BackendUtility::getRecord($table, $content, 'pid');
-            if (empty($record)) {
-                $this->executePageNotFoundHandling('No record found');
-            }
-            $pid = $record['pid'];
+        try {
+            $recordInformation = $shortlinkDecoder->getRecordInformation();
+        } catch (\RuntimeException $exception) {
+            $this->executePageNotFoundHandling($exception->getMessage());
         }
-        $GLOBALS['TSFE']->id = $pid;
-        $GLOBALS['TSFE']->domainStartPage = $GLOBALS['TSFE']->findDomainRecord($GLOBALS['TSFE']->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
-        $GLOBALS['TSFE']->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
-        if (!empty($GLOBALS['TSFE']->pageNotFound)) {
+
+        // Check if record is in current rootline
+        $tsfe = $this->getTypoScriptFrontendController();
+        $tsfe->id = $recordInformation['table'] === 'pages' ? $recordInformation['record']['uid']
+            : $recordInformation['record']['pid'];
+        $tsfe->domainStartPage = $tsfe->findDomainRecord($tsfe->TYPO3_CONF_VARS['SYS']['recursiveDomainSearch']);
+        $tsfe->getPageAndRootlineWithDomain($GLOBALS['TSFE']->domainStartPage);
+        if (!empty($tsfe->pageNotFound)) {
             $this->executePageNotFoundHandling('ID was outside the domain');
         }
 
-        return $content;
-    }
-
-    /**
-     * @return void
-     */
-    protected function init()
-    {
-        $this->configuration = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['cps_shortnr']);
+        $this->shutdown($shortlinkDecoder->getPath());
     }
 
     /**
      * @param string $reason
      * @return void
      */
-    protected function executePageNotFoundHandling($reason = '')
+    protected function executePageNotFoundHandling($reason)
     {
-        $reason = $reason ?: $this->params['reasonText'];
         $GLOBALS['TSFE']->pageNotFoundHandler($this->configuration['pageNotFound_handling'], '', $reason);
         exit;
     }
 
     /**
-     * @param string $configurationFile
-     * @return void
+     * @return TypoScriptFrontendController
      */
-    protected function getTypoScriptArray($configurationFile)
+    protected function getTypoScriptFrontendController()
     {
-        $file = GeneralUtility::getUrl($configurationFile);
-        if (empty($file)) {
-            $this->executePageNotFoundHandling();
-        } else {
-            /** @var TypoScriptParser $typoScriptParser */
-            $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
-            $conditionMatcher = GeneralUtility::makeInstance(ConditionMatcher::class);
-            $typoScriptParser->parse($file, $conditionMatcher);
-
-            $this->typoScriptArray = $typoScriptParser->setup;
-        }
+        return $GLOBALS['TSFE'];
     }
 
     /**
@@ -203,23 +143,6 @@ class PageNotFoundController implements SingletonInterface
     }
 
     /**
-     * @return void
-     */
-    protected function writeRegisterMatches()
-    {
-        $regularExpression = $this->configuration['regExp'];
-        $regularExpression = str_replace('/', '\\/', $regularExpression);
-
-        preg_match('/' . $regularExpression . '/', $this->params['currentUrl'], $matches);
-        if (count($matches)) {
-            foreach ($matches as $key => $value) {
-                $GLOBALS['TSFE']->register['tx_cpsshortnr_match_' . $key] = $value;
-            }
-            unset($key, $value);
-        }
-    }
-
-    /**
      * @param string $path
      */
     protected function shutdown($path)
@@ -233,10 +156,7 @@ class PageNotFoundController implements SingletonInterface
             header('HTTP/1.0 301 TYPO3 cps_shortnr redirect');
             header('Location: ' . GeneralUtility::locationHeaderUrl($path));
             exit;
-        } else {
-            $this->executePageNotFoundHandling();
         }
+        $this->executePageNotFoundHandling('Empty path given');
     }
 }
-
-?>

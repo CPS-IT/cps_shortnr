@@ -1,0 +1,54 @@
+{
+  "name": "cpsit/cps-shortnr",
+  "description": "Builds links to pages and extension records with a tiny url",
+  "type": "typo3-cms-extension",
+  "keywords": [
+    "TYPO3",
+    "extension",
+    "Url",
+    "Shortener",
+    "Permanent"
+  ],
+  "homepage": "https://github.com/CPS-IT/cps_shortnr",
+  "license": "GPL-2.0+",
+  "authors": [
+    {
+      "name": "Nicole Cordes",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "typo3/cms-core": ">=7.6 <8.7"
+  },
+  "require-dev": {
+    "nimut/testing-framework": "1.x-dev",
+    "georgringer/news": "^5.3"
+  },
+  "suggest": {
+    "friendsofphp/php-cs-fixer": "Tool to automatically fix PHP coding standards issues"
+  },
+  "autoload": {
+    "psr-4": {
+      "CPSIT\\CpsShortnr\\": "Classes/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "CPSIT\\CpsShortnr\\Tests\\": "Tests/"
+    }
+  },
+  "replace": {
+    "cps_shortnr": "self.version",
+    "typo3-ter/cps_shortnr": "self.version"
+  },
+  "config": {
+    "vendor-dir": ".Build/vendor",
+    "bin-dir": ".Build/bin"
+  },
+  "extra": {
+    "typo3/cms": {
+      "cms-package-dir": "{$vendor-dir}/typo3/cms",
+      "web-dir": ".Build/Web"
+    }
+  }
+}
