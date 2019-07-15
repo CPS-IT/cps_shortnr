@@ -1,3 +1,9 @@
+2017-04-06         [RELEASE] Release of cps_shortnr 2.0.1 (Nicole Cordes)
+2017-04-06 a59b22f [TASK] Raise compatibility to TYPO3 8.7 (Nicole Cordes)
+2017-04-06 0d4f8a2 [TASK] Add and merge language tests (Nicole Cordes)
+2017-04-06 f2cbb43 [BUGFIX] Correct language handling of records (Nicole Cordes)
+2017-04-06 093d0cf [BUGFIX] Get record with workspace overlay (Nicole Cordes)
+
 2017-03-31         [RELEASE] Release of cps_shortnr 2.0.0 (Nicole Cordes)
 2017-03-30 62bcf0f [TASK] Add service icons to Readme.md (Nicole Cordes)
 2017-03-30 086ac74 [TASK] Raise compatibility to TYPO3 8.6 (Nicole Cordes)
