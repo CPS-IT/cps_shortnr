@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\CpsShortnr\Tests\Shortlink;
+namespace CPSIT\CpsShortnr\Tests\Functional\Shortlink;
 
 /***************************************************************
  *  Copyright notice
@@ -42,20 +42,39 @@ class ShortlinkTest extends AbstractShortnrTestCase
                     'record' => 6,
                     'table' => 'pages',
                 ],
+                0,
                 'P6',
+            ],
+            'Page with language uid 2' => [
+                [
+                    'record' => 2,
+                    'table' => 'pages',
+                ],
+                2,
+                'P2-2',
             ],
             'News' => [
                 [
                     'record' => 456,
                     'table' => 'tx_news_domain_model_news',
                 ],
+                0,
                 'N456',
             ],
-            'News with language uid 2' => [
+            'News with sys_language_uid 2' => [
                 [
                     'record' => 457,
                     'table' => 'tx_news_domain_model_news',
                 ],
+                0,
+                'N456-2',
+            ],
+            'News with language uid 2' => [
+                [
+                    'record' => 456,
+                    'table' => 'tx_news_domain_model_news',
+                ],
+                2,
                 'N456-2',
             ],
             'Internal news' => [
@@ -63,6 +82,7 @@ class ShortlinkTest extends AbstractShortnrTestCase
                     'record' => 42,
                     'table' => 'tx_news_domain_model_news',
                 ],
+                0,
                 'IN42',
             ],
         ];
@@ -72,29 +92,15 @@ class ShortlinkTest extends AbstractShortnrTestCase
      * @test
      * @dataProvider createReturnsShortlinkForRecordDataProvider
      * @param array $configuration
+     * @param int $language
      * @param string $expectedShortlink
      */
-    public function createReturnsShortlinkForRecord(array $configuration, $expectedShortlink)
+    public function createReturnsShortlinkForRecord(array $configuration, $language, $expectedShortlink)
     {
+        $GLOBALS['TSFE']->sys_language_uid = $language;
+
         $subject = new Shortlink();
 
         $this->assertEquals($expectedShortlink, $subject->create('', $configuration));
-    }
-
-    /**
-     * @test
-     */
-    public function createReturnsShortlinkForPageWithLanguageUid()
-    {
-        $_GET['L'] = 2;
-
-        $configuration = [
-            'record' => 2,
-            'table' => 'pages',
-        ];
-
-        $subject = new Shortlink();
-
-        $this->assertEquals('P2-2', $subject->create('', $configuration));
     }
 }

@@ -24,7 +24,7 @@ namespace CPSIT\CpsShortnr\Tests\Functional;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-use TYPO3\CMS\Core\Tests\FunctionalTestCase;
+use Nimut\TestingFramework\TestCase\FunctionalTestCase;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 abstract class AbstractShortnrTestCase extends FunctionalTestCase
@@ -52,9 +52,9 @@ abstract class AbstractShortnrTestCase extends FunctionalTestCase
     {
         parent::setUp();
 
-        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages.xml');
-        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/pages_language_overlay.xml');
-        $this->importDataSet(ORIGINAL_ROOT . 'typo3/sysext/core/Tests/Functional/Fixtures/sys_language.xml');
+        $this->importDataSet('ntf://Database/pages.xml');
+        $this->importDataSet('ntf://Database/pages_language_overlay.xml');
+        $this->importDataSet('ntf://Database/sys_language.xml');
 
         $fixturePath = ORIGINAL_ROOT . 'typo3conf/ext/cps_shortnr/Tests/Functional/Fixtures/';
         $this->importDataSet($fixturePath . 'tx_news_domain_model_news.xml');
