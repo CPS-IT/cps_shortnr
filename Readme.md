@@ -117,7 +117,7 @@ aware this should be a short identifier though.
 
 Default:
 ```
-([a-zA-Z]+)(\d+)(-(\d+))?
+ ([a-zA-Z]+)(\d+)[-]?(\d+)?
 ```
 
 The regular expression is used to split the incoming Url (shortlink) into different parts. These parts can be used inside
