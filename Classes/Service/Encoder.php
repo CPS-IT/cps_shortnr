@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\CpsShortnr\Shortlink;
+namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
  *  Copyright notice
@@ -25,11 +25,13 @@ namespace CPSIT\CpsShortnr\Shortlink;
  ***************************************************************/
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Frontend\Page\PageRepository;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
+
 
 class Encoder
 {
@@ -202,12 +204,9 @@ class Encoder
     /**
      * @return int
      */
-    private function getLanguage()
+    private function getLanguage(): int
     {
-        if (is_object($GLOBALS['TSFE'])) {
-            return (int)$GLOBALS['TSFE']->sys_language_uid;
-        }
-
-        return (int)GeneralUtility::_GP('L');
+        $languageAspect = GeneralUtility::makeInstance(Context::class)->getAspect('language');
+        return $languageAspect->getId();
     }
 }

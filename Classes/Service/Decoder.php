@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\CpsShortnr\Shortlink;
+namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
  *  Copyright notice
@@ -173,8 +173,10 @@ class Decoder
             $this->getRecordInformation();
         }
 
+
         $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
         $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table']);
+
 
         return $contentObjectRenderer->stdWrap('', $this->configuration[$this->decodeIdentifier . '.']['path.']);
     }

@@ -3,6 +3,3 @@ configFile = FILE:EXT:cps_shortnr/Resources/cps_shortnr.txt
 
 # cat=basic/enable/020; type=string; label=Regular expression:Expression to apply to the current url path. Result will be sent to the TypoScript configuration
 regExp = ([a-zA-Z]+)(\d+)(-(\d+))?
-
-# cat=basic/enable/010; type=string; label=pageNotFound_handling:Old value of pageNotFound_handling. It is called if there wasn't any decoding.
-pageNotFound_handling =
