@@ -14,9 +14,8 @@ use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Routing\PageArguments;
-use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\Controller\ErrorController;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 
@@ -65,7 +64,9 @@ class ShortUrlMiddleware implements MiddlewareInterface
             }
 
             if(empty($recordInformation) || $recordInformation['record']['hidden'] === 1 || $recordInformation['record']['deleted'] === 1 ) {
-                return $this->redirectToPage((int) $this->configuration['pageNotFound_handling'],[],301);
+                /** @var ErrorController $errorController */
+                $errorController = GeneralUtility::makeInstance(ErrorController::class);
+                return $errorController->pageNotFoundAction($request, 'Object not found');
             }
 
 
@@ -76,9 +77,9 @@ class ShortUrlMiddleware implements MiddlewareInterface
             $path = $shortlinkDecoder->getPath();
             return new RedirectResponse($path, 301);
         }
+
         return $handler->handle($request);
     }
-
 
     /**
      * @return mixed
@@ -86,21 +87,5 @@ class ShortUrlMiddleware implements MiddlewareInterface
     protected function getExtConfig()
     {
         return GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('cps_shortnr');
-    }
-
-    protected function redirectToPage($uid, $data = [], $status = 301): RedirectResponse
-    {
-        $site = GeneralUtility::makeInstance(SiteFinder::class)->getSiteByPageId($uid);
-        if ($this->piVars['languageCode']) {
-            /** @var SiteLanguage $language */
-            foreach ($site->getLanguages() as $language) {
-                if ($language->getTwoLetterIsoCode() === $this->piVars['languageCode']) {
-                    $data['_language'] = $language->getLanguageId();
-                    break;
-                }
-            }
-        }
-        $url = $site->getRouter()->generateUri($uid, $data);
-        return new RedirectResponse($url, $status);
     }
 }
