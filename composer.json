@@ -18,7 +18,7 @@
     }
   ],
   "require": {
-    "typo3/cms-core": ">=7.6 <8.8"
+    "typo3/cms-core": "^10.4"
   },
   "require-dev": {
     "nimut/testing-framework": "1.x-dev",
@@ -38,8 +38,7 @@
     }
   },
   "replace": {
-    "cps_shortnr": "self.version",
-    "typo3-ter/cps_shortnr": "self.version"
+    "cps_shortnr": "self.version"
   },
   "config": {
     "vendor-dir": ".Build/vendor",
@@ -47,6 +46,7 @@
   },
   "extra": {
     "typo3/cms": {
+      "extension-key": "cps_shortnr",
       "cms-package-dir": "{$vendor-dir}/typo3/cms",
       "web-dir": ".Build/Web"
     }
