@@ -1,3 +1,14 @@
+2021-09-10         [RELEASE] Release of cps_shortnr 3.0.0 (Timo Gockel)
+2021-08-03 64350d1 [TASK] Add metadata information into composer.json (Santiago Nunez Negrillo)
+2021-08-03 3b56fa1 [TASK] Rename Tests.backup into Tests (Santiago Nunez Negrillo)
+2021-08-03 3656cef [BUGFIX] Restore old tests (Santiago Nunez Negrillo)
+2021-08-03 61476ac [TASK] Adjust error handling in ShortUrlMiddleware (Santiago Nunez Negrillo)
+2021-08-03 e133b2e Delete .DS_Store (Krzyszotof Napora)
+2021-08-03 c30c2f0 Add redirection when record not exist and log this information (Kris Napora)
+2021-08-02 85a616a Typo3 10 compatibility (Krzyszotof Napora)
+2019-08-20 f8d0d8d Miss that one. update Regex to a more robust one. (Benjamin Rannow)
+2019-08-20 ae461fc [BUGFIX] update Regex to a more stable one. (Benjamin Rannow)
+
 2021-08-10         Typo3 10 compatibility
 2019-07-15         [RELEASE] Release of cps_shortnr 2.0.2 (Erik Rauchstein)
 2018-07-06 813fdde [TASK] Add hellurl support (Steffen Mevius)
