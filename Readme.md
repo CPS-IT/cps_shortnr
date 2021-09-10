@@ -138,14 +138,14 @@ Example:
 ```
 lib.shortlink = USER
 lib.shortlink {
-    userFunc = CPSIT\CpsShortnr\Shortlink\Shortlink->create
+    userFunc = CPSIT\CpsShortnr\Service\Shortlink->create
     record.data = TSFE:id
     table = pages
 }
 
 lib.newslink = USER
 lib.newslink {
-    userFunc = CPSIT\CpsShortnr\Shortlink\Shortlink->create
+    userFunc = CPSIT\CpsShortnr\Service\Shortlink->create
     record.data = GP:tx_news_pi1|news
     record.intval = 1
     table = tx_news_domain_model_news
@@ -156,6 +156,6 @@ lib.newslink {
 
 | Property | Data type     | Description                                     |
 | -------- | ------------- | ----------------------------------------------- |
-| userFunc | function name | CPSIT\CpsShortnr\Shortlink\Shortlink->create    |
+| userFunc | function name | CPSIT\CpsShortnr\Service\Shortlink->create    |
 | record   | stdWrap       | The uid of the record that should be encoded.   |
 | table    | text          | The table of the record that should be encoded. |

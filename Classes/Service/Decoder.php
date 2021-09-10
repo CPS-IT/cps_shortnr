@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\CpsShortnr\Shortlink;
+namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
  *  Copyright notice
@@ -25,10 +25,12 @@ namespace CPSIT\CpsShortnr\Shortlink;
  ***************************************************************/
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
+use TYPO3\CMS\Core\Log\LogLevel;
 
 class Decoder
 {
@@ -115,17 +117,21 @@ class Decoder
     }
 
     /**
-     * @throws \RuntimeException
      * @return array
      */
-    public function getRecordInformation()
+    public function getRecordInformation(): array
     {
+        $loger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+
         if ($this->decodeIdentifier === null) {
             $this->resolveDecodeIdentifier();
         }
 
         if (empty($this->configuration[$this->decodeIdentifier . '.'])) {
-            throw new \RuntimeException('Missing shortlink configuration for key "' . $this->decodeIdentifier . '"', 1490608891);
+
+            $msg = 'Missing shortlink configuration for key' . $this->decodeIdentifier . ' 1490608891';
+            $loger->log(LogLevel::ERROR, $msg, []);
+            return [];
         }
 
         $shortLinkConfiguration = $this->configuration[$this->decodeIdentifier . '.'];
@@ -135,7 +141,9 @@ class Decoder
             || empty($shortLinkConfiguration['source.']['table'])
             || empty($shortLinkConfiguration['path.'])
         ) {
-            throw new \RuntimeException('Invalid shortlink configuration', 1490608898);
+            $msg = 'Invalid shortlink configuration 1490608898';
+            $loger->log(LogLevel::ERROR, $msg, []);
+            return [];
         }
 
         // Get record
@@ -153,7 +161,10 @@ class Decoder
         $record = BackendUtility::getRecord($table, $recordUid);
 
         if ($record === null) {
-            throw new \RuntimeException('No record for "' . $recordUid . '" found', 1490609023);
+            $msg = 'No record for ' . $recordUid . ' found 1490609023';
+            $loger->log(LogLevel::ERROR, $msg, []);
+            return [];
+
         }
 
         $this->recordInformation = [
@@ -173,8 +184,10 @@ class Decoder
             $this->getRecordInformation();
         }
 
+
         $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
         $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table']);
+
 
         return $contentObjectRenderer->stdWrap('', $this->configuration[$this->decodeIdentifier . '.']['path.']);
     }

@@ -1,5 +1,5 @@
 <?php
-namespace CPSIT\CpsShortnr\Shortlink;
+namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
  *  Copyright notice
@@ -24,6 +24,8 @@ namespace CPSIT\CpsShortnr\Shortlink;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 
@@ -44,14 +46,13 @@ class Shortlink
             throw new \RuntimeException('No table defined', 1490653712);
         }
 
-        $extensionConfiguration = unserialize($GLOBALS['TYPO3_CONF_VARS']['EXT']['extConf']['cps_shortnr']);
+        $extensionConfiguration = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('cps_shortnr');
 
-        if (substr($extensionConfiguration['configFile'], 0, 5) !== 'FILE:') {
-            $configurationFile = PATH_site . $extensionConfiguration['configFile'];
+        if (!str_starts_with($extensionConfiguration['configFile'], 'FILE:')) {
+            $configurationFile = Environment::getPublicPath() . '/' . $extensionConfiguration['configFile'];
         } else {
             $configurationFile = GeneralUtility::getFileAbsFileName(substr($extensionConfiguration['configFile'], 5));
         }
-
         $encoder = Encoder::createFromConfigurationFile($configurationFile);
 
         if (empty($configuration['record.'])) {
