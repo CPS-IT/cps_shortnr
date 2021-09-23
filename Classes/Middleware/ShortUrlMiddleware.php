@@ -28,6 +28,11 @@ class ShortUrlMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+
+        if(!preg_match('/^\/[N,P,E]{1}[0-9]{1,}$/', $request->getUri()->getPath())) {
+            return $handler->handle($request);
+        }
+
         $site = $request->getAttribute('site');
         $id = $request->getQueryParams()['id'] ?? $request->getParsedBody()['id'] ?? $site->getRootPageId();
         $type = $request->getQueryParams()['type'] ?? $request->getParsedBody()['type'] ?? '0';
