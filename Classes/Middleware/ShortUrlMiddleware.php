@@ -28,8 +28,8 @@ class ShortUrlMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-
-        if(!preg_match('/^\/[N,P,E]{1}[0-9]{1,}$/', $request->getUri()->getPath())) {
+        $this->configuration = $this->getExtConfig();
+        if(!preg_match($this->configuration['runWizardRegExp'], rtrim($request->getUri()->getPath(), '/'))) {
             return $handler->handle($request);
         }
 
@@ -37,13 +37,12 @@ class ShortUrlMiddleware implements MiddlewareInterface
         $id = $request->getQueryParams()['id'] ?? $request->getParsedBody()['id'] ?? $site->getRootPageId();
         $type = $request->getQueryParams()['type'] ?? $request->getParsedBody()['type'] ?? '0';
         $url = $request->getUri()->getPath();
-        $this->configuration = $this->getExtConfig();
+
         if (!str_starts_with($this->configuration['configFile'], 'FILE:')) {
             $configurationFile = Environment::getPublicPath() . '/' . $this->configuration['configFile'];
         } else {
             $configurationFile = GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
         }
-
         $language = $request->getAttribute('language');
         $shortlinkDecoder = Decoder::createFromConfigurationFile($configurationFile, $url, $this->configuration['regExp']);
 

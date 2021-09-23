@@ -3,3 +3,8 @@ configFile = FILE:EXT:cps_shortnr/Resources/cps_shortnr.txt
 
 # cat=basic/enable/020; type=string; label=Regular expression:Expression to apply to the current url path. Result will be sent to the TypoScript configuration
 regExp = ([a-zA-Z]+)(\d+)(-(\d+))?
+
+# cat=basic/enable/020; type=string; label=Expression expresion to run Middleware
+runWizardRegExp = /^\/[N,P,E]{1}[0-9]{1,}$/
+
+
