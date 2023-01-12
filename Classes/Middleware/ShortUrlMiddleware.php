@@ -52,8 +52,7 @@ class ShortUrlMiddleware implements MiddlewareInterface
             $pageArguments = new PageArguments((int)$id, (string)$type, []);
         }
 
-
-        $GLOBALS['TSFE'] = $this->typoScriptFrontendController = GeneralUtility::makeInstance(
+        $GLOBALS['TSFE'] = GeneralUtility::makeInstance(
             TypoScriptFrontendController::class,
             GeneralUtility::makeInstance(Context::class),
             $site,
