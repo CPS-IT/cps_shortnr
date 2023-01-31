@@ -18,10 +18,10 @@
     }
   ],
   "require": {
-    "typo3/cms-core": "^10.4"
+    "typo3/cms-core": "^10.4 || ^11.5"
   },
   "require-dev": {
-    "nimut/testing-framework": "1.x-dev",
+    "nimut/testing-framework": "^4.0 || ^5.0 || ^6.0",
     "georgringer/news": "^5.3"
   },
   "suggest": {

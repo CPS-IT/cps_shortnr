@@ -24,6 +24,7 @@ namespace CPSIT\CpsShortnr\Service;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
+use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
@@ -178,7 +179,7 @@ class Decoder
     /**
      * @return string
      */
-    public function getPath()
+    public function getPath(ServerRequestInterface $request)
     {
         if ($this->recordInformation === null) {
             $this->getRecordInformation();
@@ -186,7 +187,7 @@ class Decoder
 
 
         $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-        $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table']);
+        $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table'], $request);
 
 
         return $contentObjectRenderer->stdWrap('', $this->configuration[$this->decodeIdentifier . '.']['path.']);
