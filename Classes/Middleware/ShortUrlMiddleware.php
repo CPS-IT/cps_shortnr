@@ -15,6 +15,7 @@ use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
 use TYPO3\CMS\Frontend\Controller\ErrorController;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 use TYPO3\CMS\Core\Http\RedirectResponse;
@@ -46,12 +47,18 @@ class ShortUrlMiddleware implements MiddlewareInterface
         $language = $request->getAttribute('language');
         $shortlinkDecoder = Decoder::createFromConfigurationFile($configurationFile, $url, $this->configuration['regExp']);
 
-        $GLOBALS['TSFE'] = $this->typoScriptFrontendController = GeneralUtility::makeInstance(
+        $pageArguments = $request->getAttribute('routing');
+        if (!$pageArguments instanceof PageArguments) {
+            $pageArguments = new PageArguments((int)$id, (string)$type, []);
+        }
+
+        $GLOBALS['TSFE'] = GeneralUtility::makeInstance(
             TypoScriptFrontendController::class,
             GeneralUtility::makeInstance(Context::class),
             $site,
             $language,
-            $request->getAttribute('routing', new PageArguments((int)$id, (string)$type, []))
+            $pageArguments,
+            GeneralUtility::makeInstance(FrontendUserAuthentication::class)
         );
         // Write register
         array_push($GLOBALS['TSFE']->registerStack, $GLOBALS['TSFE']->register);
@@ -78,7 +85,7 @@ class ShortUrlMiddleware implements MiddlewareInterface
                 : $recordInformation['record']['pid'];
             $context  =  GeneralUtility::makeInstance(Context::class);
             $GLOBALS['TSFE']->sys_page = GeneralUtility::makeInstance(PageRepository::class, $context);
-            $path = $shortlinkDecoder->getPath();
+            $path = $shortlinkDecoder->getPath($request);
             return new RedirectResponse($path, 301);
         }
 

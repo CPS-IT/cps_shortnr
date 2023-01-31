@@ -1,3 +1,8 @@
+2023-01-31         [RELEASE] Release of cps_shortnr 3.1.0 (Vladimir Falcon)
+2023-01-12 c08e989 Fixed PHP dynamic property declaration warning (Vladimir Falcon)
+2023-01-09 06c4aeb Code refactoring initialize middleware after typo3/cms-frontend/page-argument-validator (Vladimir Falcon)
+2023-01-05 d4c6eec Update composer and ext_emconf.php files to support  TYPO3 V-11.5.x (Vladimir Falcon)
+
 2021-09-23         [RELEASE] Release of cps_shortnr 3.0.2 (Timo Gockel)
 2021-09-23 7b7b883 Add reg exp to run middelware (Kris Napora)
 
