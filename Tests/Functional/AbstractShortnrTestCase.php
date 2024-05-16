@@ -24,7 +24,7 @@ namespace CPSIT\CpsShortnr\Tests\Functional;
  *  This copyright notice MUST APPEAR in all copies of the script!
  ***************************************************************/
 
-use Nimut\TestingFramework\TestCase\FunctionalTestCase;
+use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
 
 abstract class AbstractShortnrTestCase extends FunctionalTestCase
