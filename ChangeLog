@@ -1,3 +1,6 @@
+2024-09-06         [RELEASE] Release of cps-shortnr 3.2.0 (Dirk Wenzel)
+2024-05-16 13147e2 WIP: Upgrade for TYPO3 12 (Vladimir Falcón Piva)
+
 2023-01-31         [RELEASE] Release of cps_shortnr 3.1.0 (Vladimir Falcon)
 2023-01-12 c08e989 Fixed PHP dynamic property declaration warning (Vladimir Falcon)
 2023-01-09 06c4aeb Code refactoring initialize middleware after typo3/cms-frontend/page-argument-validator (Vladimir Falcon)
