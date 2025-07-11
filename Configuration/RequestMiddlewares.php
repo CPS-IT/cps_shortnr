@@ -1,12 +1,16 @@
 <?php
 
+use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
 return [
     'frontend' => [
-        'cps-shortnr' => [
-            'target' => \CPSIT\CpsShortnr\Middleware\ShortUrlMiddleware::class,
+        'CPSIT/ShortNr/ShortNrResolver' => [
+            'target' => ShortNumberMiddleware::class,
             'before' => [
-                'typo3/cms-frontend/page-resolver',
+                'typo3/cms-frontend/backend-user-authentication',
+                'typo3/cms-adminpanel/sql-logging',
+                'typo3/cms-frontend/site',
+                'typo3/cms-core/normalized-params-attribute'
             ],
-        ],
-    ],
+        ]
+    ]
 ];
