@@ -33,18 +33,19 @@ class ConfigLoader
      */
     public function getConfig(): array
     {
+        $suffix = $this->getConfigFileSuffix();
         // cache file is outdated ... remove and process a fresh one
-        if (!$this->isConfigCacheValid()) {
-            $this->cacheManager->getArrayFileCache()->invalidateFileCache();
+        if (!$this->isConfigCacheValid($suffix)) {
+            $this->cacheManager->getArrayFileCache()->invalidateFileCache($suffix);
+        } else {
+            $config = $this->cacheManager->getArrayFileCache()->readArrayFileCache($suffix);
+            if ($config)
+                return $config;
         }
-
-        $config = $this->cacheManager->getArrayFileCache()->readArrayFileCache();
-        if ($config)
-            return $config;
 
         $config = self::$runtimeCache['config'] ??= $this->parseYamlConfigFile($this->getConfigFilePath());
         if ($config) {
-            $this->cacheManager->getArrayFileCache()->writeArrayFileCache($config);
+            $this->cacheManager->getArrayFileCache()->writeArrayFileCache($config, $suffix);
         }
 
         return $config ?? [];
@@ -73,25 +74,36 @@ class ConfigLoader
     /**
      * @throws ShortNrConfigException
      */
-    protected function isConfigCacheValid(): bool
+    protected function isConfigCacheValid(string $suffix = ''): bool
     {
         // is yaml file is more up to date then cache file ... it's considered not valid
         // we only run this check once per execution
-        return self::$runtimeCache['file']['valid'] ??= (function(): ?bool {
+        return (self::$runtimeCache['file']['valid'] ??= (function(string $suffix): ?bool {
             $configPath = $this->getConfigFilePath();
             if ($configPath === null) {
                 return null; // No config file configured
             }
 
             $yamlMTime = $this->fileSystem->filemtime($configPath);
-            $cacheMTime = $this->cacheManager->getArrayFileCache()->getFileModificationTime();
+            $cacheMTime = $this->cacheManager->getArrayFileCache()->getFileModificationTime($suffix);
 
             if ($yamlMTime === false || $cacheMTime === null) {
                 return null;
             }
 
             return $yamlMTime <= $cacheMTime;
-        })();
+        })($suffix)) ?? false;
+    }
+
+    /**
+     * generates a hash based on the given config location
+     *
+     * @return string
+     * @throws ShortNrConfigException
+     */
+    public function getConfigFileSuffix(): string
+    {
+        return self::$runtimeCache['file']['hash'] ??= md5($this->getConfigFilePath() ?? '');
     }
 
     /**

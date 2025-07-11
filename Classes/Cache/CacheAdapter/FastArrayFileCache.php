@@ -14,7 +14,7 @@ class FastArrayFileCache
 {
     private static array $runtimeCache = [];
 
-    private const FILE_NAME = 'config.php';
+    private const FILE_NAME = 'config%s.php';
 
     private readonly ?FrontendInterface $cache;
 
@@ -24,22 +24,24 @@ class FastArrayFileCache
     {}
 
     /**
+     * @param string $suffix
      * @return array|null
      */
-    public function readArrayFileCache(): ?array
+    public function readArrayFileCache(string $suffix = ''): ?array
     {
-        return self::$runtimeCache['data']['config'] ??= $this->fetchDataFromFileCache();
+        return self::$runtimeCache['data']['config'] ??= $this->fetchDataFromFileCache($suffix);
     }
 
     /**
      * @param array $data
+     * @param string $suffix
      * @return void
      * @throws ShortNrCacheException
      */
-    public function writeArrayFileCache(array $data): void
+    public function writeArrayFileCache(array $data, string $suffix = ''): void
     {
         self::$runtimeCache['data']['config'] = $data;
-        $cacheFile = $this->getArrayCacheFilePath();
+        $cacheFile = $this->getArrayCacheFilePath($suffix);
         $this->ensureCacheDirectoryExists($cacheFile);
         $this->writeArrayToFile($data, $cacheFile);
     }
@@ -88,9 +90,13 @@ class FastArrayFileCache
         return "<?php" . PHP_EOL . PHP_EOL . "return " . var_export($data, true) . ";" . PHP_EOL;
     }
 
-    private function fetchDataFromFileCache(): ?array
+    /**
+     * @param string $suffix
+     * @return array|null
+     */
+    private function fetchDataFromFileCache(string $suffix): ?array
     {
-        $cacheFileLocation = $this->getArrayCacheFilePath();
+        $cacheFileLocation = $this->getArrayCacheFilePath($suffix);
         if (!$this->fileSystem->file_exists($cacheFileLocation)) {
             return null;
         }
@@ -105,19 +111,26 @@ class FastArrayFileCache
 
     /**
      * empty cache and remove file
+     *
+     * @param string $suffix
+     * @return void
      */
-    public function invalidateFileCache(): void
+    public function invalidateFileCache(string $suffix = ''): void
     {
         unset(self::$runtimeCache['data']['config']);
-        $cacheFileLocation = $this->getArrayCacheFilePath();
+        $cacheFileLocation = $this->getArrayCacheFilePath($suffix);
         if ($this->fileSystem->file_exists($cacheFileLocation)) {
             $this->fileSystem->unlink($cacheFileLocation);
         }
     }
 
-    public function getFileModificationTime(): ?int
+    /**
+     * @param string $suffix
+     * @return int|null
+     */
+    public function getFileModificationTime(string $suffix = ''): ?int
     {
-        $mtime = $this->fileSystem->filemtime($this->getArrayCacheFilePath());
+        $mtime = $this->fileSystem->filemtime($this->getArrayCacheFilePath($suffix));
         if($mtime === false){
             return null;
         }
@@ -126,11 +139,12 @@ class FastArrayFileCache
     }
 
     /**
+     * @param string $suffix
      * @return string
      */
-    private function getArrayCacheFilePath(): string
+    private function getArrayCacheFilePath(string $suffix = ''): string
     {
-        return self::$runtimeCache['path']['cacheArrayFile'] ??=  Path::join($this->getFileCacheDirLocationString(), self::FILE_NAME);
+        return self::$runtimeCache['path']['cacheArrayFile'] ??= Path::join($this->getFileCacheDirLocationString(), sprintf(self::FILE_NAME, $suffix));
     }
 
     /**
@@ -146,6 +160,10 @@ class FastArrayFileCache
         );
     }
 
+    /**
+     * @param string $dirPath
+     * @return bool
+     */
     private function createDirIfNotExists(string $dirPath): bool
     {
         if (!$this->fileSystem->file_exists($dirPath)) {
