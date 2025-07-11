@@ -1,0 +1,4 @@
+/.Build/
+/Tests/.phpunit_result/
+.idea
+.DS_Store

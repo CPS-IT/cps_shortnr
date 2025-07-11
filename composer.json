@@ -43,7 +43,6 @@
         "typo3/cms": {
             "extension-key": "cps_shortnr",
             "cms-package-dir": "{$vendor-dir}/typo3/cms",
-            "app-dir": ".Build",
             "web-dir": ".Build/public"
         }
     }

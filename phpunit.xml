@@ -1,9 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- https://phpunit.de/manual/current/en/appendixes.configuration.html -->
-<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.1/phpunit.xsd" backupGlobals="true" bootstrap=".Build/vendor/typo3/testing-framework/Resources/Core/Build/UnitTestsBootstrap.php" colors="true" failOnRisky="true" failOnWarning="true">
+<phpunit
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.1/phpunit.xsd"
+        backupGlobals="true"
+        bootstrap=".Build/vendor/typo3/testing-framework/Resources/Core/Build/UnitTestsBootstrap.php"
+        colors="true"
+        failOnRisky="true"
+        failOnWarning="true"
+        cacheResultFile="Tests/.phpunit_result/.phpunit.result.cache"
+>
   <coverage>
     <report>
-      <clover outputFile="Tests/phpunit_result/tests-clover.xml"/>
+      <clover outputFile="Tests/.phpunit_result/tests-clover.xml"/>
       <html outputDirectory="Tests/.phpunit_result/codeCoverage" highLowerBound="80"/>
     </report>
   </coverage>
