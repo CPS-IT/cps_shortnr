@@ -19,3 +19,16 @@ ShortNr:
     type: page
     prefix: PAGE
     table: pages
+  press:
+    prefix: pm
+    type: plugin
+    table: tx_bmubarticles_domain_model_article
+    condition:
+      article_type: press
+    pluginConfig:
+      extension: BmubArticles
+      plugin: Articles
+      pid: 289
+      action: show
+      controller: Article
+      objectName: article # name for value for the UID

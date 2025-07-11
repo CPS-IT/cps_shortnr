@@ -10,3 +10,7 @@ services:
   CPSIT\ShortNr\Service\FileSystem\FileSystemInterface:
     alias: CPSIT\ShortNr\Service\FileSystem\FileSystem
     public: true
+
+  CPSIT\ShortNr\Service\Path\PathResolverInterface:
+    alias: CPSIT\ShortNr\Service\Path\Typo3PathResolver
+    public: true

@@ -6,10 +6,10 @@ use CPSIT\ShortNr\Cache\CacheManager;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\FileSystem\FileSystemInterface;
+use CPSIT\ShortNr\Service\Path\PathResolverInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class ConfigLoader
 {
@@ -19,11 +19,13 @@ class ConfigLoader
      * @param CacheManager $cacheManager
      * @param ExtensionConfiguration $extensionConfiguration
      * @param FileSystemInterface $fileSystem
+     * @param PathResolverInterface $pathResolver
      */
     public function __construct(
         private readonly CacheManager $cacheManager,
         private readonly ExtensionConfiguration $extensionConfiguration,
-        private readonly FileSystemInterface $fileSystem
+        private readonly FileSystemInterface $fileSystem,
+        private readonly PathResolverInterface $pathResolver
     )
     {}
 
@@ -140,7 +142,7 @@ class ConfigLoader
             $path = str_replace('FILE:', '', $path);
         }
 
-        return GeneralUtility::getFileAbsFileName($path);
+        return $this->pathResolver->getAbsolutePath($path);
     }
 
     /**

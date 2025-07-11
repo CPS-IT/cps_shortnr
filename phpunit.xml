@@ -10,7 +10,9 @@
         failOnWarning="true"
         cacheResultFile="Tests/.phpunit_result/.phpunit.result.cache"
 >
-  <coverage>
+  <coverage
+          ignoreDeprecatedCodeUnits="true"
+          disableCodeCoverageIgnore="true">
     <report>
       <clover outputFile="Tests/.phpunit_result/tests-clover.xml"/>
       <html outputDirectory="Tests/.phpunit_result/codeCoverage" highLowerBound="80"/>
@@ -34,5 +36,9 @@
     <include>
       <directory>Classes</directory>
     </include>
+    <exclude>
+      <directory>Classes/Service/FileSystem</directory>
+      <directory>Classes/Exception</directory>
+    </exclude>
   </source>
 </phpunit>
