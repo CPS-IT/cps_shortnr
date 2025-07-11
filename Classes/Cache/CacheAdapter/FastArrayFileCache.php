@@ -1,0 +1,157 @@
+<?php declare(strict_types=1);
+
+namespace CPSIT\ShortNr\Cache\CacheAdapter;
+
+use CPSIT\ShortNr\Config\ExtensionSetup;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Service\FileSystem\FileSystemInterface;
+use Symfony\Component\Filesystem\Path;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
+use TYPO3\CMS\Core\Core\Environment;
+use Throwable;
+
+class FastArrayFileCache
+{
+    private static array $runtimeCache = [];
+
+    private const FILE_NAME = 'config.php';
+
+    private readonly ?FrontendInterface $cache;
+
+    public function __construct(
+        private readonly FileSystemInterface $fileSystem
+    )
+    {}
+
+    /**
+     * @return array|null
+     */
+    public function readArrayFileCache(): ?array
+    {
+        return self::$runtimeCache['data']['config'] ??= $this->fetchDataFromFileCache();
+    }
+
+    /**
+     * @param array $data
+     * @return void
+     * @throws ShortNrCacheException
+     */
+    public function writeArrayFileCache(array $data): void
+    {
+        self::$runtimeCache['data']['config'] = $data;
+        $cacheFile = $this->getArrayCacheFilePath();
+        $this->ensureCacheDirectoryExists($cacheFile);
+        $this->writeArrayToFile($data, $cacheFile);
+    }
+
+    /**
+     * @param string $cacheFile
+     * @return void
+     * @throws ShortNrCacheException
+     */
+    private function ensureCacheDirectoryExists(string $cacheFile): void
+    {
+        $cacheDir = Path::getDirectory($cacheFile);
+
+        if (!$this->createDirIfNotExists($cacheDir)) {
+            throw new ShortNrCacheException('Could not create dir: ' . $cacheDir);
+        }
+    }
+
+    /**
+     * @param array $data
+     * @param string $cacheFile
+     * @return void
+     * @throws ShortNrCacheException
+     */
+    private function writeArrayToFile(array $data, string $cacheFile): void
+    {
+        $cacheDir = Path::getDirectory($cacheFile);
+        $tempFile = $this->fileSystem->tempnam($cacheDir, ExtensionSetup::CACHE_KEY);
+        $phpCode = $this->generatePhpArrayCode($data);
+
+        try {
+            $this->fileSystem->file_put_contents($tempFile, $phpCode, LOCK_EX);
+            $this->fileSystem->rename($tempFile, $cacheFile);
+        } catch (Throwable $e) {
+            $this->fileSystem->unlink($tempFile);
+            throw new ShortNrCacheException('Could not write Cache: ' . $e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * @param array $data
+     * @return string
+     */
+    private function generatePhpArrayCode(array $data): string
+    {
+        return "<?php" . PHP_EOL . PHP_EOL . "return " . var_export($data, true) . ";" . PHP_EOL;
+    }
+
+    private function fetchDataFromFileCache(): ?array
+    {
+        $cacheFileLocation = $this->getArrayCacheFilePath();
+        if (!$this->fileSystem->file_exists($cacheFileLocation)) {
+            return null;
+        }
+
+        try {
+            $result = $this->fileSystem->require($cacheFileLocation);
+            return is_array($result) ? $result : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * empty cache and remove file
+     */
+    public function invalidateFileCache(): void
+    {
+        unset(self::$runtimeCache['data']['config']);
+        $cacheFileLocation = $this->getArrayCacheFilePath();
+        if ($this->fileSystem->file_exists($cacheFileLocation)) {
+            $this->fileSystem->unlink($cacheFileLocation);
+        }
+    }
+
+    public function getFileModificationTime(): ?int
+    {
+        $mtime = $this->fileSystem->filemtime($this->getArrayCacheFilePath());
+        if($mtime === false){
+            return null;
+        }
+
+        return $mtime;
+    }
+
+    /**
+     * @return string
+     */
+    private function getArrayCacheFilePath(): string
+    {
+        return self::$runtimeCache['path']['cacheArrayFile'] ??=  Path::join($this->getFileCacheDirLocationString(), self::FILE_NAME);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getFileCacheDirLocationString(): string
+    {
+        return self::$runtimeCache['path']['cacheDir'] ??= Path::join(
+            Environment::getVarPath(),
+            'cache',
+            'code',
+            ExtensionSetup::CACHE_KEY
+        );
+    }
+
+    private function createDirIfNotExists(string $dirPath): bool
+    {
+        if (!$this->fileSystem->file_exists($dirPath)) {
+            return $this->fileSystem->mkdir($dirPath, 0755, true);
+        }
+
+        return true;
+    }
+}

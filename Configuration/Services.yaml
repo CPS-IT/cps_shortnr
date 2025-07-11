@@ -2,7 +2,11 @@ services:
   _defaults:
     autowire: true
     autoconfigure: true
-    public: false
+    public: true
 
   CPSIT\ShortNr\:
     resource: '../Classes/*'
+
+  CPSIT\ShortNr\Service\FileSystem\FileSystemInterface:
+    alias: CPSIT\ShortNr\Service\FileSystem\FileSystem
+    public: true
