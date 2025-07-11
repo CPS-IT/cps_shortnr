@@ -1,0 +1,21 @@
+ShortNr:
+  notFound: "/fehler-404" # support page id or hard-coded slug (detects it via is_numeric)
+  types:
+    page: "\\CPSIT\\ShortNr\\Service\\Processor\\PageProcessor"
+    plugin: "\\CPSIT\\ShortNr\\Service\\Processor\\PluginProcessor" # add custom processor here
+
+  _default:
+    # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
+    regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
+    regexGroupMapping: # regex group mapping
+      prefix: "{match-1}"
+      id: "{match-2}"
+      language_id: "{match-3}"
+    condition: # database conditions
+      uid: "{match-2}"
+      sys_language_uid: "{match-3}"
+
+  pages: # default page
+    type: page
+    prefix: PAGE
+    table: pages
