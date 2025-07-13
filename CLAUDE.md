@@ -36,6 +36,8 @@ Classes/
 │   │       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
 │   │       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
 │   └── Url/ - URL encoding/decoding services (empty, future development)
+├── ViewHelpers/
+│   └── ShortUrlViewHelper.php - Fluid ViewHelper for generating short URLs
 └── Exception/ - Custom exceptions
 ```
 
@@ -43,7 +45,7 @@ Classes/
 
 * URL decoder Service (will be in Service/Url/)
 * URL encoder Service (will be in Service/Url/)
-* URL encoder ViewHelper
+* ShortUrlViewHelper business logic (placeholder implementation)
 * tbd...
 
 ### Key Architectural Patterns
@@ -110,7 +112,8 @@ Tests/Unit/
 ├── Config/
 │   ├── ConfigLoaderTest.php
 │   └── ExtensionSetupTest.php
-└── Middleware/ShortNumberMiddlewareTest.php
+├── Middleware/ShortNumberMiddlewareTest.php
+└── ViewHelpers/ShortUrlViewHelperTest.php
 ```
 
 ### Testing Strategy & Quality Standards
@@ -131,6 +134,8 @@ Tests/Unit/
 6. **No reflection testing** - Never test private properties or methods directly
 7. **Contract assertions** - Assert on public behavior and outcomes
 8. **Remove anti-patterns** - Delete tests that provide false confidence (mock configuration testing)
+9. **Eliminate redundancy** - Never duplicate test scenarios between methods and DataProviders
+10. **Comprehensive edge cases** - Include boundary conditions, null values, complex parameters
 
 ### Low-Quality Test Anti-Patterns to Avoid
 - **Reflection-based testing** - Testing private properties/methods breaks encapsulation
@@ -138,6 +143,8 @@ Tests/Unit/
 - **Mock configuration testing** - Circular tests that validate mock setup rather than behavior
 - **Meaningless instantiation tests** - Tests that only verify object creation
 - **Wrapper function testing** - Testing simple TYPO3/framework wrappers without added logic
+- **Test method redundancy** - Separate test methods that duplicate DataProvider scenarios
+- **Shallow edge case coverage** - Missing boundary conditions, null handling, complex parameter structures
 
 ### Test Commands
 ```bash
@@ -345,3 +352,36 @@ At the end of each session, update this document with:
 2. **Behavioral Middleware Testing** - Middleware tests should focus on HTTP request/response contracts using PSR-15 patterns with DataProviders for request scenarios - validates actual middleware behavior rather than dependency injection mechanics
 
 3. **Test Quality Enforcement** - Established concrete criteria for high-quality tests: behavioral focus, refactoring safety, interface mocking, contract assertions - provides clear guidelines for maintaining test architecture alignment
+
+### Session Date: 2025-01-13
+**Changes Made**: Created ShortUrlViewHelper placeholder with modern TYPO3 12/13 standards, updated architecture documentation
+
+**New Insights**:
+
+1. **Modern TYPO3 ViewHelper Standards** - TYPO3 12/13 requires final classes with strict typing, no deprecated traits, and clean argument registration via `initializeArguments()` - ensures future-proof ViewHelper development aligned with current framework evolution
+
+2. **ViewHelper Architecture Strategy** - ViewHelpers should be dependency-free placeholders initially, designed for future service integration (EncodingService) rather than direct config access - maintains clean separation of concerns and prevents tight coupling to configuration layer
+
+3. **Professional Interface Design** - Complete argument interfaces (target, type, language, absolute, parameters) designed upfront enable comprehensive usage patterns while maintaining backward compatibility - critical for extension adoption and developer experience
+
+### Session Date: 2025-01-13
+**Changes Made**: Created comprehensive ViewHelper test suite with canary pattern and fixed argument default handling
+
+**New Insights**:
+
+1. **Canary Test Pattern for Placeholders** - Tests that expect placeholder results serve as automatic reminders to update tests when real implementation is added - ensures test-implementation synchronization and prevents forgotten test updates when business logic changes
+
+2. **ViewHelper Argument Handling** - TYPO3 ViewHelpers require explicit null coalescing for optional arguments (`$this->arguments['key'] ?? default`) even with `initializeArguments()` defaults - critical for preventing undefined array key warnings in strict PHP environments
+
+3. **Standard PHPUnit for TYPO3 ViewHelpers** - Simple ViewHelpers without TYPO3 dependencies should use standard `TestCase` rather than TYPO3 testing framework - maintains architectural consistency and avoids unnecessary framework overhead for unit testing
+
+### Session Date: 2025-01-13
+**Changes Made**: Enhanced test quality standards, fixed ViewHelper test redundancy and edge case coverage
+
+**New Insights**:
+
+1. **Test Redundancy Detection** - Duplicate scenarios between test methods and DataProviders must be eliminated immediately - maintains DRY principles and prevents false confidence in coverage metrics
+
+2. **DataProvider-First Testing Strategy** - Always consolidate test scenarios into DataProviders rather than separate methods - improves maintainability and ensures comprehensive scenario coverage without duplication
+
+3. **Quality Standard Enforcement Process** - Systematic quality review (create → test → recheck → fix → document) prevents technical debt accumulation - establishes iterative improvement cycle for maintaining architectural alignment
