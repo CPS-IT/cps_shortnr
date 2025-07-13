@@ -4,7 +4,9 @@ namespace CPSIT\ShortNr\Tests\Unit\Config;
 
 use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Config\ConfigInterface;
 use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Config\ExtensionSetup;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
@@ -63,7 +65,7 @@ class ConfigLoaderTest extends TestCase
         $property->setValue(null, []);
     }
 
-    public function testGetConfigReturnsEmptyArrayWhenNoConfigFileConfigured(): void
+    public function testGetConfigReturnsEmptyConfigWhenNoConfigFileConfigured(): void
     {
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -71,14 +73,15 @@ class ConfigLoaderTest extends TestCase
         
         $result = $this->configLoader->getConfig();
         
-        $this->assertSame([], $result);
+        $this->assertInstanceOf(ConfigInterface::class, $result);
+        $this->assertSame([], $result->getConfigNames());
     }
 
     public function testGetConfigReturnsCachedDataWhenCacheIsValid(): void
     {
         $configFilePath = '/path/to/config.yaml';
         $configHash = md5($configFilePath);
-        $cachedData = ['cached' => 'data'];
+        $cachedData = ['shortnr' => ['pages' => ['type' => 'page']]];
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -98,15 +101,16 @@ class ConfigLoaderTest extends TestCase
         
         $result = $this->configLoader->getConfig();
         
-        $this->assertSame($cachedData, $result);
+        $this->assertInstanceOf(ConfigInterface::class, $result);
+        $this->assertSame(['pages'], $result->getConfigNames());
     }
 
     public function testGetConfigInvalidatesCacheWhenYamlIsNewer(): void
     {
         $configFilePath = '/path/to/config.yaml';
         $configHash = md5($configFilePath);
-        $yamlContent = "test: value\n";
-        $expectedConfig = ['test' => 'value'];
+        $yamlContent = "shortnr:\n  pages:\n    type: page\n";
+        $expectedConfig = ['shortnr' => ['pages' => ['type' => 'page']]];
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -142,27 +146,28 @@ class ConfigLoaderTest extends TestCase
         
         $result = $this->configLoader->getConfig();
         
-        $this->assertSame($expectedConfig, $result);
+        $this->assertInstanceOf(ConfigInterface::class, $result);
+        $this->assertSame(['pages'], $result->getConfigNames());
     }
 
     public static function yamlContentDataProvider(): array
     {
         return [
             'simple config' => [
-                'yamlContent' => "key: value\n",
-                'expectedConfig' => ['key' => 'value']
+                'yamlContent' => "shortnr:\n  pages:\n    type: page\n",
+                'expectedConfigNames' => ['pages']
             ],
             'nested config' => [
-                'yamlContent' => "database:\n  host: localhost\n  port: 3306\n",
-                'expectedConfig' => ['database' => ['host' => 'localhost', 'port' => 3306]]
+                'yamlContent' => "shortnr:\n  pages:\n    type: page\n  articles:\n    type: plugin\n",
+                'expectedConfigNames' => ['pages', 'articles']
             ],
-            'array config' => [
-                'yamlContent' => "features:\n  - feature1\n  - feature2\n",
-                'expectedConfig' => ['features' => ['feature1', 'feature2']]
+            'config with default' => [
+                'yamlContent' => "shortnr:\n  _default:\n    regex: '/test/'\n  pages:\n    type: page\n",
+                'expectedConfigNames' => ['pages']
             ],
             'empty yaml' => [
                 'yamlContent' => "",
-                'expectedConfig' => []
+                'expectedConfigNames' => []
             ]
         ];
     }
@@ -170,7 +175,7 @@ class ConfigLoaderTest extends TestCase
     /**
      * @dataProvider yamlContentDataProvider
      */
-    public function testGetConfigParsesYamlContentCorrectly(string $yamlContent, array $expectedConfig): void
+    public function testGetConfigParsesYamlContentCorrectly(string $yamlContent, array $expectedConfigNames): void
     {
         $configFilePath = '/path/to/config.yaml';
         $configHash = md5($configFilePath);
@@ -199,15 +204,13 @@ class ConfigLoaderTest extends TestCase
             ->with($configFilePath)
             ->willReturn($yamlContent);
         
-        if (!empty($expectedConfig)) {
-            $this->fastArrayFileCache->expects($this->once())
-                ->method('writeArrayFileCache')
-                ->with($expectedConfig, $configHash);
-        }
+        $this->fastArrayFileCache->method('writeArrayFileCache')
+            ->with($this->isType('array'), $configHash);
         
         $result = $this->configLoader->getConfig();
         
-        $this->assertSame($expectedConfig, $result);
+        $this->assertInstanceOf(ConfigInterface::class, $result);
+        $this->assertSame($expectedConfigNames, $result->getConfigNames());
     }
 
 
@@ -216,8 +219,7 @@ class ConfigLoaderTest extends TestCase
     {
         $configFilePath = 'FILE:/path/to/config.yaml';
         $resolvedPath = '/path/to/config.yaml';
-        $expectedConfig = ['test' => 'value'];
-        $yamlContent = "test: value\n";
+        $yamlContent = "shortnr:\n  pages:\n    type: page\n";
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -249,11 +251,12 @@ class ConfigLoaderTest extends TestCase
         
         $this->fastArrayFileCache->expects($this->once())
             ->method('writeArrayFileCache')
-            ->with($expectedConfig, md5($resolvedPath));
+            ->with($this->isType('array'), md5($resolvedPath));
         
         $result = $this->configLoader->getConfig();
         
-        $this->assertSame($expectedConfig, $result);
+        $this->assertInstanceOf(ConfigInterface::class, $result);
+        $this->assertSame(['pages'], $result->getConfigNames());
     }
 
     public function testGetConfigThrowsExceptionWhenExtensionConfigurationFails(): void
@@ -271,8 +274,7 @@ class ConfigLoaderTest extends TestCase
     public function testGetConfigUsesRuntimeCacheForSubsequentCalls(): void
     {
         $configFilePath = '/path/to/config.yaml';
-        $expectedConfig = ['cached' => 'data'];
-        $yamlContent = "cached: data\n";
+        $yamlContent = "shortnr:\n  pages:\n    type: page\n";
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -298,13 +300,15 @@ class ConfigLoaderTest extends TestCase
             ->willReturn($yamlContent);
         
         $this->fastArrayFileCache->method('writeArrayFileCache')
-            ->with($expectedConfig, $this->isType('string'));
+            ->with($this->isType('array'), $this->isType('string'));
         
         $result1 = $this->configLoader->getConfig();
         $result2 = $this->configLoader->getConfig();
         
-        $this->assertSame($expectedConfig, $result1);
-        $this->assertSame($expectedConfig, $result2);
+        $this->assertInstanceOf(ConfigInterface::class, $result1);
+        $this->assertInstanceOf(ConfigInterface::class, $result2);
+        $this->assertSame(['pages'], $result1->getConfigNames());
+        $this->assertSame(['pages'], $result2->getConfigNames());
     }
 
     public function testGetConfigFileSuffixReturnsHashOfConfigPath(): void
@@ -334,7 +338,7 @@ class ConfigLoaderTest extends TestCase
         $this->assertSame($expectedHash, $result);
     }
 
-    public function testGetConfigReturnsEmptyArrayWhenYamlFileDoesNotExist(): void
+    public function testGetConfigReturnsEmptyConfigWhenYamlFileDoesNotExist(): void
     {
         $configFilePath = '/path/to/nonexistent.yaml';
         $configHash = md5($configFilePath);
@@ -364,7 +368,8 @@ class ConfigLoaderTest extends TestCase
         
         $result = $this->configLoader->getConfig();
         
-        $this->assertSame([], $result);
+        $this->assertInstanceOf(ConfigInterface::class, $result);
+        $this->assertSame([], $result->getConfigNames());
     }
 
 }

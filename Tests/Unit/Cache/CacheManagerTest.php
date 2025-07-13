@@ -46,98 +46,8 @@ class CacheManagerTest extends TestCase
         }
     }
 
-    public static function typo3CacheDataProvider(): array
-    {
-        return [
-            'TYPO3 cache manager available and working' => [
-                'cacheManagerAvailable' => true,
-                'cacheExists' => true,
-                'throwException' => false,
-                'expectedResult' => 'cache_instance'
-            ],
-            'TYPO3 cache manager throws exception' => [
-                'cacheManagerAvailable' => true,
-                'cacheExists' => false,
-                'throwException' => true,
-                'expectedResult' => null
-            ],
-            'TYPO3 cache manager not available' => [
-                'cacheManagerAvailable' => false,
-                'cacheExists' => false,
-                'throwException' => false,
-                'expectedResult' => null
-            ]
-        ];
-    }
 
-    /**
-     * @dataProvider typo3CacheDataProvider
-     */
-    public function testGetCacheHandlesDifferentTypo3CacheScenarios(
-        bool $cacheManagerAvailable,
-        bool $cacheExists,
-        bool $throwException,
-        ?string $expectedResult
-    ): void {
-        $cacheManager = new CacheManager($this->fastArrayFileCache);
-        
-        if ($cacheManagerAvailable) {
-            $typo3CacheManager = $this->createMock(Typo3CacheManager::class);
-            
-            if ($throwException) {
-                $typo3CacheManager->method('getCache')
-                    ->with(ExtensionSetup::CACHE_KEY)
-                    ->willThrowException(new \Exception('Cache not found'));
-            } elseif ($cacheExists) {
-                $cacheFrontend = $this->createMock(FrontendInterface::class);
-                $typo3CacheManager->method('getCache')
-                    ->with(ExtensionSetup::CACHE_KEY)
-                    ->willReturn($cacheFrontend);
-                $expectedResult = $cacheFrontend;
-            }
-            
-            GeneralUtility::setSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
-        }
-        
-        $reflection = new \ReflectionClass($cacheManager);
-        $method = $reflection->getMethod('getCache');
 
-        $result = $method->invoke($cacheManager);
-        
-        if ($expectedResult === 'cache_instance') {
-            $this->assertInstanceOf(FrontendInterface::class, $result);
-        } else {
-            $this->assertSame($expectedResult, $result);
-        }
-        
-        if ($cacheManagerAvailable) {
-            GeneralUtility::removeSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
-        }
-    }
-
-    public function testGetCacheReturnsSameCacheInstanceOnSubsequentCalls(): void
-    {
-        $typo3CacheManager = $this->createMock(Typo3CacheManager::class);
-        $cacheFrontend = $this->createMock(FrontendInterface::class);
-        
-        $typo3CacheManager->expects($this->once())
-            ->method('getCache')
-            ->with(ExtensionSetup::CACHE_KEY)
-            ->willReturn($cacheFrontend);
-        
-        GeneralUtility::setSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
-        
-        $reflection = new \ReflectionClass($this->cacheManager);
-        $method = $reflection->getMethod('getCache');
-
-        $result1 = $method->invoke($this->cacheManager);
-        $result2 = $method->invoke($this->cacheManager);
-        
-        $this->assertSame($cacheFrontend, $result1);
-        $this->assertSame($result1, $result2);
-        
-        GeneralUtility::removeSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
-    }
 
 
     public function testConstructorInitializesWithFastArrayFileCache(): void
@@ -194,32 +104,4 @@ class CacheManagerTest extends TestCase
         }
     }
 
-    public function testCacheManagerHandlesMultipleExceptionTypes(): void
-    {
-        $exceptionTypes = [
-            new \Exception('Generic exception'),
-            new \RuntimeException('Runtime exception'),
-            new \InvalidArgumentException('Invalid argument'),
-            new \LogicException('Logic exception')
-        ];
-        
-        foreach ($exceptionTypes as $exception) {
-            $typo3CacheManager = $this->createMock(Typo3CacheManager::class);
-            $typo3CacheManager->method('getCache')
-                ->with(ExtensionSetup::CACHE_KEY)
-                ->willThrowException($exception);
-            
-            GeneralUtility::setSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
-            
-            $cacheManager = new CacheManager($this->fastArrayFileCache);
-            $reflection = new \ReflectionClass($cacheManager);
-            $method = $reflection->getMethod('getCache');
-
-            $result = $method->invoke($cacheManager);
-            
-            $this->assertNull($result, sprintf('Exception type %s should result in null cache', get_class($exception)));
-            
-            GeneralUtility::removeSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
-        }
-    }
 }

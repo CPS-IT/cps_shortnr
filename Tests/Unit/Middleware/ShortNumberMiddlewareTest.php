@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Tests\Unit\Middleware;
 
 use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
@@ -39,7 +40,8 @@ class ShortNumberMiddlewareTest extends TestCase
     ): void {
         // Arrange
         $request = $this->createRequestMock($requestPath);
-        $this->configLoader->method('getConfig')->willReturn($configData);
+        $config = new Config($configData);
+        $this->configLoader->method('getConfig')->willReturn($config);
         
         if ($expectsHandlerCall) {
             $this->handler
@@ -90,13 +92,13 @@ class ShortNumberMiddlewareTest extends TestCase
             ],
             'URL with query parameters scenario' => [
                 'requestPath' => '/page',
-                'configData' => ['pages' => ['prefix' => 'p']],
+                'configData' => ['shortnr' => ['pages' => ['prefix' => 'p']]],
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ],
             'Potential future short URL pattern' => [
                 'requestPath' => '/p123',
-                'configData' => ['pages' => ['prefix' => 'p']],
+                'configData' => ['shortnr' => ['pages' => ['prefix' => 'p']]],
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ]
@@ -106,11 +108,12 @@ class ShortNumberMiddlewareTest extends TestCase
     public function testMiddlewareCallsConfigLoaderForEveryRequest(): void
     {
         $request = $this->createRequestMock('/any-path');
+        $config = new Config([]);
         
         $this->configLoader
             ->expects($this->once())
             ->method('getConfig')
-            ->willReturn([]);
+            ->willReturn($config);
         
         $this->handler->method('handle')->willReturn($this->handlerResponse);
         

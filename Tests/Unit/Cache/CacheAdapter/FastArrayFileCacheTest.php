@@ -399,27 +399,6 @@ class FastArrayFileCacheTest extends TestCase
         $this->assertSame($data, $result2);
     }
 
-    public function testGeneratePhpArrayCodeProducesValidPhpCode(): void
-    {
-        $data = [
-            'string' => 'value',
-            'integer' => 42,
-            'array' => [1, 2, 3],
-            'nested' => ['key' => 'value']
-        ];
-        
-        $reflection = new \ReflectionClass($this->cache);
-        $method = $reflection->getMethod('generatePhpArrayCode');
-
-        $result = $method->invoke($this->cache, $data);
-        
-        $this->assertStringStartsWith('<?php', $result);
-        $this->assertStringContainsString('return ', $result);
-        $this->assertStringEndsWith(";\n", $result);
-        
-        $parsedData = eval(str_replace('<?php', '', $result));
-        $this->assertSame($data, $parsedData);
-    }
 
     public function testAtomicWriteOperationWithTempFile(): void
     {

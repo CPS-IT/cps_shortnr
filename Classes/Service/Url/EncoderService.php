@@ -2,7 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url;
 
-class EncoderService
+class EncoderService extends AbstractUrlService
 {
 
 }

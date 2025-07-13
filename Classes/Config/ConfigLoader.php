@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config;
 
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
@@ -30,17 +31,26 @@ class ConfigLoader
     {}
 
     /**
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
+     */
+    public function getConfig(): ConfigInterface
+    {
+        return new Config($this->getConfigArray());
+    }
+
+    /**
      * @return array
      * @throws ShortNrCacheException|ShortNrConfigException
      */
-    public function getConfig(): array
+    private function getConfigArray(): array
     {
         $suffix = $this->getConfigFileSuffix();
         // cache file is outdated ... remove and process a fresh one
         if (!$this->isConfigCacheValid($suffix)) {
             $this->cacheManager->getArrayFileCache()->invalidateFileCache($suffix);
         } else {
-            $config = $this->cacheManager->getArrayFileCache()->readArrayFileCache($suffix);
+            $config = self::$runtimeCache['config'] ??= $this->cacheManager->getArrayFileCache()->readArrayFileCache($suffix);
             if ($config)
                 return $config;
         }

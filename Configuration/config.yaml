@@ -1,19 +1,20 @@
-ShortNr:
-  notFound: "/fehler-404" # support page id or hard-coded slug (detects it via is_numeric)
+shortNr:
   types:
     page: "\\CPSIT\\ShortNr\\Service\\Processor\\PageProcessor"
     plugin: "\\CPSIT\\ShortNr\\Service\\Processor\\PluginProcessor" # add custom processor here
 
   _default:
+    # support page id or hard-coded slug (detects it via is_numeric)
+    notFound: "/fehler-404"
     # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
     regexGroupMapping: # regex group mapping
       prefix: "{match-1}"
       id: "{match-2}"
-      language_id: "{match-3}"
+      languageId: "{match-3}"
     condition: # database conditions
       uid: "{match-2}"
-      sys_language_uid: "{match-3}"
+      sysLanguageUid: "{match-3}"
 
   pages: # default page
     type: page
@@ -24,7 +25,7 @@ ShortNr:
     type: plugin
     table: tx_bmubarticles_domain_model_article
     condition:
-      article_type: press
+      articleType: press
     pluginConfig:
       extension: BmubArticles
       plugin: Articles

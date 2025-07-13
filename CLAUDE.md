@@ -23,7 +23,10 @@ Classes/
 │   ├── CacheAdapter/FastArrayFileCache.php - PHP array file cache with atomic writes
 │   └── CacheManager.php - TYPO3 cache integration
 ├── Config/
-│   ├── ConfigLoader.php - Multi-level caching YAML config loader
+│   ├── ConfigInterface.php - Configuration access interface
+│   ├── ConfigLoader.php - Multi-level caching YAML config loader (returns ConfigInterface)
+│   ├── DTO/
+│   │   └── Config.php - Configuration data transfer object with inheritance logic
 │   └── ExtensionSetup.php - TYPO3 extension configuration
 ├── Middleware/
 │   └── ShortNumberMiddleware.php - Main HTTP request handler
@@ -35,7 +38,10 @@ Classes/
 │   │   └── Typo3/
 │   │       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
 │   │       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
-│   └── Url/ - URL encoding/decoding services (empty, future development)
+│   └── Url/
+│       ├── AbstractUrlService.php - Base class for URL services
+│       ├── DecoderService.php - URL decoding service (placeholder)
+│       └── EncoderService.php - URL encoding service (placeholder)
 ├── ViewHelpers/
 │   └── ShortUrlViewHelper.php - Fluid ViewHelper for generating short URLs
 └── Exception/ - Custom exceptions
@@ -43,9 +49,10 @@ Classes/
 
 ### What is missing
 
-* URL decoder Service (will be in Service/Url/)
-* URL encoder Service (will be in Service/Url/)
+* URL decoder Service business logic (placeholder exists)
+* URL encoder Service business logic (placeholder exists)
 * ShortUrlViewHelper business logic (placeholder implementation)
+* AbstractUrlService common functionality
 * tbd...
 
 ### Key Architectural Patterns
@@ -57,21 +64,39 @@ Classes/
 
 ## Detailed Component Analysis
 
-### ConfigLoader (`Classes/Config/ConfigLoader.php:34`)
-**Purpose**: Sophisticated config loading with multi-level caching
+### ConfigLoader (`Classes/Config/ConfigLoader.php:37`)
+**Purpose**: Sophisticated config loading with multi-level caching, returns DTO objects
 **Architecture**: 
+- **DTO Pattern**: Returns ConfigInterface instead of raw arrays
 - **Runtime Cache**: Static array for request-level caching
 - **File Cache**: PHP serialized arrays stored as executable PHP files
 - **YAML Parsing**: Symfony/Yaml component for config files
 - **Cache Invalidation**: File modification time comparison
 
 **Key Methods**:
-- `getConfig()`: Main entry point, handles cache validation flow
+- `getConfig()`: Main entry point, returns ConfigInterface wrapping cached data
+- `getConfigArray()`: Private method handling cache validation flow
 - `isConfigCacheValid()`: Compares YAML vs cache file modification times
 - `getConfigFileSuffix()`: Generates MD5 hash for cache file naming
 - `prepareConfigFilePath()`: Handles FILE: prefix removal + path resolution
 
 **Dependencies**: CacheManager, ExtensionConfiguration, FileSystemInterface, PathResolverInterface
+
+### Config DTO (`Classes/Config/DTO/Config.php`)
+**Purpose**: Configuration data transfer object with inheritance logic and runtime caching
+**Architecture**:
+- **Value Inheritance**: Route configs inherit from `_default` section automatically
+- **Internal Caching**: Runtime cache for expensive operations (config names filtering)
+- **Type Safety**: Strongly typed getters with null coalescing for optional values
+- **ConfigInterface**: Implements configuration access interface
+
+**Key Methods**:
+- `getConfigNames()`: Returns filtered route names (excludes `_default` and `types`)
+- `getProcessorClass()`: Maps route type to processor class via types section
+- `getValue()`: Core inheritance method with fallback to `_default`
+- Route accessors: `getPrefix()`, `getType()`, `getTableName()`, `getCondition()`, etc.
+
+**Inheritance Pattern**: `routeConfig[key] ?? _default[key] ?? null`
 
 ### FastArrayFileCache (`Classes/Cache/CacheAdapter/FastArrayFileCache.php`)
 **Purpose**: High-performance array caching with atomic writes
@@ -168,21 +193,21 @@ docker exec php-shortnr /var/www/html/.Build/bin/phpunit --filter="testMethodNam
 The configuration follows a hierarchical structure with global settings, defaults, and specific route definitions:
 
 ```yaml
-ShortNr:
-  notFound: "/fehler-404"  # Fallback URL for 404 errors (supports page ID or slug)
-  types:                   # Processor type mappings
+shortNr:                  # Root configuration key (was ShortNr)
+  types:                  # Processor type mappings
     page: "\\CPSIT\\ShortNr\\Service\\Processor\\PageProcessor"
     plugin: "\\CPSIT\\ShortNr\\Service\\Processor\\PluginProcessor"
   
   _default:               # Default matching rules for all routes
+    notFound: "/fehler-404"  # Fallback URL for 404 errors (moved to _default)
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"  # Pattern: prefix + ID + optional language
     regexGroupMapping:    # Maps regex groups to placeholders
       prefix: "{match-1}"
       id: "{match-2}"
-      language_id: "{match-3}"
+      languageId: "{match-3}"
     condition:            # Database query conditions
       uid: "{match-2}"
-      sys_language_uid: "{match-3}"
+      sysLanguageUid: "{match-3}"
   
   # Route definitions inherit from _default and override specific settings
   pages:                  # User-defined route name
@@ -195,14 +220,14 @@ ShortNr:
     type: plugin
     table: tx_bmubarticles_domain_model_article
     condition:
-      article_type: press
+      articleType: press
     pluginConfig:         # TYPO3 plugin configuration
       extension: BmubArticles
       plugin: Articles
       pid: 289
       action: show
       controller: Article
-      objectName: article
+      objectName: article  # name for value for the UID
 ```
 
 **Key Schema Concepts:**
@@ -255,6 +280,7 @@ services:
 - **Atomic operations**: Use temp files for safe writes
 - **Runtime caching**: Cache expensive operations within request
 - **Graceful degradation**: Handle failures without breaking system
+- **Modern Language Features First**: Prefer modern PHP syntax and built-in language features over custom implementations - research existing language capabilities before adding defensive code or workarounds
 - **Zero Tolerance for Deprecations**: All deprecation warnings must be resolved - they indicate future breaking changes and technical debt.
 
 ## Important Implementation Details
@@ -317,6 +343,7 @@ At the end of each session, update this document with:
 - Deprecation warnings are NOT acceptable - fix immediately or document why they must remain
 - Run tests with full error reporting to catch all deprecations and warnings
 - Treat deprecations as bugs that must be resolved before considering code complete
+- Use camelCase consistently
 
 ---
 
@@ -385,3 +412,36 @@ At the end of each session, update this document with:
 2. **DataProvider-First Testing Strategy** - Always consolidate test scenarios into DataProviders rather than separate methods - improves maintainability and ensures comprehensive scenario coverage without duplication
 
 3. **Quality Standard Enforcement Process** - Systematic quality review (create → test → recheck → fix → document) prevents technical debt accumulation - establishes iterative improvement cycle for maintaining architectural alignment
+
+### Session Date: 2025-01-13
+**Changes Made**: Major architecture refactor - ConfigLoader now returns ConfigInterface DTO, created Config DTO with inheritance logic, added URL service placeholders, updated YAML schema
+
+**New Insights**:
+
+1. **DTO Pattern with Inheritance Logic** - Config DTO encapsulates YAML inheritance (`route[key] ?? _default[key] ?? null`) with runtime caching for expensive operations - eliminates direct array access throughout codebase and provides type-safe configuration access
+
+2. **Configuration Schema Evolution** - Root key changed from `ShortNr` to `shortnr`, `notFound` moved to `_default` section for inheritance - demonstrates iterative schema refinement while maintaining backward compatibility patterns
+
+3. **Service Placeholder Architecture** - Abstract base class with concrete service placeholders (EncoderService, DecoderService) establishes extension points for future URL processing logic - enables incremental development while maintaining clean abstractions
+
+### Session Date: 2025-07-13
+**Changes Made**: Updated all tests to use new Config DTO instead of array structure - migrated ConfigLoaderTest and MiddlewareTest to work with ConfigInterface pattern
+
+**New Insights**:
+
+1. **Modern PHP Defensive Programming** - The `??` operator elegantly handles undefined array keys in chains without requiring additional defensive programming - questioning necessity before adding protection prevents over-engineering and leverages language features effectively
+
+2. **DTO Migration Testing Strategy** - Systematic test migration requires updating imports, assertions, mocks, and data providers to expect DTO objects rather than arrays - ensures type safety while maintaining behavioral test coverage during architecture transitions
+
+3. **Array Processing Best Practices** - Using `array_values()` after `array_filter()` ensures proper sequential indexing when filtering preserves original keys - critical for maintaining predictable array structures in DTO methods that return filtered collections
+
+### Session Date: 2025-07-13
+**Changes Made**: Test compliance enforcement - removed 4 reflection-based tests that violated architectural principles, achieving 100% guideline compliance
+
+**New Insights**:
+
+1. **Architectural Violation Removal Strategy** - Remove tests that test private methods via reflection rather than attempting to refactor them - maintains encapsulation principles and prevents technical debt accumulation while preserving behavioral coverage through public API testing
+
+2. **Test Suite Compliance Validation** - Regular compliance audits against established guidelines prevent gradual degradation of test quality - systematic removal of anti-patterns ensures tests remain aligned with OOP messaging principles and refactoring safety requirements
+
+3. **Private Method Testing Philosophy** - Private methods are implementation details validated through public behavior testing - reflection-based testing of internals breaks encapsulation and creates brittle tests that fail during legitimate refactoring of internal logic

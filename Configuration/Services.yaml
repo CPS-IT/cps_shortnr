@@ -6,6 +6,7 @@ services:
 
   CPSIT\ShortNr\:
     resource: '../Classes/*'
+    exclude: '../Classes/Config/DTO'
 
   CPSIT\ShortNr\Service\FileSystem\FileSystemInterface:
     alias: CPSIT\ShortNr\Service\FileSystem\FileSystem
