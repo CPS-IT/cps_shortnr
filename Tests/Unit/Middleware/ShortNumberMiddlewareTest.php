@@ -7,6 +7,7 @@ use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 
@@ -14,9 +15,8 @@ class ShortNumberMiddlewareTest extends TestCase
 {
     private ConfigLoader $configLoader;
     private ShortNumberMiddleware $middleware;
-    private ServerRequestInterface $request;
     private RequestHandlerInterface $handler;
-    private ResponseInterface $response;
+    private ResponseInterface $handlerResponse;
 
     protected function setUp(): void
     {
@@ -24,57 +24,107 @@ class ShortNumberMiddlewareTest extends TestCase
         
         $this->configLoader = $this->createMock(ConfigLoader::class);
         $this->middleware = new ShortNumberMiddleware($this->configLoader);
-        $this->request = $this->createMock(ServerRequestInterface::class);
         $this->handler = $this->createMock(RequestHandlerInterface::class);
-        $this->response = $this->createMock(ResponseInterface::class);
+        $this->handlerResponse = $this->createMock(ResponseInterface::class);
     }
 
-    public function testConfigLoaderIsCalledDuringProcessing(): void
+    /**
+     * @dataProvider requestScenariosProvider
+     */
+    public function testMiddlewareProcessingBehavior(
+        string $requestPath,
+        array $configData,
+        bool $expectsHandlerCall,
+        string $expectedBehavior
+    ): void {
+        // Arrange
+        $request = $this->createRequestMock($requestPath);
+        $this->configLoader->method('getConfig')->willReturn($configData);
+        
+        if ($expectsHandlerCall) {
+            $this->handler
+                ->expects($this->once())
+                ->method('handle')
+                ->with($request)
+                ->willReturn($this->handlerResponse);
+        } else {
+            $this->handler->expects($this->never())->method('handle');
+        }
+
+        // Act
+        $response = $this->middleware->process($request, $this->handler);
+
+        // Assert
+        switch ($expectedBehavior) {
+            case 'passthrough':
+                $this->assertSame($this->handlerResponse, $response);
+                break;
+            case 'redirect':
+                $this->assertInstanceOf(RedirectResponse::class, $response);
+                $this->assertSame(302, $response->getStatusCode());
+                $this->assertStringContainsString('no-cache', $response->getHeaderLine('Cache-Control'));
+                break;
+        }
+    }
+
+    public static function requestScenariosProvider(): array
     {
+        return [
+            'Normal page request' => [
+                'requestPath' => '/normal-page',
+                'configData' => [],
+                'expectsHandlerCall' => true,
+                'expectedBehavior' => 'passthrough'
+            ],
+            'Root path request' => [
+                'requestPath' => '/',
+                'configData' => [],
+                'expectsHandlerCall' => true,
+                'expectedBehavior' => 'passthrough'
+            ],
+            'Long URL request' => [
+                'requestPath' => '/very/long/path/to/some/resource',
+                'configData' => [],
+                'expectsHandlerCall' => true,
+                'expectedBehavior' => 'passthrough'
+            ],
+            'URL with query parameters scenario' => [
+                'requestPath' => '/page',
+                'configData' => ['pages' => ['prefix' => 'p']],
+                'expectsHandlerCall' => true,
+                'expectedBehavior' => 'passthrough'
+            ],
+            'Potential future short URL pattern' => [
+                'requestPath' => '/p123',
+                'configData' => ['pages' => ['prefix' => 'p']],
+                'expectsHandlerCall' => true,
+                'expectedBehavior' => 'passthrough'
+            ]
+        ];
+    }
+
+    public function testMiddlewareCallsConfigLoaderForEveryRequest(): void
+    {
+        $request = $this->createRequestMock('/any-path');
+        
         $this->configLoader
             ->expects($this->once())
             ->method('getConfig')
             ->willReturn([]);
-
-        $this->handler
-            ->expects($this->once())
-            ->method('handle')
-            ->with($this->request)
-            ->willReturn($this->response);
-
-        $result = $this->middleware->process($this->request, $this->handler);
-
-        $this->assertSame($this->response, $result);
+        
+        $this->handler->method('handle')->willReturn($this->handlerResponse);
+        
+        $this->middleware->process($request, $this->handler);
     }
 
-    public function testMiddlewarePassesThroughWhenNotShortNrRequest(): void
+    private function createRequestMock(string $path): ServerRequestInterface
     {
-        $this->configLoader
-            ->expects($this->once())
-            ->method('getConfig')
-            ->willReturn([]);
-
-        $this->handler
-            ->expects($this->once())
-            ->method('handle')
-            ->with($this->request)
-            ->willReturn($this->response);
-
-        $result = $this->middleware->process($this->request, $this->handler);
-
-        $this->assertSame($this->response, $result);
-    }
-
-    public function testMiddlewareCanBeInstantiated(): void
-    {
-        $this->assertInstanceOf(ShortNumberMiddleware::class, $this->middleware);
-    }
-
-    public function testConfigLoaderIsInjectedCorrectly(): void
-    {
-        $reflection = new \ReflectionClass($this->middleware);
-        $property = $reflection->getProperty('configLoader');
-
-        $this->assertSame($this->configLoader, $property->getValue($this->middleware));
+        $uri = $this->createMock(UriInterface::class);
+        $uri->method('getPath')->willReturn($path);
+        
+        $request = $this->createMock(ServerRequestInterface::class);
+        $request->method('getUri')->willReturn($uri);
+        
+        return $request;
     }
 }

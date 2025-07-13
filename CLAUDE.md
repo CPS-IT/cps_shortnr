@@ -28,19 +28,21 @@ Classes/
 ├── Middleware/
 │   └── ShortNumberMiddleware.php - Main HTTP request handler
 ├── Service/
-│   ├── FileSystem/
-│   │   ├── FileSystemInterface.php - File operations abstraction
-│   │   └── FileSystem.php - Concrete implementation
-│   └── Path/
-│       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
-│       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
+│   ├── PlatformAdapter/
+│   │   ├── FileSystem/
+│   │   │   ├── FileSystemInterface.php - File operations abstraction
+│   │   │   └── FileSystem.php - Concrete implementation
+│   │   └── Typo3/
+│   │       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
+│   │       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
+│   └── Url/ - URL encoding/decoding services (empty, future development)
 └── Exception/ - Custom exceptions
 ```
 
 ### What is missing
 
-* URL decoder Service
-* URL encoder Service
+* URL decoder Service (will be in Service/Url/)
+* URL encoder Service (will be in Service/Url/)
 * URL encoder ViewHelper
 * tbd...
 
@@ -108,15 +110,34 @@ Tests/Unit/
 ├── Config/
 │   ├── ConfigLoaderTest.php
 │   └── ExtensionSetupTest.php
-├── Middleware/ShortNumberMiddlewareTest.php
-└── Service/Path/PathResolverTest.php
+└── Middleware/ShortNumberMiddlewareTest.php
 ```
 
-### Testing Strategy
+### Testing Strategy & Quality Standards
+- **Behavioral Focus**: Test contracts and outcomes, not implementation details
 - **DataProviders**: Extensively used for testing multiple scenarios efficiently
 - **Mock Abstractions**: FileSystemInterface and PathResolverInterface fully mockable
 - **Static Cache Management**: Proper cleanup between tests using reflection
+- **Refactoring Safety**: Tests survive legitimate architectural changes
+- **No Wrapper Testing**: Platform adapters (FileSystem, PathResolver) excluded from testing as TYPO3-only wrappers
 - **Comprehensive Coverage**: Normal flows, edge cases, error conditions
+
+### High-Quality Test Characteristics
+1. **Test behavior, not implementation** - Validate "what" the code does, not "how" it does it
+2. **Survive refactoring** - Tests should pass when internal implementation changes without contract changes
+3. **Interface-based mocking** - Mock dependencies via interfaces, never concrete classes
+4. **Object messaging validation** - Test communication between objects without exposing internals
+5. **DataProvider usage** - Prefer comprehensive scenarios over single-case methods
+6. **No reflection testing** - Never test private properties or methods directly
+7. **Contract assertions** - Assert on public behavior and outcomes
+8. **Remove anti-patterns** - Delete tests that provide false confidence (mock configuration testing)
+
+### Low-Quality Test Anti-Patterns to Avoid
+- **Reflection-based testing** - Testing private properties/methods breaks encapsulation
+- **Implementation detail testing** - Tests that break when refactoring legitimate code
+- **Mock configuration testing** - Circular tests that validate mock setup rather than behavior
+- **Meaningless instantiation tests** - Tests that only verify object creation
+- **Wrapper function testing** - Testing simple TYPO3/framework wrappers without added logic
 
 ### Test Commands
 ```bash
@@ -191,11 +212,11 @@ ShortNr:
 ### Services Configuration (`Configuration/Services.yaml`)
 ```yaml
 services:
-  CPSIT\ShortNr\Service\FileSystem\FileSystemInterface:
-    alias: CPSIT\ShortNr\Service\FileSystem\FileSystem
+  CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
   
-  CPSIT\ShortNr\Service\Path\PathResolverInterface:
-    alias: CPSIT\ShortNr\Service\Path\Typo3PathResolver
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver
 ```
 
 ### Cache Configuration (`Classes/Config/ExtensionSetup.php`)
@@ -313,3 +334,14 @@ At the end of each session, update this document with:
 1. **Global State Testing Patterns** - ExtensionSetup static testing requires careful GLOBALS management with setUp/tearDown - ensures test isolation while validating TYPO3 integration patterns
 
 2. **Data Provider Edge Case Coverage** - Testing null/false values and partial configurations validates graceful degradation - critical for extension setup robustness in diverse TYPO3 environments
+
+### Session Date: 2025-01-13
+**Changes Made**: Test quality improvements - removed low-quality tests, rewrote middleware tests with behavioral focus, excluded PlatformAdapter from coverage
+
+**New Insights**:
+
+1. **Platform Adapter Testing Strategy** - Wrapper classes for TYPO3 utilities should be excluded from testing and coverage - they provide no business logic and testing them violates the principle of not testing framework code
+
+2. **Behavioral Middleware Testing** - Middleware tests should focus on HTTP request/response contracts using PSR-15 patterns with DataProviders for request scenarios - validates actual middleware behavior rather than dependency injection mechanics
+
+3. **Test Quality Enforcement** - Established concrete criteria for high-quality tests: behavioral focus, refactoring safety, interface mocking, contract assertions - provides clear guidelines for maintaining test architecture alignment

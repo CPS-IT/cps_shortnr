@@ -14,6 +14,7 @@
           ignoreDeprecatedCodeUnits="true"
           disableCodeCoverageIgnore="true">
     <report>
+      <text outputFile="Tests/.phpunit_result/test-result.txt"/>
       <clover outputFile="Tests/.phpunit_result/tests-clover.xml"/>
       <html outputDirectory="Tests/.phpunit_result/codeCoverage" highLowerBound="80"/>
     </report>
@@ -38,6 +39,7 @@
     </include>
     <exclude>
       <directory>Classes/Service/FileSystem</directory>
+      <directory>Classes/Service/PlatformAdapter</directory>
       <directory>Classes/Exception</directory>
     </exclude>
   </source>
