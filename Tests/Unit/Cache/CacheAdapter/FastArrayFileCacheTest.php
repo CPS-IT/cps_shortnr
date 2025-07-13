@@ -5,7 +5,7 @@ namespace CPSIT\ShortNr\Tests\Unit\Cache\CacheAdapter;
 use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
 use CPSIT\ShortNr\Config\ExtensionSetup;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Service\FileSystem\FileSystemInterface;
+use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use PHPUnit\Framework\TestCase;
 
 class FastArrayFileCacheTest extends TestCase

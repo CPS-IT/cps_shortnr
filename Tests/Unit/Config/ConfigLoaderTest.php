@@ -7,8 +7,8 @@ use CPSIT\ShortNr\Cache\CacheManager;
 use CPSIT\ShortNr\Config\ConfigLoader;
 use CPSIT\ShortNr\Config\ExtensionSetup;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
-use CPSIT\ShortNr\Service\FileSystem\FileSystemInterface;
-use CPSIT\ShortNr\Service\Path\PathResolverInterface;
+use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
+use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 

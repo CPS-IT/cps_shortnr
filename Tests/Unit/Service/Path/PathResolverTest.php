@@ -2,8 +2,8 @@
 
 namespace CPSIT\ShortNr\Tests\Unit\Service\Path;
 
-use CPSIT\ShortNr\Service\Path\PathResolverInterface;
-use CPSIT\ShortNr\Service\Path\Typo3PathResolver;
+use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
+use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver;
 use PHPUnit\Framework\TestCase;
 
 class PathResolverTest extends TestCase

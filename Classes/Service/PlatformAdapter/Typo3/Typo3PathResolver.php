@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\Path;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\Typo3;
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 

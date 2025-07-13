@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\FileSystem;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\FileSystem;
 
-interface FileSystemInterface
+class FileSystem implements FileSystemInterface
 {
     /**
      * Checks whether a file or directory exists
@@ -30,7 +30,10 @@ interface FileSystemInterface
      * <p>
      * The check is done using the real UID/GID instead of the effective one.
      */
-    public function file_exists(string $filename): bool;
+    public function file_exists(string $filename): bool
+    {
+        return file_exists($filename);
+    }
 
     /**
      * Reads entire file into a string
@@ -56,7 +59,10 @@ interface FileSystemInterface
      * </p>
      * @return string|false The function returns the read data or false on failure.
      */
-    public function file_get_contents(string $filename, bool $use_include_path = false, $context = null, int $offset = 0, ?int $length = null): string|false;
+    public function file_get_contents(string $filename, bool $use_include_path = false, $context = null, int $offset = 0, ?int $length = null): string|false
+    {
+        return file_get_contents($filename, $use_include_path, $context, $offset, $length);
+    }
 
     /**
      * Includes and evaluates the specified file
@@ -73,7 +79,10 @@ interface FileSystemInterface
      *
      * @link https://php.net/manual/en/function.require.php
      */
-    public function require(string $filename): mixed;
+    public function require(string $filename): mixed
+    {
+        return require $filename;
+    }
 
     /**
      * Attempts to create the directory specified by pathname.
@@ -101,7 +110,10 @@ interface FileSystemInterface
      * @param resource $context [optional]
      * @return bool true on success or false on failure.
      */
-    public function mkdir(string $directory, int $permissions = 0777, bool $recursive = false, mixed $context = null): bool;
+    public function mkdir(string $directory, int $permissions = 0777, bool $recursive = false, mixed $context = null): bool
+    {
+        return mkdir($directory, $permissions, $recursive, $context);
+    }
 
     /**
      * Create file with unique file name
@@ -116,7 +128,10 @@ interface FileSystemInterface
      * @return string|false the new temporary filename, or false on
      * failure.
      */
-    public function tempnam(string $directory, string $prefix): string|false;
+    public function tempnam(string $directory, string $prefix): string|false
+    {
+        return tempnam($directory, $prefix);
+    }
 
     /**
      * Write a string to a file
@@ -189,7 +204,10 @@ interface FileSystemInterface
      * @return int|false The function returns the number of bytes that were written to the file, or
      * false on failure.
      */
-    public function file_put_contents(string $filename, mixed $data, int $flags = 0, mixed $context = null): int|false;
+    public function file_put_contents(string $filename, mixed $data, int $flags = 0, mixed $context = null): int|false
+    {
+        return file_put_contents($filename, $data, $flags, $context);
+    }
 
     /**
      * Renames a file or directory
@@ -207,7 +225,10 @@ interface FileSystemInterface
      * @param resource $context [optional]
      * @return bool true on success or false on failure.
      */
-    public function rename(string $from, string $to, mixed $context = null): bool;
+    public function rename(string $from, string $to, mixed $context = null): bool
+    {
+        return rename($from, $to, $context);
+    }
 
     /**
      * Deletes a file
@@ -218,7 +239,10 @@ interface FileSystemInterface
      * @param resource $context [optional]
      * @return bool true on success or false on failure.
      */
-    function unlink(string $filename, mixed $context = null): bool;
+    public function unlink(string $filename, mixed $context = null): bool
+    {
+        return unlink($filename, $context);
+    }
 
     /**
      * Gets file modification time
@@ -230,5 +254,8 @@ interface FileSystemInterface
      * The time is returned as a Unix timestamp, which is
      * suitable for the date function.
      */
-    public function filemtime(string $filename): int|false;
+    public function filemtime(string $filename): int|false
+    {
+        return filemtime($filename);
+    }
 }

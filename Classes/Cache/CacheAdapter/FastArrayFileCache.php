@@ -4,11 +4,11 @@ namespace CPSIT\ShortNr\Cache\CacheAdapter;
 
 use CPSIT\ShortNr\Config\ExtensionSetup;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Service\FileSystem\FileSystemInterface;
+use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use Symfony\Component\Filesystem\Path;
+use Throwable;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Core\Environment;
-use Throwable;
 
 class FastArrayFileCache
 {
