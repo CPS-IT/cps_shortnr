@@ -92,13 +92,13 @@ class ShortNumberMiddlewareTest extends TestCase
             ],
             'URL with query parameters scenario' => [
                 'requestPath' => '/page',
-                'configData' => ['shortnr' => ['pages' => ['prefix' => 'p']]],
+                'configData' => ['shortNr' => ['pages' => ['prefix' => 'p']]],
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ],
             'Potential future short URL pattern' => [
                 'requestPath' => '/p123',
-                'configData' => ['shortnr' => ['pages' => ['prefix' => 'p']]],
+                'configData' => ['shortNr' => ['pages' => ['prefix' => 'p']]],
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ]

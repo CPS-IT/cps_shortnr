@@ -81,7 +81,7 @@ class ConfigLoaderTest extends TestCase
     {
         $configFilePath = '/path/to/config.yaml';
         $configHash = md5($configFilePath);
-        $cachedData = ['shortnr' => ['pages' => ['type' => 'page']]];
+        $cachedData = ['shortNr' => ['pages' => ['type' => 'page']]];
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -109,8 +109,8 @@ class ConfigLoaderTest extends TestCase
     {
         $configFilePath = '/path/to/config.yaml';
         $configHash = md5($configFilePath);
-        $yamlContent = "shortnr:\n  pages:\n    type: page\n";
-        $expectedConfig = ['shortnr' => ['pages' => ['type' => 'page']]];
+        $yamlContent = "shortNr:\n  pages:\n    type: page\n";
+        $expectedConfig = ['shortNr' => ['pages' => ['type' => 'page']]];
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -154,15 +154,15 @@ class ConfigLoaderTest extends TestCase
     {
         return [
             'simple config' => [
-                'yamlContent' => "shortnr:\n  pages:\n    type: page\n",
+                'yamlContent' => "shortNr:\n  pages:\n    type: page\n",
                 'expectedConfigNames' => ['pages']
             ],
             'nested config' => [
-                'yamlContent' => "shortnr:\n  pages:\n    type: page\n  articles:\n    type: plugin\n",
+                'yamlContent' => "shortNr:\n  pages:\n    type: page\n  articles:\n    type: plugin\n",
                 'expectedConfigNames' => ['pages', 'articles']
             ],
             'config with default' => [
-                'yamlContent' => "shortnr:\n  _default:\n    regex: '/test/'\n  pages:\n    type: page\n",
+                'yamlContent' => "shortNr:\n  _default:\n    regex: '/test/'\n  pages:\n    type: page\n",
                 'expectedConfigNames' => ['pages']
             ],
             'empty yaml' => [
@@ -219,7 +219,7 @@ class ConfigLoaderTest extends TestCase
     {
         $configFilePath = 'FILE:/path/to/config.yaml';
         $resolvedPath = '/path/to/config.yaml';
-        $yamlContent = "shortnr:\n  pages:\n    type: page\n";
+        $yamlContent = "shortNr:\n  pages:\n    type: page\n";
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
@@ -274,7 +274,7 @@ class ConfigLoaderTest extends TestCase
     public function testGetConfigUsesRuntimeCacheForSubsequentCalls(): void
     {
         $configFilePath = '/path/to/config.yaml';
-        $yamlContent = "shortnr:\n  pages:\n    type: page\n";
+        $yamlContent = "shortNr:\n  pages:\n    type: page\n";
         
         $this->extensionConfiguration->method('get')
             ->with(ExtensionSetup::EXT_KEY)
