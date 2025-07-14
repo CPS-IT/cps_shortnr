@@ -4,6 +4,8 @@ namespace CPSIT\ShortNr\Service\Url;
 
 use CPSIT\ShortNr\Config\ConfigInterface;
 use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use Psr\Http\Message\ServerRequestInterface;
 
 abstract class AbstractUrlService
@@ -13,19 +15,32 @@ abstract class AbstractUrlService
     )
     {}
 
+    /**
+     * @return ConfigInterface
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
+     */
     protected function getConfig(): ConfigInterface
     {
         return $this->configLoader->getConfig();
     }
 
+    /**
+     * @param ServerRequestInterface $request
+     * @return bool
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
+     */
     public function isShortNrRequest(ServerRequestInterface $request): bool
     {
         return $this->isShortNr($request->getUri()->getPath());
     }
 
     /**
-     * @param string $uri
+     * @param string $uri uri can be like /PAGE123 or /PAGE123-1 (for english)
      * @return bool
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
      */
     public function isShortNr(string $uri): bool
     {
