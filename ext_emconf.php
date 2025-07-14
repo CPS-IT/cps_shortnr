@@ -1,7 +1,7 @@
 <?php
 
-$EM_CONF['bmub_shortnr'] = [
-  'title' => 'BMU ShortNr Resolver',
+$EM_CONF['cps_shortnr'] = [
+  'title' => 'CPS ShortNr Resolver',
   'description' => 'Resolves Short Alias Uris',
   'category' => 'plugin',
   'author' => 'Benjamin Rannow',
