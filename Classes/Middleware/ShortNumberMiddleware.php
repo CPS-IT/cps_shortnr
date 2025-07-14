@@ -2,7 +2,7 @@
 
 namespace CPSIT\ShortNr\Middleware;
 
-use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\ShortNr\Service\Url\DecoderService;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -11,24 +11,26 @@ use TYPO3\CMS\Core\Http\RedirectResponse;
 
 class ShortNumberMiddleware implements MiddlewareInterface
 {
+    /**
+     * @param DecoderService $decoderService
+     */
     public function __construct(
-        private readonly ConfigLoader $configLoader
+        private readonly DecoderService $decoderService,
     ) {}
 
+    /**
+     * @param ServerRequestInterface $request
+     * @param RequestHandlerInterface $handler
+     * @return ResponseInterface
+     */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if ($this->isShortNrRequest($request)) {
+        if ($this->decoderService->isShortNrRequest($request)) {
             // process and return redirect result to real url (move permanent)
             // URI is placeholder for now will be replaced with decoder service later
-            return ((new RedirectResponse('/',302))->withHeader('Cache-Control', 'no-cache, no-store, must-revalidate'));
+            return ((new RedirectResponse($this->decoderService->decodeRequest($request),302))->withHeader('Cache-Control', 'no-cache, no-store, must-revalidate'));
         }
 
         return $handler->handle($request);
-    }
-
-    private function isShortNrRequest(ServerRequestInterface $request): bool
-    {
-        $this->configLoader->getConfig();
-        return false;
     }
 }

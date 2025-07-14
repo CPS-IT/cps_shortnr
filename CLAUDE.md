@@ -29,7 +29,7 @@ Classes/
 │   │   └── Config.php - Configuration data transfer object with inheritance logic
 │   └── ExtensionSetup.php - TYPO3 extension configuration
 ├── Middleware/
-│   └── ShortNumberMiddleware.php - Main HTTP request handler
+│   └── ShortNumberMiddleware.php - Main HTTP request handler using DecoderService
 ├── Service/
 │   ├── PlatformAdapter/
 │   │   ├── FileSystem/
@@ -39,8 +39,8 @@ Classes/
 │   │       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
 │   │       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
 │   └── Url/
-│       ├── AbstractUrlService.php - Base class for URL services
-│       ├── DecoderService.php - URL decoding service (placeholder)
+│       ├── AbstractUrlService.php - Base class for URL services with ConfigLoader integration
+│       ├── DecoderService.php - URL decoding service (placeholder, extends AbstractUrlService)
 │       └── EncoderService.php - URL encoding service (placeholder)
 ├── ViewHelpers/
 │   └── ShortUrlViewHelper.php - Fluid ViewHelper for generating short URLs
@@ -49,10 +49,10 @@ Classes/
 
 ### What is missing
 
-* URL decoder Service business logic (placeholder exists)
+* URL decoder Service business logic (placeholder exists, needs isShortNr implementation)
 * URL encoder Service business logic (placeholder exists)
 * ShortUrlViewHelper business logic (placeholder implementation)
-* AbstractUrlService common functionality
+* AbstractUrlService isShortNr() method implementation
 * tbd...
 
 ### Key Architectural Patterns
@@ -348,6 +348,17 @@ At the end of each session, update this document with:
 ---
 
 ## Session Updates
+
+### Session Date: 2025-07-14
+**Changes Made**: Architecture refactor - ConfigLoader moved from ShortNumberMiddleware to AbstractUrlService, updated middleware tests to use DecoderService dependency
+
+**New Insights**:
+
+1. **Service Layer Configuration Access** - AbstractUrlService now centralizes ConfigLoader dependency for all URL services, eliminating direct config access from middleware layer - improves separation of concerns and enables shared configuration logic across URL processing services
+
+2. **Middleware Dependency Simplification** - ShortNumberMiddleware now depends only on DecoderService instead of ConfigLoader, following single responsibility principle - middleware focuses purely on HTTP request routing while URL services handle configuration and business logic
+
+3. **Placeholder Test Strategy for WIP Services** - DecoderService and AbstractUrlService tests expect placeholder results (null/false) with comprehensive DataProviders - ensures test completeness while services are under development and prevents false test failures during incremental implementation
 
 ### Session Date: 2025-01-11
 **Changes Made**: Test suite cleanup - 24 failing tests fixed, 4 problematic tests removed, 100% passing suite achieved

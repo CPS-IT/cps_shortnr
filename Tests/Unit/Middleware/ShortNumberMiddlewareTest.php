@@ -2,9 +2,8 @@
 
 namespace CPSIT\ShortNr\Tests\Unit\Middleware;
 
-use CPSIT\ShortNr\Config\ConfigLoader;
-use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
+use CPSIT\ShortNr\Service\Url\DecoderService;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -14,7 +13,7 @@ use TYPO3\CMS\Core\Http\RedirectResponse;
 
 class ShortNumberMiddlewareTest extends TestCase
 {
-    private ConfigLoader $configLoader;
+    private DecoderService $decoderService;
     private ShortNumberMiddleware $middleware;
     private RequestHandlerInterface $handler;
     private ResponseInterface $handlerResponse;
@@ -23,8 +22,8 @@ class ShortNumberMiddlewareTest extends TestCase
     {
         parent::setUp();
         
-        $this->configLoader = $this->createMock(ConfigLoader::class);
-        $this->middleware = new ShortNumberMiddleware($this->configLoader);
+        $this->decoderService = $this->createMock(DecoderService::class);
+        $this->middleware = new ShortNumberMiddleware($this->decoderService);
         $this->handler = $this->createMock(RequestHandlerInterface::class);
         $this->handlerResponse = $this->createMock(ResponseInterface::class);
     }
@@ -34,14 +33,15 @@ class ShortNumberMiddlewareTest extends TestCase
      */
     public function testMiddlewareProcessingBehavior(
         string $requestPath,
-        array $configData,
+        bool $isShortNrRequest,
+        ?string $decodedUrl,
         bool $expectsHandlerCall,
         string $expectedBehavior
     ): void {
         // Arrange
         $request = $this->createRequestMock($requestPath);
-        $config = new Config($configData);
-        $this->configLoader->method('getConfig')->willReturn($config);
+        $this->decoderService->method('isShortNrRequest')->willReturn($isShortNrRequest);
+        $this->decoderService->method('decodeRequest')->willReturn($decodedUrl);
         
         if ($expectsHandlerCall) {
             $this->handler
@@ -74,46 +74,51 @@ class ShortNumberMiddlewareTest extends TestCase
         return [
             'Normal page request' => [
                 'requestPath' => '/normal-page',
-                'configData' => [],
+                'isShortNrRequest' => false,
+                'decodedUrl' => null,
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ],
             'Root path request' => [
                 'requestPath' => '/',
-                'configData' => [],
+                'isShortNrRequest' => false,
+                'decodedUrl' => null,
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ],
             'Long URL request' => [
                 'requestPath' => '/very/long/path/to/some/resource',
-                'configData' => [],
+                'isShortNrRequest' => false,
+                'decodedUrl' => null,
                 'expectsHandlerCall' => true,
                 'expectedBehavior' => 'passthrough'
             ],
-            'URL with query parameters scenario' => [
-                'requestPath' => '/page',
-                'configData' => ['shortNr' => ['pages' => ['prefix' => 'p']]],
-                'expectsHandlerCall' => true,
-                'expectedBehavior' => 'passthrough'
-            ],
-            'Potential future short URL pattern' => [
+            'Short URL request with decoded result' => [
                 'requestPath' => '/p123',
-                'configData' => ['shortNr' => ['pages' => ['prefix' => 'p']]],
-                'expectsHandlerCall' => true,
-                'expectedBehavior' => 'passthrough'
+                'isShortNrRequest' => true,
+                'decodedUrl' => '/page-123',
+                'expectsHandlerCall' => false,
+                'expectedBehavior' => 'redirect'
+            ],
+            'Short URL request with null decode' => [
+                'requestPath' => '/p999',
+                'isShortNrRequest' => true,
+                'decodedUrl' => null,
+                'expectsHandlerCall' => false,
+                'expectedBehavior' => 'redirect'
             ]
         ];
     }
 
-    public function testMiddlewareCallsConfigLoaderForEveryRequest(): void
+    public function testMiddlewareCallsDecoderServiceForEveryRequest(): void
     {
         $request = $this->createRequestMock('/any-path');
-        $config = new Config([]);
         
-        $this->configLoader
+        $this->decoderService
             ->expects($this->once())
-            ->method('getConfig')
-            ->willReturn($config);
+            ->method('isShortNrRequest')
+            ->with($request)
+            ->willReturn(false);
         
         $this->handler->method('handle')->willReturn($this->handlerResponse);
         
