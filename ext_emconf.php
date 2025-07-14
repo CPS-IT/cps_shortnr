@@ -1,6 +1,6 @@
 <?php
 
-$EM_CONF['shortnr'] = [
+$EM_CONF['cps_shortnr'] = [
   'title' => 'CPS ShortNr Resolver',
   'description' => 'Resolves Short Alias Uri',
   'category' => 'plugin',

@@ -7,7 +7,7 @@ use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 
 class ExtensionSetup
 {
-    public const EXT_KEY = 'shortnr'; // same as composer.json
+    public const EXT_KEY = 'cps_shortnr'; // same as composer.json
     public const CACHE_KEY = self::EXT_KEY;
 
     /**
