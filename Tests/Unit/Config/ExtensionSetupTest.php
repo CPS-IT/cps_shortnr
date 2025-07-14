@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Tests\Unit\Config;
+namespace CPSIT\ShortNr\Tests\Unit\Config;
 
-use CPSIT\Shortnr\Config\ExtensionSetup;
+use CPSIT\ShortNr\Config\ExtensionSetup;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Cache\Backend\FileBackend;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;

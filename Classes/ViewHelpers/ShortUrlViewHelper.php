@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\ViewHelpers;
+namespace CPSIT\ShortNr\ViewHelpers;
 
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 

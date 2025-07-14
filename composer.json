@@ -22,12 +22,12 @@
     },
     "autoload": {
         "psr-4": {
-            "CPSIT\\Shortnr\\": "Classes/"
+            "CPSIT\\ShortNr\\": "Classes/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "CPSIT\\Shortnr\\Tests\\": "Tests/"
+            "CPSIT\\ShortNr\\Tests\\": "Tests/"
         }
     },
     "config": {

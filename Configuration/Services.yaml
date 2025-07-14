@@ -4,14 +4,14 @@ services:
     autoconfigure: true
     public: true
 
-  CPSIT\Shortnr\:
+  CPSIT\ShortNr\:
     resource: '../Classes/*'
     exclude: '../Classes/Config/DTO'
 
-  CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
-    alias: CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystem
+  CPSIT\ShortNr\Service\FileSystem\FileSystemInterface:
+    alias: CPSIT\ShortNr\Service\FileSystem\FileSystem
     public: true
 
-  CPSIT\Shortnr\Service\PlatformAdapter\Typo3\PathResolverInterface:
-    alias: CPSIT\Shortnr\Service\PlatformAdapter\Typo3\Typo3PathResolver
+  CPSIT\ShortNr\Service\Path\PathResolverInterface:
+    alias: CPSIT\ShortNr\Service\Path\Typo3PathResolver
     public: true

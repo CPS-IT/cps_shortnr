@@ -1,7 +1,7 @@
 shortNr:
   types:
-    page: "\\CPSIT\\Shortnr\\Service\\Processor\\PageProcessor"
-    plugin: "\\CPSIT\\Shortnr\\Service\\Processor\\PluginProcessor" # add custom processor here
+    page: "\\CPSIT\\ShortNr\\Service\\Processor\\PageProcessor"
+    plugin: "\\CPSIT\\ShortNr\\Service\\Processor\\PluginProcessor" # add custom processor here
 
   _default:
     # support page id or hard-coded slug (detects it via is_numeric)

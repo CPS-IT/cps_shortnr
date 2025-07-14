@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Tests\Unit\ViewHelpers;
+namespace CPSIT\ShortNr\Tests\Unit\ViewHelpers;
 
-use CPSIT\Shortnr\ViewHelpers\ShortUrlViewHelper;
+use CPSIT\ShortNr\ViewHelpers\ShortUrlViewHelper;
 use PHPUnit\Framework\TestCase;
 use TYPO3Fluid\Fluid\Core\Rendering\RenderingContextInterface;
 
@@ -13,7 +13,7 @@ final class ShortUrlViewHelperTest extends TestCase
     protected function setUp(): void
     {
         $this->viewHelper = new ShortUrlViewHelper();
-
+        
         $renderingContext = $this->createMock(RenderingContextInterface::class);
         $this->viewHelper->setRenderingContext($renderingContext);
         $this->viewHelper->initializeArguments();

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\shortnr\Service\PlatformAdapter\FileSystem;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\FileSystem;
 
 class FileSystem implements FileSystemInterface
 {

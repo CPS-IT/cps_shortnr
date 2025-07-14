@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Exception;
+namespace CPSIT\ShortNr\Exception;
 
 class ShortNrConfigException extends ShortNrException
 {

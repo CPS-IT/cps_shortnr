@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Tests\Unit\Middleware;
+namespace CPSIT\ShortNr\Tests\Unit\Middleware;
 
-use CPSIT\Shortnr\Config\ConfigLoader;
-use CPSIT\Shortnr\Config\DTO\Config;
-use CPSIT\Shortnr\Middleware\ShortNumberMiddleware;
+use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\ShortNr\Config\DTO\Config;
+use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -22,7 +22,7 @@ class ShortNumberMiddlewareTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
+        
         $this->configLoader = $this->createMock(ConfigLoader::class);
         $this->middleware = new ShortNumberMiddleware($this->configLoader);
         $this->handler = $this->createMock(RequestHandlerInterface::class);
@@ -42,7 +42,7 @@ class ShortNumberMiddlewareTest extends TestCase
         $request = $this->createRequestMock($requestPath);
         $config = new Config($configData);
         $this->configLoader->method('getConfig')->willReturn($config);
-
+        
         if ($expectsHandlerCall) {
             $this->handler
                 ->expects($this->once())
@@ -109,14 +109,14 @@ class ShortNumberMiddlewareTest extends TestCase
     {
         $request = $this->createRequestMock('/any-path');
         $config = new Config([]);
-
+        
         $this->configLoader
             ->expects($this->once())
             ->method('getConfig')
             ->willReturn($config);
-
+        
         $this->handler->method('handle')->willReturn($this->handlerResponse);
-
+        
         $this->middleware->process($request, $this->handler);
     }
 
@@ -124,10 +124,10 @@ class ShortNumberMiddlewareTest extends TestCase
     {
         $uri = $this->createMock(UriInterface::class);
         $uri->method('getPath')->willReturn($path);
-
+        
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
-
+        
         return $request;
     }
 }

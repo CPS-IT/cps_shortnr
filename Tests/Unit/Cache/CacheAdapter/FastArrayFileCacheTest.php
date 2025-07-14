@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Tests\Unit\Cache\CacheAdapter;
+namespace CPSIT\ShortNr\Tests\Unit\Cache\CacheAdapter;
 
-use CPSIT\Shortnr\Cache\CacheAdapter\FastArrayFileCache;
-use CPSIT\Shortnr\Config\ExtensionSetup;
-use CPSIT\Shortnr\Exception\ShortNrCacheException;
-use CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
+use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
+use CPSIT\ShortNr\Config\ExtensionSetup;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use PHPUnit\Framework\TestCase;
 
 class FastArrayFileCacheTest extends TestCase
@@ -16,10 +16,10 @@ class FastArrayFileCacheTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
+        
         $this->fileSystem = $this->createMock(FileSystemInterface::class);
         $this->cache = new FastArrayFileCache($this->fileSystem);
-
+        
         $this->clearStaticRuntimeCache();
     }
 
@@ -79,7 +79,7 @@ class FastArrayFileCacheTest extends TestCase
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
         $expectedTempFile = '/tmp/temp_cache_file';
         $expectedPhpCode = "<?php\n\nreturn " . var_export($data, true) . ";\n";
-
+        
         $this->fileSystem->method('file_exists')
             ->willReturnCallback(function($path) use ($expectedCacheFile) {
                 if ($path === dirname($expectedCacheFile)) {
@@ -90,27 +90,27 @@ class FastArrayFileCacheTest extends TestCase
                 }
                 return false;
             });
-
+        
         $this->fileSystem->method('tempnam')
             ->with(dirname($expectedCacheFile), ExtensionSetup::CACHE_KEY)
             ->willReturn($expectedTempFile);
-
+        
         $this->fileSystem->expects($this->once())
             ->method('file_put_contents')
             ->with($expectedTempFile, $expectedPhpCode, LOCK_EX);
-
+        
         $this->fileSystem->expects($this->once())
             ->method('rename')
             ->with($expectedTempFile, $expectedCacheFile);
-
+        
         $this->fileSystem->method('require')
             ->with($expectedCacheFile)
             ->willReturn($data);
-
+        
         $this->cache->writeArrayFileCache($data, $suffix);
-
+        
         $result = $this->cache->readArrayFileCache($suffix);
-
+        
         $this->assertSame($data, $result);
     }
 
@@ -150,11 +150,11 @@ class FastArrayFileCacheTest extends TestCase
     ): void {
         $suffix = 'test';
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
-
+        
         $this->fileSystem->method('file_exists')
             ->with($expectedCacheFile)
             ->willReturn($fileExists);
-
+        
         if ($fileExists) {
             if ($requireResult instanceof \Exception) {
                 $this->fileSystem->method('require')
@@ -166,9 +166,9 @@ class FastArrayFileCacheTest extends TestCase
                     ->willReturn($requireResult);
             }
         }
-
+        
         $result = $this->cache->readArrayFileCache($suffix);
-
+        
         $this->assertSame($expectedResult, $result);
     }
 
@@ -217,45 +217,45 @@ class FastArrayFileCacheTest extends TestCase
         $suffix = 'error';
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
         $expectedTempFile = '/tmp/temp_cache_file';
-
+        
         $this->fileSystem->method('file_exists')
             ->willReturnMap([
                 [dirname($expectedCacheFile), $dirExists]
             ]);
-
+        
         if (!$dirExists) {
             $this->fileSystem->method('mkdir')
                 ->with(dirname($expectedCacheFile), 0755, true)
                 ->willReturn($mkdirResult);
         }
-
+        
         if ($dirExists || $mkdirResult) {
             $this->fileSystem->method('tempnam')
                 ->with(dirname($expectedCacheFile), ExtensionSetup::CACHE_KEY)
                 ->willReturn($expectedTempFile);
         }
-
+        
         if ($filePutContentsException) {
             $this->fileSystem->method('file_put_contents')
                 ->willThrowException($filePutContentsException);
-
+            
             $this->fileSystem->expects($this->once())
                 ->method('unlink')
                 ->with($expectedTempFile);
         }
-
+        
         if ($renameException) {
             $this->fileSystem->method('rename')
                 ->willThrowException($renameException);
-
+            
             $this->fileSystem->expects($this->once())
                 ->method('unlink')
                 ->with($expectedTempFile);
         }
-
+        
         $this->expectException($expectedException);
         $this->expectExceptionMessage($expectedMessage);
-
+        
         $this->cache->writeArrayFileCache($data, $suffix);
     }
 
@@ -280,11 +280,11 @@ class FastArrayFileCacheTest extends TestCase
     {
         $suffix = 'test';
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
-
+        
         $this->fileSystem->method('file_exists')
             ->with($expectedCacheFile)
             ->willReturn($fileExists);
-
+        
         if ($expectUnlink) {
             $this->fileSystem->expects($this->once())
                 ->method('unlink')
@@ -293,9 +293,9 @@ class FastArrayFileCacheTest extends TestCase
             $this->fileSystem->expects($this->never())
                 ->method('unlink');
         }
-
+        
         $this->cache->invalidateFileCache($suffix);
-
+        
         $result = $this->cache->readArrayFileCache($suffix);
         $this->assertNull($result);
     }
@@ -325,13 +325,13 @@ class FastArrayFileCacheTest extends TestCase
     {
         $suffix = 'test';
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
-
+        
         $this->fileSystem->method('filemtime')
             ->with($expectedCacheFile)
             ->willReturn($filemtime);
-
+        
         $result = $this->cache->getFileModificationTime($suffix);
-
+        
         $this->assertSame($expectedResult, $result);
     }
 
@@ -359,21 +359,21 @@ class FastArrayFileCacheTest extends TestCase
     public function testCacheFilePathGenerationWithDifferentSuffixes(string $suffix, string $expectedFileName): void
     {
         $data = ['test' => 'data'];
-
+        
         $this->fileSystem->method('file_exists')
             ->willReturn(true);
-
+        
         $this->fileSystem->method('tempnam')
             ->willReturn('/tmp/temp_file');
-
+        
         $this->fileSystem->expects($this->once())
             ->method('file_put_contents')
             ->with('/tmp/temp_file', $this->isType('string'), LOCK_EX);
-
+        
         $this->fileSystem->expects($this->once())
             ->method('rename')
             ->with('/tmp/temp_file', $this->stringContains($expectedFileName));
-
+        
         $this->cache->writeArrayFileCache($data, $suffix);
     }
 
@@ -382,19 +382,19 @@ class FastArrayFileCacheTest extends TestCase
         $data = ['cached' => 'data'];
         $suffix = 'test';
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
-
+        
         $this->fileSystem->method('file_exists')
             ->with($expectedCacheFile)
             ->willReturn(true);
-
+        
         $this->fileSystem->expects($this->once())
             ->method('require')
             ->with($expectedCacheFile)
             ->willReturn($data);
-
+        
         $result1 = $this->cache->readArrayFileCache($suffix);
         $result2 = $this->cache->readArrayFileCache($suffix);
-
+        
         $this->assertSame($data, $result1);
         $this->assertSame($data, $result2);
     }
@@ -406,22 +406,22 @@ class FastArrayFileCacheTest extends TestCase
         $suffix = 'atomic';
         $expectedCacheFile = $this->getExpectedCacheFilePath($suffix);
         $expectedTempFile = '/tmp/shortnr_temp_123';
-
+        
         $this->fileSystem->method('file_exists')
             ->willReturn(true);
-
+        
         $this->fileSystem->method('tempnam')
             ->with(dirname($expectedCacheFile), ExtensionSetup::CACHE_KEY)
             ->willReturn($expectedTempFile);
-
+        
         $this->fileSystem->expects($this->once())
             ->method('file_put_contents')
             ->with($expectedTempFile, $this->isType('string'), LOCK_EX);
-
+        
         $this->fileSystem->expects($this->once())
             ->method('rename')
             ->with($expectedTempFile, $expectedCacheFile);
-
+        
         $this->cache->writeArrayFileCache($data, $suffix);
     }
 

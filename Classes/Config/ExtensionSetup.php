@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Config;
+namespace CPSIT\ShortNr\Config;
 
 use TYPO3\CMS\Core\Cache\Backend\FileBackend;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;

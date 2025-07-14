@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Cache\CacheAdapter;
+namespace CPSIT\ShortNr\Cache\CacheAdapter;
 
-use CPSIT\Shortnr\Config\ExtensionSetup;
-use CPSIT\Shortnr\Exception\ShortNrCacheException;
-use CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
+use CPSIT\ShortNr\Config\ExtensionSetup;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use Symfony\Component\Filesystem\Path;
 use Throwable;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;

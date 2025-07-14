@@ -1,4 +1,4 @@
-# Claude Memory - Shortnr TYPO3 Extension
+# Claude Memory - ShortNr TYPO3 Extension
 
 ## Vision
 
@@ -8,7 +8,7 @@ The configuration is handled over a YAML config file. the upmost Priority is Cle
 OOP and TDD is important, in case of OOP it is used, when possible, and not in conflict with performance or clean code, his true origin form "messaging". messaging refers to the way objects interact and communicate with each other by sending messages. This mechanism involves invoking methods on objects, which can lead to changes in the object's state or the return of a value. Essentially, objects don't directly access each other's internal data or methods; instead, they send messages to request specific actions or information
 
 ## Project Overview
-- **Extension**: Shortnr URL shortener for TYPO3
+- **Extension**: ShortNr URL shortener for TYPO3
 - **TYPO3 Versions**: 12.4 and 13.4
 - **PHP**: Written in 8.4, compatible with 8.1+
 - **Status**: Core architecture established, comprehensive test coverage implemented
@@ -66,7 +66,7 @@ Classes/
 
 ### ConfigLoader (`Classes/Config/ConfigLoader.php:37`)
 **Purpose**: Sophisticated config loading with multi-level caching, returns DTO objects
-**Architecture**:
+**Architecture**: 
 - **DTO Pattern**: Returns ConfigInterface instead of raw arrays
 - **Runtime Cache**: Static array for request-level caching
 - **File Cache**: PHP serialized arrays stored as executable PHP files
@@ -121,7 +121,7 @@ Classes/
 
 ### Path Resolution Abstraction
 **Design Decision**: Separate PathResolverInterface from FileSystemInterface
-**Rationale**:
+**Rationale**: 
 - Path resolution ≠ File system operations
 - Better testability (can mock path resolution independently)
 - TYPO3 utilities isolated from core file operations
@@ -197,7 +197,7 @@ shortNr:                  # Root configuration key (was ShortNr)
   types:                  # Processor type mappings
     page: "\\CPSIT\\ShortNr\\Service\\Processor\\PageProcessor"
     plugin: "\\CPSIT\\ShortNr\\Service\\Processor\\PluginProcessor"
-
+  
   _default:               # Default matching rules for all routes
     notFound: "/fehler-404"  # Fallback URL for 404 errors (moved to _default)
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"  # Pattern: prefix + ID + optional language
@@ -208,13 +208,13 @@ shortNr:                  # Root configuration key (was ShortNr)
     condition:            # Database query conditions
       uid: "{match-2}"
       sysLanguageUid: "{match-3}"
-
+  
   # Route definitions inherit from _default and override specific settings
   pages:                  # User-defined route name
     type: page            # Processor type (from 'types' section)
     prefix: PAGE          # URL prefix pattern
     table: pages          # Database table
-
+  
   press:                  # Custom route name (user-defined, not reserved)
     prefix: pm
     type: plugin
@@ -244,11 +244,11 @@ shortNr:                  # Root configuration key (was ShortNr)
 ### Services Configuration (`Configuration/Services.yaml`)
 ```yaml
 services:
-  CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
-    alias: CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystem
-
-  CPSIT\Shortnr\Service\PlatformAdapter\Typo3\PathResolverInterface:
-    alias: CPSIT\Shortnr\Service\PlatformAdapter\Typo3\Typo3PathResolver
+  CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
+  
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver
 ```
 
 ### Cache Configuration (`Classes/Config/ExtensionSetup.php`)
@@ -287,7 +287,7 @@ services:
 
 ### Cache File Strategy
 - **Location**: `{TYPO3_VAR_PATH}/cache/code/cps_shortnr/`
-- **Naming**: `config{md5_hash}.php`
+- **Naming**: `config{md5_hash}.php` 
 - **Format**: Executable PHP files with `return [array];`
 - **Atomic Writes**: temp file → rename pattern prevents corruption
 

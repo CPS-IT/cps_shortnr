@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\Shortnr\Service\Url;
+namespace CPSIT\ShortNr\Service\Url;
 
 abstract class AbstractUrlService
 {
