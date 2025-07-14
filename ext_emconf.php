@@ -1,8 +1,8 @@
 <?php
 
-$EM_CONF['cps_shortnr'] = [
+$EM_CONF['shortnr'] = [
   'title' => 'CPS ShortNr Resolver',
-  'description' => 'Resolves Short Alias Uris',
+  'description' => 'Resolves Short Alias Uri',
   'category' => 'plugin',
   'author' => 'Benjamin Rannow',
   'author_email' => 'b.rannow@familie-redlich.de',
