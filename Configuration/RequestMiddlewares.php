@@ -1,6 +1,6 @@
 <?php
 
-use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
+use CPSIT\Shortnr\Middleware\ShortNumberMiddleware;
 return [
     'frontend' => [
         'CPSIT/ShortNr/ShortNrResolver' => [

@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Cache;
+namespace CPSIT\Shortnr\Cache;
 
-use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
-use CPSIT\ShortNr\Config\ExtensionSetup;
+use CPSIT\Shortnr\Cache\CacheAdapter\FastArrayFileCache;
+use CPSIT\Shortnr\Config\ExtensionSetup;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Cache\CacheManager as Typo3CacheManager;

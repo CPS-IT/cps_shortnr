@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Config\DTO;
+namespace CPSIT\Shortnr\Config\DTO;
 
-use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\Shortnr\Config\ConfigInterface;
 
 class Config implements ConfigInterface
 {
@@ -25,7 +25,7 @@ class Config implements ConfigInterface
     public function getConfigNames(): array
     {
         return $this->cache['configNames'] ??= array_values(array_filter(
-            array_keys($this->data[self::ENTRYPOINT] ?? []), 
+            array_keys($this->data[self::ENTRYPOINT] ?? []),
             fn($name) : bool => ($name !== self::DEFAULT && $name !== self::TYPE_PROCESSOR)
         ));
     }

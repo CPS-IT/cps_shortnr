@@ -1,8 +1,8 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Middleware;
+namespace CPSIT\Shortnr\Middleware;
 
-use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\Shortnr\Config\ConfigLoader;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;

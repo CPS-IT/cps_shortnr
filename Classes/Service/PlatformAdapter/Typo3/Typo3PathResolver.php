@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\PlatformAdapter\Typo3;
+namespace CPSIT\Shortnr\Service\PlatformAdapter\Typo3;
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -8,7 +8,7 @@ class Typo3PathResolver implements PathResolverInterface
 {
     /**
      * Resolve a path to an absolute path according to TYPO3 conventions
-     * 
+     *
      * @param string $path The path to resolve
      * @return string The resolved absolute path
      */

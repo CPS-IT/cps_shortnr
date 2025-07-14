@@ -1,13 +1,13 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Config;
+namespace CPSIT\Shortnr\Config;
 
-use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Config\DTO\Config;
-use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Exception\ShortNrConfigException;
-use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
-use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
+use CPSIT\Shortnr\Cache\CacheManager;
+use CPSIT\Shortnr\Config\DTO\Config;
+use CPSIT\Shortnr\Exception\ShortNrCacheException;
+use CPSIT\Shortnr\Exception\ShortNrConfigException;
+use CPSIT\Shortnr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
+use CPSIT\Shortnr\Service\PlatformAdapter\Typo3\PathResolverInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;

@@ -1,10 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Tests\Unit\Cache;
+namespace CPSIT\Shortnr\Tests\Unit\Cache;
 
-use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
-use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Config\ExtensionSetup;
+use CPSIT\Shortnr\Cache\CacheAdapter\FastArrayFileCache;
+use CPSIT\Shortnr\Cache\CacheManager;
+use CPSIT\Shortnr\Config\ExtensionSetup;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Cache\CacheManager as Typo3CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
@@ -18,7 +18,7 @@ class CacheManagerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->fastArrayFileCache = $this->createMock(FastArrayFileCache::class);
         $this->cacheManager = new CacheManager($this->fastArrayFileCache);
     }
@@ -38,7 +38,7 @@ class CacheManagerTest extends TestCase
     public function testGetArrayFileCacheReturnsInjectedInstance(bool $expectedInstance): void
     {
         $result = $this->cacheManager->getArrayFileCache();
-        
+
         if ($expectedInstance) {
             $this->assertSame($this->fastArrayFileCache, $result);
         } else {
@@ -54,7 +54,7 @@ class CacheManagerTest extends TestCase
     {
         $fastArrayFileCache = $this->createMock(FastArrayFileCache::class);
         $cacheManager = new CacheManager($fastArrayFileCache);
-        
+
         $this->assertSame($fastArrayFileCache, $cacheManager->getArrayFileCache());
     }
 
@@ -79,26 +79,26 @@ class CacheManagerTest extends TestCase
     {
         $fastArrayFileCache = $this->createMock(FastArrayFileCache::class);
         $cacheManager = new CacheManager($fastArrayFileCache);
-        
+
         if ($mockTypo3Cache) {
             $typo3CacheManager = $this->createMock(Typo3CacheManager::class);
             $cacheFrontend = $this->createMock(FrontendInterface::class);
-            
+
             $typo3CacheManager->method('getCache')
                 ->with(ExtensionSetup::CACHE_KEY)
                 ->willReturn($cacheFrontend);
-            
+
             GeneralUtility::setSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
         }
-        
+
         $arrayCache = $cacheManager->getArrayFileCache();
-        
+
         if ($expectArrayCache) {
             $this->assertSame($fastArrayFileCache, $arrayCache);
         } else {
             $this->assertNull($arrayCache);
         }
-        
+
         if ($mockTypo3Cache) {
             GeneralUtility::removeSingletonInstance(Typo3CacheManager::class, $typo3CacheManager);
         }
