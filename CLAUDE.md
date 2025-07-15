@@ -2,8 +2,10 @@
 
 ## Vision
 
-URL shortner that works with encode and decode URLs. it can handle Pages and plugin calls.
-The configuration is handled over a YAML config file. the upmost Priority is Clean Code AND Performance, since the middleware is between EVERY request
+URL shortener that works with encode and decode URLs. it can handle Pages and plugin calls with condition-based routing.
+The configuration is handled over a YAML config file with an extensible condition system. The upmost Priority is Clean Code AND Performance, since the middleware is between EVERY request.
+
+**Core Philosophy: "Enable, Don't Enforce"** - Complex configuration capabilities are justified and necessary since this is not a single-project extension but a reusable component across multiple sites with diverse requirements.
 
 OOP and TDD is important, in case of OOP it is used, when possible, and not in conflict with performance or clean code, his true origin form "messaging". messaging refers to the way objects interact and communicate with each other by sending messages. This mechanism involves invoking methods on objects, which can lead to changes in the object's state or the return of a value. Essentially, objects don't directly access each other's internal data or methods; instead, they send messages to request specific actions or information
 
@@ -39,9 +41,25 @@ Classes/
 │   │       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
 │   │       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
 │   └── Url/
-│       ├── AbstractUrlService.php - Base class for URL services with ConfigLoader integration
+│       ├── AbstractUrlService.php - Base class for URL services with ConfigLoader and ConditionService integration
 │       ├── DecoderService.php - URL decoding service (placeholder, extends AbstractUrlService)
-│       └── EncoderService.php - URL encoding service (placeholder)
+│       ├── EncoderService.php - URL encoding service (placeholder)
+│       └── Condition/
+│           ├── ConditionService.php - Regex matching and condition evaluation service with operator injection
+│           └── Operators/
+│               ├── OperatorInterface.php - Base interface for condition operators
+│               ├── EqualOperator.php - Equality comparison operator (placeholder)
+│               ├── ArrayInOperator.php - Array membership operator (placeholder)
+│               ├── BetweenOperator.php - Range comparison operator (placeholder)
+│               ├── GreaterOperator.php - Greater than comparison operator (placeholder)
+│               ├── LessOperator.php - Less than comparison operator (placeholder)
+│               ├── IssetOperator.php - Existence check operator (placeholder)
+│               ├── NotOperator.php - Negation operator (placeholder)
+│               ├── RegexMatchOperator.php - Regex pattern matching operator (placeholder)
+│               ├── StringContainsOperator.php - String contains operator (placeholder)
+│               ├── StringStartsOperator.php - String starts with operator (placeholder)
+│               └── StringEndsOperator.php - String ends with operator (placeholder)
+│               # Auto-discovery: Custom operators automatically tagged via Symfony DI
 ├── ViewHelpers/
 │   └── ShortUrlViewHelper.php - Fluid ViewHelper for generating short URLs
 └── Exception/ - Custom exceptions
@@ -49,10 +67,11 @@ Classes/
 
 ### What is missing
 
-* URL decoder Service business logic (placeholder exists, needs isShortNr implementation)
+* URL decoder Service business logic (placeholder exists)
 * URL encoder Service business logic (placeholder exists)
 * ShortUrlViewHelper business logic (placeholder implementation)
-* AbstractUrlService isShortNr() method implementation
+* Condition operator implementations (11 operators created as placeholders)
+* Condition evaluation logic in ConditionService
 * tbd...
 
 ### Key Architectural Patterns
@@ -61,12 +80,14 @@ Classes/
 - **Multi-level Caching**: Runtime → File cache → YAML parsing chain
 - **Atomic Operations**: Safe file writes using temp files + rename
 - **Clean Abstractions**: TYPO3 utilities isolated behind interfaces
+- **Auto-Discovery Pattern**: Condition operators automatically tagged via Symfony DI - custom operators require only implementing OperatorInterface
+- **Extensible Processor System**: New route types can be added by implementing processor classes and registering them in config `types` section - no code changes required
 
 ## Detailed Component Analysis
 
 ### ConfigLoader (`Classes/Config/ConfigLoader.php:37`)
 **Purpose**: Sophisticated config loading with multi-level caching, returns DTO objects
-**Architecture**: 
+**Architecture**:
 - **DTO Pattern**: Returns ConfigInterface instead of raw arrays
 - **Runtime Cache**: Static array for request-level caching
 - **File Cache**: PHP serialized arrays stored as executable PHP files
@@ -86,12 +107,13 @@ Classes/
 **Purpose**: Configuration data transfer object with inheritance logic and runtime caching
 **Architecture**:
 - **Value Inheritance**: Route configs inherit from `_default` section automatically
-- **Internal Caching**: Runtime cache for expensive operations (config names filtering)
+- **Internal Caching**: Runtime cache for expensive operations (config names filtering, regex grouping)
 - **Type Safety**: Strongly typed getters with null coalescing for optional values
 - **ConfigInterface**: Implements configuration access interface
 
 **Key Methods**:
 - `getConfigNames()`: Returns filtered route names (excludes `_default` and `types`)
+- `getUniqueRegexConfigNameGroup()`: Groups routes by unique regex patterns for performance
 - `getProcessorClass()`: Maps route type to processor class via types section
 - `getValue()`: Core inheritance method with fallback to `_default`
 - Route accessors: `getPrefix()`, `getType()`, `getTableName()`, `getCondition()`, etc.
@@ -119,9 +141,20 @@ Classes/
 - **Graceful Degradation**: Falls back when TYPO3 cache unavailable
 - **Exception Handling**: Catches all cache-related exceptions
 
+### ConditionService (`Classes/Service/Url/Condition/ConditionService.php`)
+**Purpose**: Fast regex matching and condition evaluation with operator injection
+**Architecture**:
+- **Runtime Caching**: Caches regex match results within request
+- **Operator Injection**: Auto-discovered operators injected via Symfony DI tagging
+- **Performance Optimization**: URI cleaning and efficient regex grouping
+
+**Key Methods**:
+- `matchAny()`: Fast check if URI matches any configured regex pattern
+- `matchRegex()`: Private method with caching for regex operations
+
 ### Path Resolution Abstraction
 **Design Decision**: Separate PathResolverInterface from FileSystemInterface
-**Rationale**: 
+**Rationale**:
 - Path resolution ≠ File system operations
 - Better testability (can mock path resolution independently)
 - TYPO3 utilities isolated from core file operations
@@ -149,6 +182,7 @@ Tests/Unit/
 - **Refactoring Safety**: Tests survive legitimate architectural changes
 - **No Wrapper Testing**: Platform adapters (FileSystem, PathResolver) excluded from testing as TYPO3-only wrappers
 - **Comprehensive Coverage**: Normal flows, edge cases, error conditions
+- **bad idea prevention** sometimes the best fix is to start over rather than patch a fundamentally flawed approach. if you encounter to much red-fags rethink this approach entirely.
 
 ### High-Quality Test Characteristics
 1. **Test behavior, not implementation** - Validate "what" the code does, not "how" it does it
@@ -197,7 +231,7 @@ shortNr:                  # Root configuration key (was ShortNr)
   types:                  # Processor type mappings
     page: "\\CPSIT\\ShortNr\\Service\\Processor\\PageProcessor"
     plugin: "\\CPSIT\\ShortNr\\Service\\Processor\\PluginProcessor"
-  
+
   _default:               # Default matching rules for all routes
     notFound: "/fehler-404"  # Fallback URL for 404 errors (moved to _default)
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"  # Pattern: prefix + ID + optional language
@@ -208,13 +242,13 @@ shortNr:                  # Root configuration key (was ShortNr)
     condition:            # Database query conditions
       uid: "{match-2}"
       sysLanguageUid: "{match-3}"
-  
+
   # Route definitions inherit from _default and override specific settings
   pages:                  # User-defined route name
     type: page            # Processor type (from 'types' section)
     prefix: PAGE          # URL prefix pattern
     table: pages          # Database table
-  
+
   press:                  # Custom route name (user-defined, not reserved)
     prefix: pm
     type: plugin
@@ -242,13 +276,20 @@ shortNr:                  # Root configuration key (was ShortNr)
 - **Custom Type Support**: Add exotic structures by implementing custom processors and registering them
 
 ### Services Configuration (`Configuration/Services.yaml`)
+**Key Features**:
+- **Auto-discovery**: All classes autowired and autoconfigured by default
+- **Operator Tagging**: OperatorInterface implementations automatically tagged for injection
+- **Interface Aliases**: Platform adapters configured for dependency injection
+
 ```yaml
 services:
-  CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
-    alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
-  
-  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface:
-    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver
+  _instanceof:
+    CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface:
+      tags: ['cps_shortnr.condition.operators']
+
+  CPSIT\ShortNr\Service\Url\Condition\ConditionService:
+    arguments:
+      $operators: !tagged 'cps_shortnr.condition.operators'
 ```
 
 ### Cache Configuration (`Classes/Config/ExtensionSetup.php`)
@@ -287,7 +328,7 @@ services:
 
 ### Cache File Strategy
 - **Location**: `{TYPO3_VAR_PATH}/cache/code/cps_shortnr/`
-- **Naming**: `config{md5_hash}.php` 
+- **Naming**: `config{md5_hash}.php`
 - **Format**: Executable PHP files with `return [array];`
 - **Atomic Writes**: temp file → rename pattern prevents corruption
 
@@ -345,9 +386,27 @@ At the end of each session, update this document with:
 - Treat deprecations as bugs that must be resolved before considering code complete
 - Use camelCase consistently
 
+### Performance Context
+- Sub-1ms middleware goal drives architectural decisions
+- Condition system trades flexibility for evaluation overhead
+- Complex conditions may require custom processors for performance
+- Runtime caching prevents repeated expensive operations (important distinction between object and class based Runtime-cache to prevent Stateful objects)
+- Teams can choose their complexity level: simple configs vs custom processors for edge cases, we only provide the tools
+
 ---
 
 ## Session Updates
+
+### Session Date: 2025-07-15
+**Changes Made**: Major condition system architecture - Added ConditionService with 11 operator placeholders, auto-discovery via Symfony DI tagging, enhanced Config DTO with regex grouping, updated vision with "Enable, Don't Enforce" philosophy
+
+**New Insights**:
+
+1. **Flexible Condition Operators** - Operators work with both request parameters and database records depending on processor implementation - provides maximum flexibility for diverse routing scenarios without enforcing specific usage patterns
+
+2. **Auto-Discovery Performance Pattern** - Symfony DI tagging with `_instanceof` enables seamless operator extension while maintaining performance through centralized injection - custom operators require only implementing OperatorInterface and become automatically available
+
+3. **Enterprise Extensibility Design** - Dual extension points (condition operators + processor types) enable complex configurations without code changes - supports "Enable, Don't Enforce" philosophy for reusable component across multiple sites with diverse requirements
 
 ### Session Date: 2025-07-14
 **Changes Made**: Architecture refactor - ConfigLoader moved from ShortNumberMiddleware to AbstractUrlService, updated middleware tests to use DecoderService dependency

@@ -25,9 +25,28 @@ class Config implements ConfigInterface
     public function getConfigNames(): array
     {
         return $this->cache['configNames'] ??= array_values(array_filter(
-            array_keys($this->data[self::ENTRYPOINT] ?? []), 
+            array_keys($this->data[self::ENTRYPOINT] ?? []),
             fn($name) : bool => ($name !== self::DEFAULT && $name !== self::TYPE_PROCESSOR)
         ));
+    }
+
+    /**
+     * gather all regex of all names and create a regex per name list.
+     *
+     * @return array
+     */
+    public function getUniqueRegexConfigNameGroup(): array
+    {
+        if (!empty($this->cache['regexList'])) {
+            return $this->cache['regexList'];
+        }
+
+        $regexNameList = [];
+        foreach ($this->getConfigNames() as $configName) {
+            $regexNameList[$this->getRegex($configName)] = true;
+        }
+
+        return $this->cache['regexList'] = array_keys($regexNameList);
     }
 
     /**
@@ -82,7 +101,7 @@ class Config implements ConfigInterface
 
     /**
      * @param string $name
-     * @return array|null
+     * @return array
      */
     public function getCondition(string $name): array
     {
@@ -91,7 +110,7 @@ class Config implements ConfigInterface
 
     /**
      * @param string $name
-     * @return array|null
+     * @return array
      */
     public function getRegexGroupMapping(string $name): array
     {
@@ -100,7 +119,7 @@ class Config implements ConfigInterface
 
     /**
      * @param string $name
-     * @return array|null
+     * @return array
      */
     public function getPluginConfig(string $name): array
     {

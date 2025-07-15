@@ -8,6 +8,14 @@ services:
     resource: '../Classes/*'
     exclude: '../Classes/Config/DTO'
 
+  _instanceof:
+    CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface:
+      tags: ['cps_shortnr.condition.operators']
+
+  CPSIT\ShortNr\Service\Url\Condition\ConditionService:
+    arguments:
+      $operators: !tagged 'cps_shortnr.condition.operators'
+
   CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
     alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
     public: true

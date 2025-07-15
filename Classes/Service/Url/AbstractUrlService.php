@@ -6,12 +6,14 @@ use CPSIT\ShortNr\Config\ConfigInterface;
 use CPSIT\ShortNr\Config\ConfigLoader;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
 use Psr\Http\Message\ServerRequestInterface;
 
 abstract class AbstractUrlService
 {
     public function __construct(
         private readonly ConfigLoader $configLoader,
+        protected readonly ConditionService $conditionService,
     )
     {}
 
@@ -37,6 +39,8 @@ abstract class AbstractUrlService
     }
 
     /**
+     * fast check if the given uri is a shortNr
+     *
      * @param string $uri uri can be like /PAGE123 or /PAGE123-1 (for english)
      * @return bool
      * @throws ShortNrCacheException
@@ -45,7 +49,6 @@ abstract class AbstractUrlService
     public function isShortNr(string $uri): bool
     {
         $config = $this->configLoader->getConfig();
-
-        return false;
+        return $this->conditionService->matchAny($uri, $config);
     }
 }

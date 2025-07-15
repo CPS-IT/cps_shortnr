@@ -5,12 +5,12 @@ shortNr:
 
   _default:
     # support page id or hard-coded slug (detects it via is_numeric)
-    notFound: "/fehler-404"
+    notFound: "/"
     # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
     regexGroupMapping: # regex group mapping
       prefix: "{match-1}"
-      id: "{match-2}"
+      uid: "{match-2}"
       languageId: "{match-3}"
     condition: # database conditions
       uid: "{match-2}"
@@ -20,16 +20,41 @@ shortNr:
     type: page
     prefix: PAGE
     table: pages
-  press:
-    prefix: pm
-    type: plugin
-    table: tx_bmubarticles_domain_model_article
-    condition:
-      articleType: press
-    pluginConfig:
-      extension: BmubArticles
-      plugin: Articles
-      pid: 289
-      action: show
-      controller: Article
-      objectName: article # name for value for the UID
+
+# condition example
+# not = negate the operant
+# [] implicit, in array
+# contains
+# gt / gte
+# lt / lte
+# isset: true/false
+# starts
+# ends
+# between
+# match
+
+#  example:
+#    type: page
+#    condition:
+  #     is_event:
+  #       not: 1 # is_event not 1 (is_event != 1)
+  #     score:
+  #       gte: 50 # gte = greater than equal (score >= 5) (also supports gt)
+  #     ranking:
+  #       lt: 30 # lt = lower than (ranking < 30) (also supports lte)
+  #     status: [ "active", "pending" ]    # implicit IN
+  #     name:
+  #       contains: "test"
+  #     version:
+  #       starts: 'v'
+  #     street:
+  #       ends: 'road'
+  #     surname:
+  #       isset: true # any name is ok as long the variable exists
+  #     email:
+  #       match: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"  # regex
+  #     age:
+  #       not:
+  #         between: [ 18, 65 ]     # shorthand for >= 18 AND <= 65
+  #     blocked_users:
+  #       not: [ "spam", "bot" ]  # opposite of implicit IN
