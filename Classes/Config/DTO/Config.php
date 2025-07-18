@@ -8,7 +8,6 @@ class Config implements ConfigInterface
 {
     private array $cache = [];
     private const DEFAULT = '_default';
-    private const TYPE_PROCESSOR = 'types';
     private const ENTRYPOINT = 'shortNr';
 
     /**
@@ -26,14 +25,14 @@ class Config implements ConfigInterface
     {
         return $this->cache['configNames'] ??= array_values(array_filter(
             array_keys($this->data[self::ENTRYPOINT] ?? []),
-            fn($name) : bool => ($name !== self::DEFAULT && $name !== self::TYPE_PROCESSOR)
+            fn($name) : bool => ($name !== self::DEFAULT)
         ));
     }
 
     /**
      * gather all regex of all names and create a regex per name list.
      *
-     * @return array
+     * @return array<string, array>
      */
     public function getUniqueRegexConfigNameGroup(): array
     {
@@ -43,20 +42,10 @@ class Config implements ConfigInterface
 
         $regexNameList = [];
         foreach ($this->getConfigNames() as $configName) {
-            $regexNameList[$this->getRegex($configName)] = true;
+            $regexNameList[$this->getRegex($configName)][] = $configName;
         }
 
-        return $this->cache['regexList'] = array_keys($regexNameList);
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getProcessorClass(string $name): ?string
-    {
-        $type = $this->getType($name);
-        return $type ? ($this->data[self::ENTRYPOINT][self::TYPE_PROCESSOR][$type] ?? null) : null;
+        return $this->cache['regexList'] = $regexNameList;
     }
 
     /**

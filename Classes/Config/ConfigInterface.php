@@ -12,15 +12,9 @@ interface ConfigInterface
     /**
      * gather all regex of all names and create a regex per name list.
      *
-     * @return array
+     * @return array<string, array>
      */
     public function getUniqueRegexConfigNameGroup(): array;
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getProcessorClass(string $name): ?string;
 
     /**
      * @param string $name

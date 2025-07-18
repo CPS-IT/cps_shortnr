@@ -11,10 +11,22 @@ services:
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface:
       tags: ['cps_shortnr.condition.operators']
+    CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
+      tags: [ 'cps_shortnr.processors' ]
 
   CPSIT\ShortNr\Service\Url\Condition\ConditionService:
     arguments:
       $operators: !tagged 'cps_shortnr.condition.operators'
+
+  CPSIT\ShortNr\Service\Url\AbstractUrlService:
+    arguments:
+      $processors: !tagged 'cps_shortnr.processors'
+
+  # Concrete services inherit
+  CPSIT\ShortNr\Service\Url\DecoderService:
+    parent: CPSIT\ShortNr\Service\Url\AbstractUrlService
+  CPSIT\ShortNr\Service\Url\EncoderService:
+    parent: CPSIT\ShortNr\Service\Url\AbstractUrlService
 
   CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
     alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
