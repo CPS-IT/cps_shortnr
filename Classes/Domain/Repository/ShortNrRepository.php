@@ -33,6 +33,8 @@ class ShortNrRepository
         $qb = $this->getQueryBuilder($tableName);
         $qb->select(...$fields);
         $qb->from($tableName);
+
+        // build where conditions based on the config
         $queryConditions = $this->conditionService->buildQueryCondition($condition, $qb);
         if (empty($queryConditions)) {
             throw new ShortNrQueryException('DB resolve without Conditions are not supported');
