@@ -16,7 +16,7 @@ abstract class BaseProcessor implements ProcessorInterface
         $result = [];
         foreach ($condition as $key => $value) {
             // support only match by now, performance reasons
-            if (preg_match('/\{match-(\d+)\}/', (string)$value, $m)) {
+            if (preg_match('/{match-(\d+)}/', (string)$value, $m)) {
                 $index = (int)($m[1] ?? -1);
                 $matchValue = $matches[$index][0] ?? null;
                 $result[$key] = $matchValue !== null ? (int)$matchValue : null;

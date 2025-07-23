@@ -15,7 +15,6 @@ class NotOperator implements WrappingOperatorInterface
     public function support(mixed $fieldConfig): bool
     {
         return is_array($fieldConfig) && array_key_exists('not', $fieldConfig);
-;
     }
 
     /**
