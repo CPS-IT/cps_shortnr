@@ -50,7 +50,7 @@ class DecoderService extends AbstractUrlService
             $regexMatches = $candidate['matches'] ?? [];
             foreach ($candidate['names']??[] as $name) {
 
-                // load processor if prossible and gives the decode task over with all current available information
+                // load processor if possible and gives the decode task over with all current available information
                 $processor = $this->getProcessor($config->getType($name));
                 $decodedUri = $processor?->decode($uri, $name, $config, $regexMatches);
                 if ($decodedUri !== null) {

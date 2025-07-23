@@ -3,7 +3,11 @@
 namespace CPSIT\ShortNr\Service\Url\Condition;
 
 use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\WrappingOperatorInterface;
 use Generator;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 class ConditionService
 {
@@ -13,6 +17,43 @@ class ConditionService
         private readonly iterable $operators
     )
     {}
+
+    /**
+     * @param array $conditionConfig
+     * @param QueryBuilder $queryBuilder
+     * @return array
+     */
+    public function buildQueryCondition(array $conditionConfig, QueryBuilder $queryBuilder): array
+    {
+        $dbConditions = [];
+        foreach ($conditionConfig as $fieldName => $fieldConfig) {
+            $dbConditions[] = $this->processFieldConfig($fieldName, $fieldConfig, $queryBuilder, null);
+        }
+
+        return $dbConditions;
+    }
+
+    private function processFieldConfig(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed
+    {
+        $operator = $this->findOperator($fieldConfig);
+        if ($operator instanceof WrappingOperatorInterface) {
+            // do magic to unwrap
+            return $operator->wrap($fieldName, $fieldConfig, $queryBuilder, $parent, fn(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed => $this->processFieldConfig($fieldName, $fieldConfig, $queryBuilder, $parent));
+        }
+
+        return $operator->process($fieldName, $fieldConfig, $queryBuilder, $parent);
+    }
+
+    private function findOperator(mixed $fieldConfig): ?OperatorInterface
+    {
+        foreach ($this->operators as $operator) {
+            if ($operator->support($fieldConfig)) {
+                return $operator;
+            }
+        }
+
+        return null;
+    }
 
     /**
      * Fast check if any given regex matches the uri

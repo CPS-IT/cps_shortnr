@@ -71,7 +71,7 @@ interface ConfigInterface
     /**
      * @param string $name
      * @param string $key
-     * @return mixed
+     * @return mixed return value, if not found return NULL
      *
      * @internal
      */

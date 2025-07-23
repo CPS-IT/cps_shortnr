@@ -126,8 +126,17 @@ class Config implements ConfigInterface
 
     /**
      * @param string $name
+     * @return string|null
+     */
+    public function getLanguageParentField(string $name): ?string
+    {
+        return $this->getValue($name, 'languageParentField');
+    }
+
+    /**
+     * @param string $name
      * @param string $key
-     * @return mixed
+     * @return mixed return value, if not found return NULL
      *
      * @internal
      */

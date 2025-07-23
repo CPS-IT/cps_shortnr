@@ -7,50 +7,48 @@ shortNr:
     regexGroupMapping: # regex group mapping
       prefix: "{match-1}"
       uid: "{match-2}"
-      languageId: "{match-3}"
+      languageUid: "{match-3}"
     condition: # database conditions
       uid: "{match-2}"
       sysLanguageUid: "{match-3}"
+    languageParentField: "l10n_parent"  # default TYPO3 field name
 
   pages: # default page
     type: page
     prefix: PAGE
     table: pages
-
-# condition example
-# not = negate the operant
-# [] implicit, in array
-# contains
-# gt / gte
-# lt / lte
-# isset: true/false
-# starts
-# ends
-# between
-# match
-
-#  example:
-#    type: page
-#    condition:
-  #     is_event:
-  #       not: 1 # is_event not 1 (is_event != 1)
-  #     score:
-  #       gte: 50 # gte = greater than equal (score >= 5) (also supports gt)
-  #     ranking:
-  #       lt: 30 # lt = lower than (ranking < 30) (also supports lte)
-  #     status: [ "active", "pending" ]    # implicit IN
-  #     name:
-  #       contains: "test"
-  #     version:
-  #       starts: 'v'
-  #     street:
-  #       ends: 'road'
-  #     surname:
-  #       isset: true # any name is ok as long the variable exists
-  #     email:
-  #       match: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"  # regex
-  #     age:
-  #       not:
-  #         between: [ 18, 65 ]     # shorthand for >= 18 AND <= 65
-  #     blocked_users:
-  #       not: [ "spam", "bot" ]  # opposite of implicit IN
+    slug: slug
+    condition:
+      uid: "{match-2}"
+      sysLanguageUid: "{match-3}"
+      is_event:
+        contains: "test2"
+        not:
+          eq: 1
+          contains: "test"
+        #not: 1 # is_event not 1 (is_event != 1)
+      score:
+        gte: 50 # gte = greater than equal (score >= 5) (also supports gt)
+      ranking:
+        lt: 30 # lt = lower than (ranking < 30) (also supports lte)
+      status: [ "active", "pending" ]    # implicit IN
+      name:
+        contains: "test"
+      lastName:
+        not:
+          contains: "test"
+      version:
+        not:
+          ends: '-rc'
+        starts: 'v'
+      street:
+        ends: 'road'
+      surname:
+        isset: true # any name is ok as long the variable exists
+      email:
+        match: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"  # regex
+      age:
+        not:
+          between: [ 18, 65 ]     # shorthand for >= 18 AND <= 65
+      blocked_users:
+        not: [ "spam", "bot" ]  # opposite of implicit IN

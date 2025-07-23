@@ -6,7 +6,9 @@ services:
 
   CPSIT\ShortNr\:
     resource: '../Classes/*'
-    exclude: '../Classes/Config/DTO'
+    exclude:
+      - '../Classes/Config/DTO'
+      - '../Classes/Service/Url/Condition/Operators/DTO'
 
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface:

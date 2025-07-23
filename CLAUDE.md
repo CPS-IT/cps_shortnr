@@ -23,7 +23,7 @@ OOP and TDD is important, in case of OOP it is used, when possible, and not in c
 Classes/
 ├── Cache/
 │   ├── CacheAdapter/FastArrayFileCache.php - PHP array file cache with atomic writes
-│   └── CacheManager.php - TYPO3 cache integration
+│   └── CacheManager.php - TYPO3 cache integration with graceful degradation
 ├── Config/
 │   ├── ConfigInterface.php - Configuration access interface
 │   ├── ConfigLoader.php - Multi-level caching YAML config loader (returns ConfigInterface)
@@ -41,25 +41,29 @@ Classes/
 │   │       ├── PathResolverInterface.php - TYPO3 path resolution abstraction
 │   │       └── Typo3PathResolver.php - GeneralUtility::getFileAbsFileName wrapper
 │   └── Url/
-│       ├── AbstractUrlService.php - Base class for URL services with ConfigLoader and ConditionService integration
-│       ├── DecoderService.php - URL decoding service (placeholder, extends AbstractUrlService)
+│       ├── AbstractUrlService.php - Base class with processor injection, config/condition service integration
+│       ├── DecoderService.php - URL decoding service with caching and processor delegation
 │       ├── EncoderService.php - URL encoding service (placeholder)
-│       └── Condition/
-│           ├── ConditionService.php - Regex matching and condition evaluation service with operator injection
-│           └── Operators/
-│               ├── OperatorInterface.php - Base interface for condition operators
-│               ├── EqualOperator.php - Equality comparison operator (placeholder)
-│               ├── ArrayInOperator.php - Array membership operator (placeholder)
-│               ├── BetweenOperator.php - Range comparison operator (placeholder)
-│               ├── GreaterOperator.php - Greater than comparison operator (placeholder)
-│               ├── LessOperator.php - Less than comparison operator (placeholder)
-│               ├── IssetOperator.php - Existence check operator (placeholder)
-│               ├── NotOperator.php - Negation operator (placeholder)
-│               ├── RegexMatchOperator.php - Regex pattern matching operator (placeholder)
-│               ├── StringContainsOperator.php - String contains operator (placeholder)
-│               ├── StringStartsOperator.php - String starts with operator (placeholder)
-│               └── StringEndsOperator.php - String ends with operator (placeholder)
-│               # Auto-discovery: Custom operators automatically tagged via Symfony DI
+│       ├── Condition/
+│       │   ├── ConditionService.php - Generator-based regex matching with runtime caching
+│       │   └── Operators/
+│       │       ├── OperatorInterface.php - Base interface for condition operators
+│       │       ├── EqualOperator.php - Equality comparison operator (placeholder)
+│       │       ├── ArrayInOperator.php - Array membership operator (placeholder)
+│       │       ├── BetweenOperator.php - Range comparison operator (placeholder)
+│       │       ├── GreaterOperator.php - Greater than comparison operator (placeholder)
+│       │       ├── LessOperator.php - Less than comparison operator (placeholder)
+│       │       ├── IssetOperator.php - Existence check operator (placeholder)
+│       │       ├── NotOperator.php - Negation operator (placeholder)
+│       │       ├── RegexMatchOperator.php - Regex pattern matching operator (placeholder)
+│       │       ├── StringContainsOperator.php - String contains operator (placeholder)
+│       │       ├── StringStartsOperator.php - String starts with operator (placeholder)
+│       │       └── StringEndsOperator.php - String ends with operator (placeholder)
+│       │       # Auto-discovery: Custom operators automatically tagged via Symfony DI
+│       └── Processor/
+│           ├── ProcessorInterface.php - Base interface for URL processors
+│           ├── PageProcessor.php - TYPO3 page URL processing (placeholder)
+│           └── PluginProcessor.php - TYPO3 plugin URL processing (placeholder)
 ├── ViewHelpers/
 │   └── ShortUrlViewHelper.php - Fluid ViewHelper for generating short URLs
 └── Exception/ - Custom exceptions
@@ -67,11 +71,12 @@ Classes/
 
 ### What is missing
 
-* URL decoder Service business logic (placeholder exists)
 * URL encoder Service business logic (placeholder exists)
 * ShortUrlViewHelper business logic (placeholder implementation)
 * Condition operator implementations (11 operators created as placeholders)
-* Condition evaluation logic in ConditionService
+* Processor implementations (PageProcessor and PluginProcessor placeholders)
+* Database repositories for encoder/decoder operations
+* TYPO3 multi-language UID handling in processors
 * tbd...
 
 ### Key Architectural Patterns
@@ -82,6 +87,9 @@ Classes/
 - **Clean Abstractions**: TYPO3 utilities isolated behind interfaces
 - **Auto-Discovery Pattern**: Condition operators automatically tagged via Symfony DI - custom operators require only implementing OperatorInterface
 - **Extensible Processor System**: New route types can be added by implementing processor classes and registering them in config `types` section - no code changes required
+- **Generator-Based Performance**: ConditionService uses Generator pattern for lazy evaluation and early returns
+- **Processor Delegation**: URL processing delegated to specialized processors via auto-discovery DI pattern
+- **Multi-Level Caching**: Runtime caching in services prevents duplicate expensive operations within requests
 
 ## Detailed Component Analysis
 
@@ -142,15 +150,58 @@ Classes/
 - **Exception Handling**: Catches all cache-related exceptions
 
 ### ConditionService (`Classes/Service/Url/Condition/ConditionService.php`)
-**Purpose**: Fast regex matching and condition evaluation with operator injection
+**Purpose**: Generator-based regex matching with runtime caching and operator injection
 **Architecture**:
-- **Runtime Caching**: Caches regex match results within request
+- **Generator Pattern**: Uses Generator for lazy evaluation and early returns in `matchAny()`
+- **Runtime Caching**: Caches regex match results within request using URI+regex composite keys
 - **Operator Injection**: Auto-discovered operators injected via Symfony DI tagging
-- **Performance Optimization**: URI cleaning and efficient regex grouping
+- **Performance Optimization**: PREG_OFFSET_CAPTURE for efficient regex grouping
 
 **Key Methods**:
-- `matchAny()`: Fast check if URI matches any configured regex pattern
-- `matchRegex()`: Private method with caching for regex operations
+- `matchAny()`: Fast check using Generator pattern - returns on first match
+- `findAllMatchConfigCandidates()`: Returns Generator of all matching candidates with regex groups
+- `matchRegex()`: Private method with caching for regex operations using composite keys
+- `matchGenerator()`: Core Generator that yields match data for candidate processing
+
+### AbstractUrlService (`Classes/Service/Url/AbstractUrlService.php`)
+**Purpose**: Base class for URL services with processor injection and shared functionality
+**Architecture**:
+- **Processor Injection**: Auto-discovered processors injected via Symfony DI tagging
+- **Runtime Caching**: Caches processor instances by type to prevent repeated iterations
+- **Configuration Access**: Centralized ConfigLoader dependency for all URL services
+- **Condition Integration**: Shared ConditionService for URI matching across encoder/decoder
+
+**Key Methods**:
+- `getProcessor()`: Cached processor lookup by type string
+- `isShortNr()`: Fast URI validation using ConditionService
+- `normalizeShortNrUri()`: Standard URI trimming for consistent processing
+- `getConfig()`: Protected config access for subclasses
+
+### DecoderService (`Classes/Service/Url/DecoderService.php`)
+**Purpose**: URL decoding with 24-hour caching and processor delegation
+**Architecture**:
+- **TYPO3 Cache Integration**: Uses CacheManager for long-term caching (24 hours)
+- **Processor Delegation**: Delegates actual decoding to specialized processors
+- **Candidate Processing**: Iterates through regex matches and attempts decoding
+- **Performance Optimization**: Caches decoded results to prevent repeated database queries
+
+**Key Methods**:
+- `decodeRequest()`: PSR-15 compatible request decoding
+- `decode()`: Main decoding entry point with caching
+- `decodeUri()`: Private method handling candidate iteration and processor delegation
+- `findConfigCandidates()`: Generator-based candidate discovery via ConditionService
+
+### ProcessorInterface (`Classes/Service/Url/Processor/ProcessorInterface.php`)
+**Purpose**: Contract for URL processors handling specific route types
+**Architecture**:
+- **Type Identification**: `getType()` method maps to config `types` section
+- **Decoding Contract**: `decode()` method receives URI, config name, full config, and regex matches
+- **Processor Delegation**: Enables specialized handling for pages, plugins, and custom types
+- **Auto-Discovery**: Processors automatically tagged via Symfony DI
+
+**Key Methods**:
+- `getType()`: Returns string identifier matching config `types` section
+- `decode()`: Processes URI with full context - returns decoded URL or null
 
 ### Path Resolution Abstraction
 **Design Decision**: Separate PathResolverInterface from FileSystemInterface
@@ -238,7 +289,7 @@ shortNr:                  # Root configuration key (was ShortNr)
     regexGroupMapping:    # Maps regex groups to placeholders
       prefix: "{match-1}"
       id: "{match-2}"
-      languageId: "{match-3}"
+      languageUid: "{match-3}"
     condition:            # Database query conditions
       uid: "{match-2}"
       sysLanguageUid: "{match-3}"
@@ -278,7 +329,8 @@ shortNr:                  # Root configuration key (was ShortNr)
 ### Services Configuration (`Configuration/Services.yaml`)
 **Key Features**:
 - **Auto-discovery**: All classes autowired and autoconfigured by default
-- **Operator Tagging**: OperatorInterface implementations automatically tagged for injection
+- **Dual Tagging System**: Both operators and processors auto-tagged for injection
+- **Parent-Child Pattern**: Concrete services inherit from AbstractUrlService
 - **Interface Aliases**: Platform adapters configured for dependency injection
 
 ```yaml
@@ -286,10 +338,20 @@ services:
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface:
       tags: ['cps_shortnr.condition.operators']
+    CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
+      tags: ['cps_shortnr.processors']
 
   CPSIT\ShortNr\Service\Url\Condition\ConditionService:
     arguments:
       $operators: !tagged 'cps_shortnr.condition.operators'
+
+  CPSIT\ShortNr\Service\Url\AbstractUrlService:
+    arguments:
+      $processors: !tagged 'cps_shortnr.processors'
+
+  # Concrete services inherit
+  CPSIT\ShortNr\Service\Url\DecoderService:
+    parent: CPSIT\ShortNr\Service\Url\AbstractUrlService
 ```
 
 ### Cache Configuration (`Classes/Config/ExtensionSetup.php`)
@@ -345,11 +407,14 @@ services:
 - **PHP array serialization**: Faster than JSON for large arrays
 
 ## Future Development Notes
-- **Middleware**: Currently placeholder, needs URL shortening logic
-- **Database layer**: Will need URL storage/retrieval
+- **Processor Implementations**: PageProcessor and PluginProcessor need database query logic
+- **Database Repositories**: Create repository pattern for URL storage/retrieval operations
+- **TYPO3 Language Handling**: Multi-language UID resolution in processors for sys_language_uid
+- **Encoder Service**: Implement URL encoding with database storage and collision handling
+- **Condition Operators**: Implement 11 placeholder operators for advanced condition evaluation
 - **Cache warming**: Consider background cache warming for large configs
 - **Monitoring**: Add cache hit/miss metrics
-- **Path resolution**: Consider caching resolved paths for performance
+- **ViewHelper Integration**: Connect ShortUrlViewHelper to EncoderService
 
 ## Session Update Instructions (For Claude Code)
 
@@ -515,3 +580,14 @@ At the end of each session, update this document with:
 2. **Test Suite Compliance Validation** - Regular compliance audits against established guidelines prevent gradual degradation of test quality - systematic removal of anti-patterns ensures tests remain aligned with OOP messaging principles and refactoring safety requirements
 
 3. **Private Method Testing Philosophy** - Private methods are implementation details validated through public behavior testing - reflection-based testing of internals breaks encapsulation and creates brittle tests that fail during legitimate refactoring of internal logic
+
+### Session Date: 2025-07-18
+**Changes Made**: Implemented processor system architecture - ProcessorInterface with PageProcessor/PluginProcessor, enhanced DecoderService with working business logic, updated Services.yaml with processor auto-discovery
+
+**New Insights**:
+
+1. **Processor Delegation Pattern** - DecoderService delegates actual URL processing to specialized processors while handling caching and candidate discovery - separates routing logic from type-specific processing and enables clean extension for new route types
+
+2. **Generator-Based Performance Optimization** - ConditionService uses Generator pattern for lazy evaluation in `matchAny()` enabling early returns on first match - critical for middleware performance where most requests don't match shortNr patterns
+
+3. **Multi-Level Caching Strategy** - Runtime caching in services prevents duplicate operations within requests while TYPO3 cache provides 24-hour persistence - balances performance optimization with memory usage for high-traffic middleware scenarios
