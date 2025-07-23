@@ -93,7 +93,7 @@ Classes/
 
 ## Detailed Component Analysis
 
-### ConfigLoader (`Classes/Config/ConfigLoader.php:37`)
+### ConfigLoader (`Classes/Config/ConfigLoader.php`)
 **Purpose**: Sophisticated config loading with multi-level caching, returns DTO objects
 **Architecture**:
 - **DTO Pattern**: Returns ConfigInterface instead of raw arrays
@@ -233,7 +233,7 @@ Tests/Unit/
 - **Refactoring Safety**: Tests survive legitimate architectural changes
 - **No Wrapper Testing**: Platform adapters (FileSystem, PathResolver) excluded from testing as TYPO3-only wrappers
 - **Comprehensive Coverage**: Normal flows, edge cases, error conditions
-- **bad idea prevention** sometimes the best fix is to start over rather than patch a fundamentally flawed approach. if you encounter to much red-fags rethink this approach entirely.
+- **bad idea prevention** sometimes the best fix is to start over rather than patch a fundamentally flawed approach. if you encounter too much red-fags rethink this approach entirely.
 
 ### High-Quality Test Characteristics
 1. **Test behavior, not implementation** - Validate "what" the code does, not "how" it does it
@@ -452,11 +452,21 @@ At the end of each session, update this document with:
 - Use camelCase consistently
 
 ### Performance Context
-- Sub-1ms middleware goal drives architectural decisions
+- Sub-1ms middleware goal drives architectural decisions (if not in conflict with the Quality Standards, and Industry Standards)
 - Condition system trades flexibility for evaluation overhead
 - Complex conditions may require custom processors for performance
 - Runtime caching prevents repeated expensive operations (important distinction between object and class based Runtime-cache to prevent Stateful objects)
 - Teams can choose their complexity level: simple configs vs custom processors for edge cases, we only provide the tools
+
+### Decision Transparency & Weight Tuning
+When making trade-off decisions, Claude should provide:
+
+**Decision Format:**
+> ⚖️ **Weight Alert**: [Primary concern] weighted at 0.X, [Secondary concern] at 0.Y
+> Choosing [approach] because [specific reasoning]
+> Consider rebalancing if [context changes, e.g., team composition, traffic patterns, maintenance phase]
+
+This enables real-time prompt tuning and architectural decision auditing.
 
 ---
 
