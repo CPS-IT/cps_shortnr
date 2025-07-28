@@ -259,16 +259,16 @@ Tests/Unit/
 ### Test Commands
 ```bash
 # Run all tests
-docker exec php-shortnr /var/www/html/.Build/bin/phpunit
+./docker.sh exec /var/www/html/.Build/bin/phpunit
 
 # Run specific test class
-docker exec php-shortnr /var/www/html/.Build/bin/phpunit Tests/Unit/Config/ConfigLoaderTest.php
+./docker.sh exec /var/www/html/.Build/bin/phpunit Tests/Unit/Config/ConfigLoaderTest.php
 
 # Run with coverage
-docker exec php-shortnr /var/www/html/.Build/bin/phpunit --coverage-html var/coverage
+./docker.sh exec /var/www/html/.Build/bin/phpunit --coverage-html var/coverage
 
 # Run specific test method
-docker exec php-shortnr /var/www/html/.Build/bin/phpunit --filter="testMethodName"
+./docker.sh exec /var/www/html/.Build/bin/phpunit --filter="testMethodName"
 ```
 
 ## Configuration & Dependency Injection
