@@ -30,7 +30,7 @@ final class QueryBuilderMockHelper
      */
     public function createQueryBuilderMock(): QueryBuilder&MockObject
     {
-        $queryBuilder = $this->testCase->createMock(QueryBuilder::class);
+        $queryBuilder = $this->createQueryBuilderMockObject();
         $expressionBuilder = $this->createExpressionBuilderMock();
         
         $queryBuilder->method('expr')
@@ -46,13 +46,25 @@ final class QueryBuilderMockHelper
     }
 
     /**
+     * Creates QueryBuilder mock object via TestCase
+     * 
+     * @return QueryBuilder&MockObject
+     */
+    private function createQueryBuilderMockObject(): QueryBuilder&MockObject
+    {
+        return $this->testCase->getMockBuilder(QueryBuilder::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+    }
+
+    /**
      * Creates expression builder mock with all SQL expression methods
      * 
      * @return ExpressionBuilder&MockObject
      */
     private function createExpressionBuilderMock(): ExpressionBuilder&MockObject
     {
-        $expressionBuilder = $this->testCase->createMock(ExpressionBuilder::class);
+        $expressionBuilder = $this->createExpressionBuilderMockObject();
         
         // Equality operators
         $expressionBuilder->method('eq')
@@ -93,8 +105,24 @@ final class QueryBuilderMockHelper
             ->willReturnCallback([$this, 'createAndExpression']);
         $expressionBuilder->method('or')
             ->willReturnCallback([$this, 'createOrExpression']);
+            
+        // Generic comparison operator for custom SQL operations
+        $expressionBuilder->method('comparison')
+            ->willReturnCallback(fn($field, $operator, $value) => "{$field} {$operator} {$value}");
 
         return $expressionBuilder;
+    }
+
+    /**
+     * Creates ExpressionBuilder mock object via TestCase
+     * 
+     * @return ExpressionBuilder&MockObject
+     */
+    private function createExpressionBuilderMockObject(): ExpressionBuilder&MockObject
+    {
+        return $this->testCase->getMockBuilder(ExpressionBuilder::class)
+            ->disableOriginalConstructor()
+            ->getMock();
     }
 
     /**
@@ -112,7 +140,7 @@ final class QueryBuilderMockHelper
      */
     public function createAndExpression(...$expressions): CompositeExpression
     {
-        $composite = $this->testCase->createMock(CompositeExpression::class);
+        $composite = $this->createCompositeExpressionMock();
         $composite->method('__toString')
             ->willReturn('(' . implode(' AND ', array_filter($expressions)) . ')');
         return $composite;
@@ -123,10 +151,22 @@ final class QueryBuilderMockHelper
      */
     public function createOrExpression(...$expressions): CompositeExpression
     {
-        $composite = $this->testCase->createMock(CompositeExpression::class);
+        $composite = $this->createCompositeExpressionMock();
         $composite->method('__toString')
             ->willReturn('(' . implode(' OR ', array_filter($expressions)) . ')');
         return $composite;
+    }
+
+    /**
+     * Creates CompositeExpression mock object via TestCase
+     * 
+     * @return CompositeExpression&MockObject
+     */
+    private function createCompositeExpressionMock(): CompositeExpression&MockObject
+    {
+        return $this->testCase->getMockBuilder(CompositeExpression::class)
+            ->disableOriginalConstructor()
+            ->getMock();
     }
 
     /**

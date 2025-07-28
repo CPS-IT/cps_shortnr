@@ -16,6 +16,10 @@ class OperatorHistory implements OperatorHistoryInterface
     )
     {}
 
+    /**
+     * @param string $className
+     * @return bool
+     */
     public function hasOperatorTypeInHistory(string $className): bool
     {
         if ($className === get_class($this->operator)) {

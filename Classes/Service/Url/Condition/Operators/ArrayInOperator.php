@@ -6,13 +6,13 @@ use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 use Doctrine\DBAL\ArrayParameterType;
 
-class ArrayInOperator implements OperatorInterface
+class ArrayInOperator implements QueryOperatorInterface
 {
     /**
      * @param mixed $fieldConfig
      * @return bool
      */
-    public function support(mixed $fieldConfig): bool
+    public function supports(mixed $fieldConfig): bool
     {
         return is_array($fieldConfig) && array_is_list($fieldConfig);
     }
@@ -36,6 +36,10 @@ class ArrayInOperator implements OperatorInterface
         return $queryBuilder->expr()->in($fieldName, $placeholder);
     }
 
+    /**
+     * @param array $values
+     * @return int
+     */
     private function determineArrayType(array $values): int
     {
         if (empty($values)) {
@@ -54,6 +58,5 @@ class ArrayInOperator implements OperatorInterface
             'integer' => ArrayParameterType::INTEGER,
             default => ArrayParameterType::STRING
         };
-
     }
 }

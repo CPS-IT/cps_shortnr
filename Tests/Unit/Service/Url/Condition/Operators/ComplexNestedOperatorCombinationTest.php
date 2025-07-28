@@ -395,7 +395,7 @@ final class ComplexNestedOperatorCombinationTest extends BaseOperatorTest
         string $scenario
     ): void {
         $operator = $this->operators[$operatorType];
-        $result = $operator->support($config);
+        $result = $operator->supports($config);
         
         $this->assertEquals($expectedSupport, $result, 
             "Support detection failed for {$operatorType} with scenario: {$scenario}");

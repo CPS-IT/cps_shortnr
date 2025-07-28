@@ -5,13 +5,13 @@ namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
-class StringContainsOperator implements OperatorInterface
+class StringContainsOperator implements QueryOperatorInterface
 {
     /**
      * @param mixed $fieldConfig
      * @return bool
      */
-    public function support(mixed $fieldConfig): bool
+    public function supports(mixed $fieldConfig): bool
     {
         return is_array($fieldConfig) && array_key_exists('contains', $fieldConfig);
     }

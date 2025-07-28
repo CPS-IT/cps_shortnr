@@ -8,13 +8,13 @@ use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
-class BetweenOperator implements OperatorInterface
+class BetweenOperator implements QueryOperatorInterface
 {
     /**
      * @param mixed $fieldConfig
      * @return bool
      */
-    public function support(mixed $fieldConfig): bool
+    public function supports(mixed $fieldConfig): bool
     {
         return is_array($fieldConfig) && array_key_exists('between', $fieldConfig);
     }

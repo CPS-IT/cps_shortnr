@@ -30,9 +30,9 @@ final class NotOperatorTest extends BaseOperatorTest
     /**
      * @dataProvider supportDataProvider
      */
-    public function testSupport(mixed $fieldConfig, bool $expectedSupport, string $scenario): void
+    public function testSupports(mixed $fieldConfig, bool $expectedSupport, string $scenario): void
     {
-        $result = $this->operator->support($fieldConfig);
+        $result = $this->operator->supports($fieldConfig);
         $this->assertEquals($expectedSupport, $result, 
             "Support check failed for scenario: {$scenario}");
     }

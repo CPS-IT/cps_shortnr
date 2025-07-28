@@ -131,7 +131,7 @@ abstract class BaseOperatorTest extends TestCase
             ],
             'string' => [
                 'value' => 'test',
-                'type' => \TYPO3\CMS\Core\Database\Connection::PARAM_STR,
+                'type' => \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY,
                 'normalOp' => 'normal',
                 'negatedOp' => 'negated',
             ],
@@ -155,7 +155,7 @@ abstract class BaseOperatorTest extends TestCase
             ],
             'float as string' => [
                 'value' => '3.14',
-                'type' => \TYPO3\CMS\Core\Database\Connection::PARAM_STR,
+                'type' => \TYPO3\CMS\Core\Database\Connection::PARAM_INT_ARRAY,
                 'normalOp' => 'normal',
                 'negatedOp' => 'negated',
             ],

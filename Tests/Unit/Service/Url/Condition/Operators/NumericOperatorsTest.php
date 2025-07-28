@@ -50,7 +50,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $scenario
     ): void {
         // Test support
-        $this->assertEquals($shouldSupport, $this->betweenOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->betweenOperator->supports($fieldConfig),
             "Between operator support failed for: {$scenario}");
         
         if (!$shouldSupport) {
@@ -114,7 +114,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $expectedOperator,
         string $scenario
     ): void {
-        $this->assertEquals($shouldSupport, $this->greaterOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->greaterOperator->supports($fieldConfig),
             "Greater operator support failed for: {$scenario}");
         
         if (!$shouldSupport) return;
@@ -163,7 +163,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $expectedOperator,
         string $scenario
     ): void {
-        $this->assertEquals($shouldSupport, $this->lessOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->lessOperator->supports($fieldConfig),
             "Less operator support failed for: {$scenario}");
         
         if (!$shouldSupport) return;
@@ -210,7 +210,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $expectedOperator,
         string $scenario
     ): void {
-        $this->assertEquals($shouldSupport, $this->issetOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->issetOperator->supports($fieldConfig),
             "Isset operator support failed for: {$scenario}");
         
         if (!$shouldSupport) return;
@@ -256,7 +256,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $expectedOperator,
         string $scenario
     ): void {
-        $this->assertEquals($shouldSupport, $this->startsOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->startsOperator->supports($fieldConfig),
             "String starts operator support failed for: {$scenario}");
         
         if (!$shouldSupport) return;
@@ -302,7 +302,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $expectedOperator,
         string $scenario
     ): void {
-        $this->assertEquals($shouldSupport, $this->endsOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->endsOperator->supports($fieldConfig),
             "String ends operator support failed for: {$scenario}");
         
         if (!$shouldSupport) return;
@@ -348,7 +348,7 @@ final class NumericOperatorsTest extends BaseOperatorTest
         string $expectedOperator,
         string $scenario
     ): void {
-        $this->assertEquals($shouldSupport, $this->regexOperator->support($fieldConfig),
+        $this->assertEquals($shouldSupport, $this->regexOperator->supports($fieldConfig),
             "Regex operator support failed for: {$scenario}");
         
         if (!$shouldSupport) return;

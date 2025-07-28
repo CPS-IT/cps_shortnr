@@ -4,7 +4,7 @@ namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
-use Doctrine\DBAL\Exception;
+use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -42,8 +42,8 @@ class ShortNrRepository
 
         $qb->where(...$queryConditions);
         try {
-            return $qb->executeQuery()->fetchAssociative();
-        } catch (Exception $e) {
+            return $this->conditionService->postQueryResultFilterCondition($qb->executeQuery()->fetchAssociative(), $condition);
+        } catch (Throwable $e) {
             throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
         }
     }

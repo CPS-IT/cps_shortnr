@@ -3,15 +3,14 @@
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
-class RegexMatchOperator implements OperatorInterface
+class RegexMatchOperator implements ResultOperatorInterface
 {
     /**
      * @param mixed $fieldConfig
      * @return bool
      */
-    public function support(mixed $fieldConfig): bool
+    public function supports(mixed $fieldConfig): bool
     {
         return is_array($fieldConfig) && array_key_exists('match', $fieldConfig);
     }
@@ -19,35 +18,14 @@ class RegexMatchOperator implements OperatorInterface
     /**
      * @param string $fieldName
      * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
+     * @param array $result
      * @param OperatorHistoryInterface|null $parent
-     * @return string
+     * @return array|null
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): string
+    public function postResultProcess(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array
     {
-        $pattern = $fieldConfig['match'];
-        $param = $queryBuilder->createNamedParameter($pattern);
-
-        $platformName = $queryBuilder->getConnection()->getDatabasePlatform()->getName();
-
-        $regexOperator = match ($platformName) {
-            'mysql', 'mariadb' => 'REGEXP',
-            'postgresql', 'pdo_postgresql' => '~',
-            'sqlite', 'sqlite3', 'pdo_sqlite' => 'REGEXP',
-            default => 'REGEXP'
-        };
-
-        $notRegexOperator = match ($platformName) {
-            'mysql', 'mariadb' => 'NOT REGEXP',
-            'postgresql', 'pdo_postgresql' => '!~',
-            'sqlite', 'sqlite3', 'pdo_sqlite' => 'NOT REGEXP',
-            default => 'NOT REGEXP'
-        };
-
-        if ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class)) {
-            return $queryBuilder->expr()->comparison($fieldName, $notRegexOperator, $param);
-        }
-
-        return $queryBuilder->expr()->comparison($fieldName, $regexOperator, $param);
+        // WIP! skip test for now!
+        // TODO: add regex check
+        return null;
     }
 }

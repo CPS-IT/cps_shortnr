@@ -11,14 +11,17 @@ services:
       - '../Classes/Service/Url/Condition/Operators/DTO'
 
   _instanceof:
-    CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface:
-      tags: ['cps_shortnr.condition.operators']
+    CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:
+      tags: ['cps_shortnr.query.operators']
+    CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface:
+      tags: ['cps_shortnr.result.operators']
     CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
       tags: [ 'cps_shortnr.processors' ]
 
   CPSIT\ShortNr\Service\Url\Condition\ConditionService:
     arguments:
-      $operators: !tagged 'cps_shortnr.condition.operators'
+      $queryOperators: !tagged 'cps_shortnr.query.operators'
+      $resultOperators: !tagged 'cps_shortnr.result.operators'
 
   CPSIT\ShortNr\Service\Url\AbstractUrlService:
     arguments:
