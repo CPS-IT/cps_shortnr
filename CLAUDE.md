@@ -30,6 +30,15 @@ Classes/
 │   ├── DTO/
 │   │   └── Config.php - Configuration data transfer object with inheritance logic
 │   └── ExtensionSetup.php - TYPO3 extension configuration
+├── Domain/
+│   └── Repository/
+│       └── ShortNrRepository.php - Database operations with condition service integration
+├── Exception/
+│   ├── ShortNrException.php - Base exception class
+│   ├── ShortNrCacheException.php - Cache-related exceptions
+│   ├── ShortNrConfigException.php - Configuration-related exceptions
+│   ├── ShortNrOperatorException.php - Operator-related exceptions
+│   └── ShortNrQueryException.php - Database query exceptions
 ├── Middleware/
 │   └── ShortNumberMiddleware.php - Main HTTP request handler using DecoderService
 ├── Service/
@@ -45,39 +54,52 @@ Classes/
 │       ├── DecoderService.php - URL decoding service with caching and processor delegation
 │       ├── EncoderService.php - URL encoding service (placeholder)
 │       ├── Condition/
-│       │   ├── ConditionService.php - Generator-based regex matching with runtime caching
+│       │   ├── ConditionService.php - Generator-based regex matching with runtime caching and operator integration
 │       │   └── Operators/
 │       │       ├── OperatorInterface.php - Base interface for condition operators
-│       │       ├── EqualOperator.php - Equality comparison operator (placeholder)
-│       │       ├── ArrayInOperator.php - Array membership operator (placeholder)
-│       │       ├── BetweenOperator.php - Range comparison operator (placeholder)
-│       │       ├── GreaterOperator.php - Greater than comparison operator (placeholder)
-│       │       ├── LessOperator.php - Less than comparison operator (placeholder)
-│       │       ├── IssetOperator.php - Existence check operator (placeholder)
-│       │       ├── NotOperator.php - Negation operator (placeholder)
-│       │       ├── RegexMatchOperator.php - Regex pattern matching operator (placeholder)
-│       │       ├── StringContainsOperator.php - String contains operator (placeholder)
-│       │       ├── StringStartsOperator.php - String starts with operator (placeholder)
-│       │       └── StringEndsOperator.php - String ends with operator (placeholder)
+│       │       ├── QueryOperatorInterface.php - Database query building interface
+│       │       ├── ResultOperatorInterface.php - Result filtering interface
+│       │       ├── WrappingOperatorInterface.php - Complex nested operations interface
+│       │       ├── DTO/
+│       │       │   ├── OperatorHistory.php - Operator chain tracking implementation
+│       │       │   └── OperatorHistoryInterface.php - Operator chain tracking interface
+│       │       ├── AndOperator.php - Logical AND operator implementation
+│       │       ├── EqualOperator.php - Equality comparison operator
+│       │       ├── ArrayInOperator.php - Array membership operator
+│       │       ├── BetweenOperator.php - Range comparison operator
+│       │       ├── GreaterOperator.php - Greater than comparison operator
+│       │       ├── LessOperator.php - Less than comparison operator
+│       │       ├── IssetOperator.php - Existence check operator
+│       │       ├── NotOperator.php - Negation operator
+│       │       ├── RegexMatchOperator.php - Regex pattern matching operator
+│       │       ├── StringContainsOperator.php - String contains operator
+│       │       ├── StringStartsOperator.php - String starts with operator
+│       │       └── StringEndsOperator.php - String ends with operator
 │       │       # Auto-discovery: Custom operators automatically tagged via Symfony DI
 │       └── Processor/
 │           ├── ProcessorInterface.php - Base interface for URL processors
+│           ├── BaseProcessor.php - Abstract base class with common functionality
 │           ├── PageProcessor.php - TYPO3 page URL processing (placeholder)
 │           └── PluginProcessor.php - TYPO3 plugin URL processing (placeholder)
 ├── ViewHelpers/
 │   └── ShortUrlViewHelper.php - Fluid ViewHelper for generating short URLs
-└── Exception/ - Custom exceptions
 ```
 
 ### What is missing
 
 * URL encoder Service business logic (placeholder exists)
 * ShortUrlViewHelper business logic (placeholder implementation)
-* Condition operator implementations (11 operators created as placeholders)
 * Processor implementations (PageProcessor and PluginProcessor placeholders)
-* Database repositories for encoder/decoder operations
 * TYPO3 multi-language UID handling in processors
 * tbd...
+
+### What is completed
+
+* **4-Interface Operator System**: Complete condition operator architecture with OperatorInterface, QueryOperatorInterface, ResultOperatorInterface, and WrappingOperatorInterface
+* **12 Operator Implementations**: Full implementation of all condition operators including new AndOperator for logical operations
+* **ShortNrRepository**: Database operations service with integrated condition system for dynamic query building
+* **Operator History DTO**: Tracking system to prevent infinite loops in nested operator chains
+* **Exception Hierarchy**: Comprehensive exception system for operators, queries, cache, and configuration errors
 
 ### Key Architectural Patterns
 - **Dependency Injection**: All services use constructor injection
@@ -150,18 +172,29 @@ Classes/
 - **Exception Handling**: Catches all cache-related exceptions
 
 ### ConditionService (`Classes/Service/Url/Condition/ConditionService.php`)
-**Purpose**: Generator-based regex matching with runtime caching and operator injection
+**Purpose**: Dual-phase condition processing system with query building and result filtering capabilities
 **Architecture**:
-- **Generator Pattern**: Uses Generator for lazy evaluation and early returns in `matchAny()`
+- **Dual Operator Injection**: Separate iterables for QueryOperatorInterface and ResultOperatorInterface instances
+- **Two-Phase Processing**: Pre-query condition building and post-query result filtering
+- **Wrapping Operator Support**: Special handling for WrappingOperatorInterface with nested callback delegation
 - **Runtime Caching**: Caches regex match results within request using URI+regex composite keys
-- **Operator Injection**: Auto-discovered operators injected via Symfony DI tagging
-- **Performance Optimization**: PREG_OFFSET_CAPTURE for efficient regex grouping
 
 **Key Methods**:
-- `matchAny()`: Fast check using Generator pattern - returns on first match
-- `findAllMatchConfigCandidates()`: Returns Generator of all matching candidates with regex groups
-- `matchRegex()`: Private method with caching for regex operations using composite keys
-- `matchGenerator()`: Core Generator that yields match data for candidate processing
+- `buildQueryCondition()`: Builds database WHERE conditions using QueryOperators before query execution
+- `postQueryResultFilterCondition()`: Filters query results using ResultOperators after query execution
+- `processFieldConfig()`: Core query-time processor with wrapping operator support and recursive callbacks
+- `processPostResultFieldConfig()`: Core result-time processor for filtering retrieved data
+- `findQueryBuilderOperator()`: Locates appropriate QueryOperator for given field configuration
+- `findPostResultOperator()`: Locates appropriate ResultOperator for given field configuration
+
+**Two-Phase Processing Pattern**:
+1. **Query Phase**: QueryOperators build SQL WHERE conditions using QueryBuilder
+2. **Result Phase**: ResultOperators filter actual result arrays from database
+
+**Wrapping Operator Integration**:
+- Detects WrappingOperatorInterface implementations
+- Provides nested callback for recursive processing
+- Enables complex logical operations (AND & NOT) with proper nesting (we exclude OR-operation since its not necessary to add this complexity by now)
 
 ### AbstractUrlService (`Classes/Service/Url/AbstractUrlService.php`)
 **Purpose**: Base class for URL services with processor injection and shared functionality
@@ -222,6 +255,26 @@ Tests/Unit/
 │   ├── ConfigLoaderTest.php
 │   └── ExtensionSetupTest.php
 ├── Middleware/ShortNumberMiddlewareTest.php
+├── Service/
+│   └── Url/
+│       ├── Condition/
+│       │   └── Operators/
+│       │       ├── AndOperatorTest.php - Comprehensive test for logical AND operations
+│       │       ├── ArrayInOperatorTest.php - Array membership operator tests
+│       │       ├── BaseOperatorTest.php - Foundation tests for common operator patterns
+│       │       ├── ComplexNestedOperatorCombinationTest.php - Integration tests for nested operators
+│       │       ├── EqualOperatorTest.php - Equality comparison tests
+│       │       ├── Helper/QueryBuilderMockHelper.php - Test utility for QueryBuilder mocking
+│       │       ├── IssetOperatorTest.php - Existence check operator tests
+│       │       ├── LessOperatorTest.php - Less than comparison tests
+│       │       ├── NestedOperatorIntegrationTest.php - Complex nesting scenarios
+│       │       ├── NotOperatorTest.php - Negation operator tests
+│       │       ├── NumericOperatorsTest.php - Consolidated numeric operator tests
+│       │       ├── RegexMatchOperatorTest.php - Regex pattern matching tests
+│       │       ├── StringContainsOperatorTest.php - String contains operator tests
+│       │       ├── StringEndsOperatorTest.php - String ends with operator tests
+│       │       └── StringStartsOperatorTest.php - String starts with operator tests
+│       └── DecoderServiceTest.php
 └── ViewHelpers/ShortUrlViewHelperTest.php
 ```
 
@@ -264,11 +317,36 @@ Tests/Unit/
 # Run specific test class
 ./docker.sh exec /var/www/html/.Build/bin/phpunit Tests/Unit/Config/ConfigLoaderTest.php
 
+# Run operator tests specifically
+./docker.sh exec /var/www/html/.Build/bin/phpunit Tests/Unit/Service/Url/Condition/Operators/
+
 # Run with coverage
 ./docker.sh exec /var/www/html/.Build/bin/phpunit --coverage-html var/coverage
 
 # Run specific test method
 ./docker.sh exec /var/www/html/.Build/bin/phpunit --filter="testMethodName"
+```
+
+### Docker Development Environment
+The project includes an optimized `docker.sh` script that provides intelligent container management:
+
+**Key Features:**
+- **Smart Building**: Only builds when running `up` commands or when image doesn't exist
+- **Auto-start**: `docker.sh exec` automatically starts containers if not running
+- **UID/GID Injection**: Prevents permission issues by using host user credentials
+- **Transparent Forwarding**: All docker-compose commands work through the script
+
+**Usage Examples:**
+```bash
+# Start development environment
+./docker.sh up -d
+
+# Execute commands (auto-starts if needed)
+./docker.sh exec /var/www/html/.Build/bin/phpunit
+
+# Standard docker-compose commands work
+./docker.sh ps
+./docker.sh logs -f php
 ```
 
 ## Configuration & Dependency Injection
@@ -406,12 +484,59 @@ services:
 - **Atomic writes**: Prevents cache corruption during writes
 - **PHP array serialization**: Faster than JSON for large arrays
 
+## Operator System Architecture
+
+### QueryOperator vs ResultOperator Pattern
+The condition system implements a sophisticated two-phase processing approach that separates database query optimization from result filtering:
+
+**QueryOperatorInterface** (`Classes/Service/Url/Condition/Operators/QueryOperatorInterface.php`)
+- **Purpose**: Build SQL WHERE conditions before query execution
+- **Performance**: Leverages database indexes and query optimization
+- **Method**: `process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed`
+- **Use Cases**: Simple comparisons, range checks, existence validation
+- **Examples**: EqualOperator, LessOperator, GreaterOperator, IssetOperator
+
+**ResultOperatorInterface** (`Classes/Service/Url/Condition/Operators/ResultOperatorInterface.php`)
+- **Purpose**: Filter actual result arrays after query execution
+- **Use Cases**: Complex logic that can't be expressed in SQL, regex operations, custom business rules
+- **Method**: `postResultProcess(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array`
+- **Examples**: RegexMatchOperator, StringContainsOperator, complex validation logic
+
+**WrappingOperatorInterface** (`Classes/Service/Url/Condition/Operators/WrappingOperatorInterface.php`)
+- **Purpose**: Enables complex nested operations like AND, OR, NOT
+- **Dual Implementation**: Extends both QueryOperatorInterface and ResultOperatorInterface
+- **Recursive Callbacks**: Provides nested processing for complex logical structures
+- **Methods**:
+  - `wrap()`: Query-time nested processing with callback delegation
+  - `postResultWrap()`: Result-time nested processing with callback delegation
+- **Examples**: AndOperator for logical AND operations
+
+### Operator Discovery and Injection
+```yaml
+# Configuration/Services.yaml
+services:
+  _instanceof:
+    CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:
+      tags: ['cps_shortnr.condition.query_operators']
+    CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface:
+      tags: ['cps_shortnr.condition.result_operators']
+
+  CPSIT\ShortNr\Service\Url\Condition\ConditionService:
+    arguments:
+      $queryOperators: !tagged 'cps_shortnr.condition.query_operators'
+      $resultOperators: !tagged 'cps_shortnr.condition.result_operators'
+```
+
+### Performance Optimization Strategy
+- **Query Phase**: Use QueryOperators for database-optimizable conditions (leverages indexes)
+- **Result Phase**: Use ResultOperators only when SQL can't express the logic
+- **Mixed Operations**: WrappingOperators coordinate both phases for complex nested logic
+- **Operator History**: Prevents infinite recursion in nested operator chains
+
 ## Future Development Notes
 - **Processor Implementations**: PageProcessor and PluginProcessor need database query logic
-- **Database Repositories**: Create repository pattern for URL storage/retrieval operations
 - **TYPO3 Language Handling**: Multi-language UID resolution in processors for sys_language_uid
 - **Encoder Service**: Implement URL encoding with database storage and collision handling
-- **Condition Operators**: Implement 11 placeholder operators for advanced condition evaluation
 - **Cache warming**: Consider background cache warming for large configs
 - **Monitoring**: Add cache hit/miss metrics
 - **ViewHelper Integration**: Connect ShortUrlViewHelper to EncoderService
@@ -601,3 +726,14 @@ This enables real-time prompt tuning and architectural decision auditing.
 2. **Generator-Based Performance Optimization** - ConditionService uses Generator pattern for lazy evaluation in `matchAny()` enabling early returns on first match - critical for middleware performance where most requests don't match shortNr patterns
 
 3. **Multi-Level Caching Strategy** - Runtime caching in services prevents duplicate operations within requests while TYPO3 cache provides 24-hour persistence - balances performance optimization with memory usage for high-traffic middleware scenarios
+
+### Session Date: 2025-07-28
+**Changes Made**: Major operator system completion - Implemented complete 4-interface operator architecture (OperatorInterface, QueryOperatorInterface, ResultOperatorInterface, WrappingOperatorInterface), added 12 fully functional operators including new AndOperator, created ShortNrRepository with condition integration, comprehensive test suite with 83% coverage, and optimized docker.sh development script
+
+**New Insights**:
+
+1. **Interface Segregation Excellence** - 4-interface operator system (base → query/result → wrapping) enables clean separation between query building and result filtering while supporting complex nested operations - demonstrates interface segregation principle applied to domain-specific database operations
+
+2. **Operator History Pattern** - OperatorHistory DTO prevents infinite loops in nested operator chains while enabling complex logical operations - critical for maintaining system stability when users create recursive condition configurations
+
+3. **Test-Driven Architecture Maturity** - Comprehensive operator test suite with behavioral focus, DataProvider patterns, and interface mocking validates that architectural decisions can be tested without implementation coupling - ensures refactoring safety and long-term maintainability
