@@ -29,7 +29,7 @@ class CacheManager
 
     /**
      * @param string $cacheKey
-     * @param callable $processBlock
+     * @param callable $processBlock must return a string
      * @param int|null $ttl Lifetime of this cache entry in seconds. If NULL is specified, the default lifetime is used. "0" means unlimited lifetime.
      * @return string|null
      * @throws ShortNrCacheException

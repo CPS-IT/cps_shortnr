@@ -4,14 +4,14 @@ namespace CPSIT\ShortNr\Service\Url\Condition\Operators\DTO;
 
 use CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface;
 
-class OperatorHistory implements OperatorHistoryInterface
+class OperatorHistory
 {
     /**
-     * @param OperatorHistoryInterface|null $parent
+     * @param OperatorHistory|null $parent
      * @param OperatorInterface $operator
      */
     public function __construct(
-        private readonly ?OperatorHistoryInterface $parent,
+        private readonly ?OperatorHistory $parent,
         private readonly OperatorInterface $operator
     )
     {}

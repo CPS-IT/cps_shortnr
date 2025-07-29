@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 
@@ -19,8 +20,7 @@ class PageProcessor extends BaseProcessor
      * @param ConfigInterface $config
      * @param array $matches
      * @return string|null
-     * @throws ShortNrConfigException
-     * @throws ShortNrQueryException
+     * @throws ShortNrConfigException|ShortNrQueryException|ShortNrCacheException
      */
     public function decode(string $uri, string $name, ConfigInterface $config, array $matches): ?string
     {
@@ -31,7 +31,7 @@ class PageProcessor extends BaseProcessor
         if (!$slug)
             throw new ShortNrConfigException("Slug config not found");
 
-        $result = $this->shortNrRepository->resolveTable([$slug],$tableName, $condition, $languageParentField);
+        $result = $this->shortNrRepository->resolveTable([$slug], $tableName, $condition, $languageParentField);
 
         return null;
     }

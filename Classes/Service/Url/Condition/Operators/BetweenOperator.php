@@ -3,39 +3,55 @@
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
 use CPSIT\ShortNr\Exception\ShortNrOperatorException;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 class BetweenOperator implements QueryOperatorInterface
 {
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(mixed $fieldConfig): bool
+    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
-        return is_array($fieldConfig) && array_key_exists('between', $fieldConfig);
+        $condition = $fieldCondition->getCondition();
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && array_key_exists('between', $condition);
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @return int
+     */
+    public function getPriority(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return CompositeExpression
      * @throws ShortNrOperatorException
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): CompositeExpression
+    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): CompositeExpression
     {
-        $values = $fieldConfig['between'];
+        $condition = $fieldCondition->getCondition();
+        $fieldName = $fieldCondition->getFieldName();
+        $queryBuilder = $context->getQueryBuilder();
+
+        $values = $condition['between'] ?? null;
         if (!is_array($values) || count($values) !== 2) {
             throw new ShortNrOperatorException('Between operator requires exactly 2 numbers.');
         }
 
-        $value1 = $this->transformToNumber($values[0]);
-        $value2 = $this->transformToNumber($values[1]);
+        $value1 = $this->transformToNumber($values[0] ?? null);
+        $value2 = $this->transformToNumber($values[1] ?? null);
         if ($value1 === null || $value2 === null) {
             throw new ShortNrOperatorException('Between operator requires exactly 2 numbers. got: ' . $value1. ' and ' . $value2);
         }

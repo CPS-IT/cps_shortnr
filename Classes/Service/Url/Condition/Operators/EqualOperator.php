@@ -2,45 +2,60 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use TYPO3\CMS\Core\Database\Connection;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 class EqualOperator implements QueryOperatorInterface
 {
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(mixed $fieldConfig): bool
+    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
-        return !is_array($fieldConfig) || array_key_exists('eq', $fieldConfig);
+        $condition = $fieldCondition->getCondition();
+        return $context->fieldExists($fieldCondition->getFieldName()) && !is_array($condition) || array_key_exists('eq', $condition);
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @return int
+     */
+    public function getPriority(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return string
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): string
+    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): string
     {
-        // normalize to scalar value
-        if (is_array($fieldConfig)) {
-            $fieldConfig = $fieldConfig['eq'];
+        $condition = $fieldCondition->getCondition();
+        $fieldName = $fieldCondition->getFieldName();
+        $queryBuilder = $context->getQueryBuilder();
+
+        if (is_array($condition)) {
+            $condition = $condition['eq'] ?? null;
         }
 
-        $type = match (gettype($fieldConfig)) {
+        $type = match (gettype($condition)) {
             'integer' => Connection::PARAM_INT,
             'NULL' => Connection::PARAM_NULL,
             'boolean' => Connection::PARAM_BOOL,
             default => Connection::PARAM_INT_ARRAY
         };
         if ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class)) {
-            return $queryBuilder->expr()->neq($fieldName, $queryBuilder->createNamedParameter($fieldConfig, $type));
+            return $queryBuilder->expr()->neq($fieldName, $queryBuilder->createNamedParameter($condition, $type));
         }
 
-        return $queryBuilder->expr()->eq($fieldName, $queryBuilder->createNamedParameter($fieldConfig, $type));
+        return $queryBuilder->expr()->eq($fieldName, $queryBuilder->createNamedParameter($condition, $type));
     }
 }

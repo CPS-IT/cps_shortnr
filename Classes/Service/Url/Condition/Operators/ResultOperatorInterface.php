@@ -2,17 +2,18 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
 
 interface ResultOperatorInterface extends OperatorInterface
 {
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return array|null
      */
-    public function postResultProcess(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array;
-
+    public function postResultProcess(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array;
 }

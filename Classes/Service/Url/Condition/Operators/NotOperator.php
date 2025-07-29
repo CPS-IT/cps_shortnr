@@ -2,78 +2,107 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\Query\Expression\CompositeExpression;
 
 class NotOperator implements WrappingOperatorInterface
 {
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(mixed $fieldConfig): bool
+    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
-        return is_array($fieldConfig) && array_key_exists('not', $fieldConfig);
+        $fieldConfig = $fieldCondition->getCondition();
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists('not', $fieldConfig);
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @return int
+     */
+    public function getPriority(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return mixed
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed
+    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed
     {
         return null;
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return array|null
      */
-    public function postResultProcess(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array
+    public function postResultProcess(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         return null;
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
-     * @return array|null
+     * @return array|string|CompositeExpression|null
      */
-    public function wrap(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent, callable $nestedCallback): ?array
+    public function wrap(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): null|string|array|CompositeExpression
     {
-        if (!array_key_exists('not', $fieldConfig)) {
+        $condition = $fieldCondition->getCondition();
+        if (!array_key_exists('not', $condition)) {
             return null;
         }
 
-        return $nestedCallback($fieldName, $fieldConfig['not'], $queryBuilder,  new OperatorHistory($parent, $this));
+        return $nestedCallback(
+            new FieldCondition(
+                $fieldCondition->getFieldName(),
+                $condition['not']
+            ),
+            $context,
+            new OperatorHistory($parent, $this)
+        );
     }
 
     /**
      * filter Query Results based on the config
      *
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return array|null
      */
-    public function postResultWrap(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent, callable $nestedCallback): ?array
+    public function postResultWrap(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
     {
-        if (!array_key_exists('not', $fieldConfig)) {
+        $condition = $fieldCondition->getCondition();
+        if (!array_key_exists('not', $condition)) {
             return null;
         }
 
-        return $nestedCallback($fieldName, $fieldConfig['not'], $result,  new OperatorHistory($parent, $this));
+        return $nestedCallback(
+            $result,
+            new FieldCondition(
+                $fieldCondition->getFieldName(),
+                $condition['not']
+            ),
+            $context,
+            new OperatorHistory($parent, $this)
+        );
     }
 }

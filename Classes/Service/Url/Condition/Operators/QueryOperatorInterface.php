@@ -2,18 +2,18 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 
 interface QueryOperatorInterface extends OperatorInterface
 {
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return mixed
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed;
+    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed;
 
 }

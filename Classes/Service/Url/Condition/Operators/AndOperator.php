@@ -2,42 +2,54 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
-use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\Query\Expression\CompositeExpression;
 
 class AndOperator implements WrappingOperatorInterface
 {
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(mixed $fieldConfig): bool
+    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
-        return is_array($fieldConfig) && count($fieldConfig) > 1 && !array_is_list($fieldConfig);
+        $condition = $fieldCondition->getCondition();
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && count($condition) > 1 && !array_is_list($condition);
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
-     * @return null
+     * @return int
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): null
+    public function getPriority(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return string|null
+     */
+    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): ?string
     {
         return null;
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return array|null
      */
-    public function postResultProcess(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array
+    public function postResultProcess(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         return null;
     }
@@ -45,24 +57,31 @@ class AndOperator implements WrappingOperatorInterface
     /**
      * adds an and condition to the DB query
      *
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return null|CompositeExpression
      */
-    public function wrap(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent, callable $nestedCallback): ?CompositeExpression
+    public function wrap(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?CompositeExpression
     {
+        $condition = $fieldCondition->getCondition();
         // early exit with no deep branching here since its empty
-        if (empty($fieldConfig)) {
+        if (empty($condition)) {
             return null;
         }
 
         $andConditions = [];
         $operatorHistory = new OperatorHistory($parent, $this);
-        foreach ($fieldConfig as $operatorName => $fieldConfigSegment) {
-            $andConditions[] = $nestedCallback($fieldName, [$operatorName => $fieldConfigSegment], $queryBuilder, $operatorHistory);
+        foreach ($condition as $operatorName => $fieldConfigSegment) {
+            $andConditions[] = $nestedCallback(
+                new FieldCondition(
+                    $fieldCondition->getFieldName(),
+                    [$operatorName => $fieldConfigSegment]
+                ),
+                $context,
+                $operatorHistory
+            );
         }
 
         $conditionsLeft = array_filter($andConditions);
@@ -70,7 +89,7 @@ class AndOperator implements WrappingOperatorInterface
             return null;
         }
 
-        return $queryBuilder->expr()->and(
+        return $context->getQueryBuilder()->expr()->and(
             ...$conditionsLeft
         );
     }
@@ -78,24 +97,32 @@ class AndOperator implements WrappingOperatorInterface
     /**
      * filter Query Results based on the config
      *
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return array|null
      */
-    public function postResultWrap(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent, callable $nestedCallback): ?array
+    public function postResultWrap(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
     {
+        $condition = $fieldCondition->getCondition();
         // Early return for empty config
-        if (empty($fieldConfig)) {
+        if (empty($condition)) {
             return $result;
         }
 
         // Create operator history once to reuse
         $operatorHistory = new OperatorHistory($parent, $this);
-        foreach ($fieldConfig as $operatorName => $fieldConfigSegment) {
-            $conditionResult = $nestedCallback($fieldName, [$operatorName => $fieldConfigSegment], $result, $operatorHistory);
+        foreach ($condition as $operatorName => $fieldConfigSegment) {
+            $conditionResult = $nestedCallback(
+                new FieldCondition(
+                    $fieldCondition->getFieldName(),
+                    [$operatorName => $fieldConfigSegment]
+                ),
+                $result,
+                $operatorHistory
+            );
 
             // In AND operation, if any condition is null/false, entire result is null
             if ($conditionResult === null) {

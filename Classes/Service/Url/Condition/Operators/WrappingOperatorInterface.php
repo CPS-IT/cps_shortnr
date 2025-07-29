@@ -2,31 +2,32 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
-use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\Query\Expression\CompositeExpression;
 
 interface WrappingOperatorInterface extends QueryOperatorInterface, ResultOperatorInterface
 {
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
-     * @return array|CompositeExpression|null
+     * @return array|string|CompositeExpression|null
      */
-    public function wrap(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent, callable $nestedCallback): null|array|CompositeExpression;
+    public function wrap(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): null|string|array|CompositeExpression;
 
     /**
      * filter Query Results based on the config
      *
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return array|null
      */
-    public function postResultWrap(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent, callable $nestedCallback): ?array;
+    public function postResultWrap(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array;
 }

@@ -2,32 +2,48 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use TYPO3\CMS\Core\Database\Connection;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 class GreaterOperator implements QueryOperatorInterface
 {
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(mixed $fieldConfig): bool
+    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
-        return is_array($fieldConfig) && (array_key_exists('gt', $fieldConfig) || array_key_exists('gte', $fieldConfig));
+        $condition = $fieldCondition->getCondition();
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && (array_key_exists('gt', $condition) || array_key_exists('gte', $condition));
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @return int
+     */
+    public function getPriority(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return string
      */
-    public function process(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): string
+    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): string
     {
-        $isGte = array_key_exists('gte', $fieldConfig);
-        $value = $isGte ? $fieldConfig['gte'] : $fieldConfig['gt'];
+        $condition = $fieldCondition->getCondition();
+        $fieldName = $fieldCondition->getFieldName();
+        $queryBuilder = $context->getQueryBuilder();
+
+        $isGte = array_key_exists('gte', $condition);
+        $value = $isGte ? $condition['gte'] : $condition['gt'];
 
         $type = match (gettype($value)) {
             'integer' => Connection::PARAM_INT,

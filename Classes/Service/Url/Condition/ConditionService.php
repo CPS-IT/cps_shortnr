@@ -3,12 +3,16 @@
 namespace CPSIT\ShortNr\Service\Url\Condition;
 
 use CPSIT\ShortNr\Config\ConfigInterface;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\WrappingOperatorInterface;
 use Generator;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 class ConditionService
 {
@@ -27,15 +31,18 @@ class ConditionService
     /**
      * creates pre query where conditions
      *
-     * @param array $conditionConfig
-     * @param QueryBuilder $queryBuilder
+     * @param QueryOperatorContext $context
      * @return array
      */
-    public function buildQueryCondition(array $conditionConfig, QueryBuilder $queryBuilder): array
+    public function buildQueryCondition(QueryOperatorContext $context): array
     {
         $dbConditions = [];
-        foreach ($conditionConfig as $fieldName => $fieldConfig) {
-            $dbCondition = $this->processFieldConfig($fieldName, $fieldConfig, $queryBuilder, null);
+        foreach ($context->getConfigCondition() as $fieldName => $condition) {
+            $dbCondition = $this->processFieldConfig(
+                new FieldCondition($fieldName, $condition),
+                $context,
+                null
+            );
             if (!empty($dbCondition)) {
                 $dbConditions[] = $dbCondition;
             }
@@ -47,94 +54,132 @@ class ConditionService
     /**
      * Filter Data Direct from Results
      *
-     * @param array<array> $results
-     * @param array $conditionConfig
+     * @param ResultOperatorContext $context
      * @return array
      */
-    public function postQueryResultFilterCondition(array $results, array $conditionConfig): array
+    public function postQueryResultFilterCondition(ResultOperatorContext $context): array
     {
-        $filteredResults = [];
+        $results = $context->getResults();
+        if (empty($results)) {
+            return [];
+        }
+
+        $conditions = $context->getConfigCondition();
         foreach ($results as $result) {
-            foreach ($conditionConfig as $fieldName => $fieldConfig) {
-                $filteredResults[] = $this->processPostResultFieldConfig($fieldName, $fieldConfig, $result, null);
+            foreach ($conditions as $fieldName => $condition) {
+                if (
+                    $filteredResults = $this->processPostResultFieldConfig(
+                        $result,
+                        new FieldCondition($fieldName, $condition),
+                        $context,
+                        null
+                    )
+                ) {
+                    return $filteredResults;
+                }
             }
         }
 
-        return array_filter($filteredResults);
+        return $results[array_key_first($results)];
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
-     * @param QueryBuilder $queryBuilder
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return mixed
      */
-    private function processFieldConfig(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed
+    private function processFieldConfig(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed
     {
-        $operator = $this->findQueryBuilderOperator($fieldConfig);
+        $operator = $this->findQueryBuilderOperator($fieldCondition, $context, $parent);
         if ($operator === null) {
             return null;
         }
 
         if ($operator instanceof WrappingOperatorInterface) {
             // do magic to unwrap
-            return $operator->wrap($fieldName, $fieldConfig, $queryBuilder, $parent, fn(string $fieldName, mixed $fieldConfig, QueryBuilder $queryBuilder, ?OperatorHistoryInterface $parent): mixed => $this->processFieldConfig($fieldName, $fieldConfig, $queryBuilder, $parent));
+            return $operator->wrap($fieldCondition, $context, $parent, fn(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed => $this->processFieldConfig($fieldCondition, $context, $parent));
         }
 
-        return $operator->process($fieldName, $fieldConfig, $queryBuilder, $parent);
+        return $operator->process($fieldCondition, $context, $parent);
     }
 
     /**
-     * @param string $fieldName
-     * @param mixed $fieldConfig
      * @param array $result
-     * @param OperatorHistoryInterface|null $parent
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return array|null
      */
-    private function processPostResultFieldConfig(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array
+    private function processPostResultFieldConfig(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
-        $operator = $this->findPostResultOperator($fieldConfig);
+        $operator = $this->findPostResultOperator($fieldCondition, $context, $parent);
         if ($operator === null) {
             return null;
         }
 
         if ($operator instanceof WrappingOperatorInterface) {
             // do magic to unwrap
-            return $operator->postResultWrap($fieldName, $fieldConfig, $result, $parent, fn(string $fieldName, mixed $fieldConfig, array $result, ?OperatorHistoryInterface $parent): ?array => $this->processPostResultFieldConfig($fieldName, $fieldConfig, $result, $parent));
+            return $operator->postResultWrap($result, $fieldCondition, $context, $parent, fn(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array => $this->processPostResultFieldConfig($result, $fieldCondition, $context, $parent));
         }
 
-        return $operator->postResultProcess($fieldName, $fieldConfig, $result, $parent);
+        return $operator->postResultProcess($result, $fieldCondition, $context, $parent);
     }
 
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param QueryOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return QueryOperatorInterface|null
      */
-    private function findQueryBuilderOperator(mixed $fieldConfig): ?QueryOperatorInterface
+    private function findQueryBuilderOperator(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): ?QueryOperatorInterface
     {
-        foreach ($this->queryOperators as $operator) {
-            if ($operator->supports($fieldConfig)) {
-                return $operator;
-            }
+        $operator = $this->findOperator($this->queryOperators, $fieldCondition, $context, $parent);
+        if ($operator instanceof QueryOperatorInterface) {
+            return $operator;
         }
 
         return null;
     }
 
     /**
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param ResultOperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return ResultOperatorInterface|null
      */
-    private function findPostResultOperator(mixed $fieldConfig): ?ResultOperatorInterface
+    private function findPostResultOperator(FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?ResultOperatorInterface
     {
-        foreach ($this->resultOperators as $operator) {
-            if ($operator->supports($fieldConfig)) {
-                return $operator;
-            }
+        $operator = $this->findOperator($this->resultOperators, $fieldCondition, $context, $parent);
+        if ($operator instanceof ResultOperatorInterface) {
+            return $operator;
         }
 
         return null;
+    }
+
+    /**
+     * @param iterable<OperatorInterface> $operators
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return OperatorInterface|null
+     */
+    private function findOperator(iterable $operators, FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): ?OperatorInterface
+    {
+        $operatorList = [];
+        foreach ($operators as $operator) {
+            if ($operator->supports($fieldCondition, $context, $parent)) {
+                $operatorList[$operator->getPriority()] ??= $operator;
+            }
+        }
+
+        if (empty($operatorList)) {
+            return null;
+        }
+
+        ksort($operatorList, SORT_NUMERIC);
+        return $operatorList[array_key_last($operatorList)] ?? null;
     }
 
     /**

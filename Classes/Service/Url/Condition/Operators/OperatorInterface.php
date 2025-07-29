@@ -2,18 +2,26 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistoryInterface;
-use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 
 interface OperatorInterface
 {
     /**
-     * first comes, first serves logic
-     *
      * check if that operator can handle the given fieldConfig
      *
-     * @param mixed $fieldConfig
+     * @param FieldCondition $fieldCondition
+     * @param OperatorContext $context
+     * @param OperatorHistory|null $parent
      * @return bool return true if the operator can support that fieldConfig otherwise false
      */
-    public function supports(mixed $fieldConfig): bool;
+    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool;
+
+    /**
+     * if more than one operator can serve the same operation, the one with the highest priority will be used
+     *
+     * @return int (default: 0)
+     */
+    public function getPriority(): int;
 }
