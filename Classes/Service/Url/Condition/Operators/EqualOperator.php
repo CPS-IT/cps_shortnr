@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -19,7 +20,7 @@ class EqualOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $condition = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && !is_array($condition) || array_key_exists('eq', $condition);
+        return $context->fieldExists($fieldCondition->getFieldName()) && (is_scalar($condition) || array_key_exists(ConfigEnum::ConditionEqual->value, $condition));
     }
 
     /**
@@ -43,7 +44,7 @@ class EqualOperator implements QueryOperatorInterface
         $queryBuilder = $context->getQueryBuilder();
 
         if (is_array($condition)) {
-            $condition = $condition['eq'] ?? null;
+            $condition = $condition[ConfigEnum::ConditionEqual->value] ?? null;
         }
 
         $type = match (gettype($condition)) {

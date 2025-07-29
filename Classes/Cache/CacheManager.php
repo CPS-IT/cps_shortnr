@@ -42,10 +42,12 @@ class CacheManager
 
         if ($cacheValue === null || $cacheValue === false) {
             $value = $processBlock();
-            if (!is_string($value)) {
+            if (!is_string($value) && !$value === null && $value !== false) {
                 throw new ShortNrCacheException('invalid cache value, expected string');
             }
-            $cache?->set($cleanCacheKey, $value, lifetime:  $ttl);
+            if (is_string($value)) {
+                $cache?->set($cleanCacheKey, $value, lifetime:  $ttl);
+            }
             return $value;
         }
 

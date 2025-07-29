@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -18,7 +19,7 @@ class StringStartsOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists('starts', $fieldConfig);
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists(ConfigEnum::ConditionStingStarts->value, $fieldConfig);
     }
 
     /**
@@ -41,7 +42,7 @@ class StringStartsOperator implements QueryOperatorInterface
         $fieldName = $fieldCondition->getFieldName();
         $queryBuilder = $context->getQueryBuilder();
 
-        $value = $condition['starts'] ?? null;
+        $value = $condition[ConfigEnum::ConditionStingStarts->value] ?? null;
         if ($value === null ) {
             return null;
         }

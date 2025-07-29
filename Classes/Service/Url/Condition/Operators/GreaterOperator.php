@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -19,7 +20,7 @@ class GreaterOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $condition = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && (array_key_exists('gt', $condition) || array_key_exists('gte', $condition));
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && (array_key_exists(ConfigEnum::ConditionGreaterThan->value, $condition) || array_key_exists(ConfigEnum::ConditionGreaterThanEqual->value, $condition));
     }
 
     /**
@@ -42,8 +43,8 @@ class GreaterOperator implements QueryOperatorInterface
         $fieldName = $fieldCondition->getFieldName();
         $queryBuilder = $context->getQueryBuilder();
 
-        $isGte = array_key_exists('gte', $condition);
-        $value = $isGte ? $condition['gte'] : $condition['gt'];
+        $isGte = array_key_exists(ConfigEnum::ConditionGreaterThanEqual->value, $condition);
+        $value = $isGte ? $condition[ConfigEnum::ConditionGreaterThanEqual->value] : $condition[ConfigEnum::ConditionGreaterThan->value];
 
         $type = match (gettype($value)) {
             'integer' => Connection::PARAM_INT,

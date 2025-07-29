@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -20,7 +21,7 @@ class NotOperator implements WrappingOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists('not', $fieldConfig);
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists(ConfigEnum::ConditionNot->value, $fieldConfig);
     }
 
     /**
@@ -64,14 +65,14 @@ class NotOperator implements WrappingOperatorInterface
     public function wrap(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): null|string|array|CompositeExpression
     {
         $condition = $fieldCondition->getCondition();
-        if (!array_key_exists('not', $condition)) {
+        if (!array_key_exists(ConfigEnum::ConditionNot->value, $condition)) {
             return null;
         }
 
         return $nestedCallback(
             new FieldCondition(
                 $fieldCondition->getFieldName(),
-                $condition['not']
+                $condition[ConfigEnum::ConditionNot->value]
             ),
             $context,
             new OperatorHistory($parent, $this)
@@ -91,7 +92,7 @@ class NotOperator implements WrappingOperatorInterface
     public function postResultWrap(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
     {
         $condition = $fieldCondition->getCondition();
-        if (!array_key_exists('not', $condition)) {
+        if (!array_key_exists(ConfigEnum::ConditionNot->value, $condition)) {
             return null;
         }
 
@@ -99,7 +100,7 @@ class NotOperator implements WrappingOperatorInterface
             $result,
             new FieldCondition(
                 $fieldCondition->getFieldName(),
-                $condition['not']
+                $condition[ConfigEnum::ConditionNot->value]
             ),
             $context,
             new OperatorHistory($parent, $this)

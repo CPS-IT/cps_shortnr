@@ -4,14 +4,12 @@ shortNr:
     notFound: "/"
     # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
-    regexGroupMapping: # regex group mapping
-      prefix: "{match-1}"
-      uid: "{match-2}"
-      languageUid: "{match-3}"
     condition: # database conditions
       uid: "{match-2}"
       sysLanguageUid: "{match-3}"
     languageParentField: "l10n_parent"  # default TYPO3 field name
+    languageField: "sysLanguageUid" # needed for language overlay if omitted or empty = no overlay
+    identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
 
   pages: # default page
     type: page

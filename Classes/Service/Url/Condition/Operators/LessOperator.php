@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -19,7 +20,7 @@ class LessOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && (array_key_exists('lt', $fieldConfig) || array_key_exists('lte', $fieldConfig));
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && (array_key_exists(ConfigEnum::ConditionLessThan->value, $fieldConfig) || array_key_exists(ConfigEnum::ConditionLessThanEqual->value, $fieldConfig));
     }
 
     /**
@@ -42,8 +43,8 @@ class LessOperator implements QueryOperatorInterface
         $fieldName = $fieldCondition->getFieldName();
         $queryBuilder = $context->getQueryBuilder();
 
-        $isLte = array_key_exists('lte', $condition);
-        $value = $isLte ? $condition['lte'] : $condition['lt'];
+        $isLte = array_key_exists(ConfigEnum::ConditionLessThanEqual->value, $condition);
+        $value = $isLte ? $condition[ConfigEnum::ConditionLessThanEqual->value] : $condition[ConfigEnum::ConditionLessThan->value];
 
         $type = match (gettype($value)) {
             'integer' => Connection::PARAM_INT,

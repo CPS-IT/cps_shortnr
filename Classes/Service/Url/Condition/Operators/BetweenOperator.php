@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrOperatorException;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
@@ -21,7 +22,7 @@ class BetweenOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $condition = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && array_key_exists('between', $condition);
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && array_key_exists(ConfigEnum::ConditionBetween->value, $condition);
     }
 
     /**
@@ -45,7 +46,7 @@ class BetweenOperator implements QueryOperatorInterface
         $fieldName = $fieldCondition->getFieldName();
         $queryBuilder = $context->getQueryBuilder();
 
-        $values = $condition['between'] ?? null;
+        $values = $condition[ConfigEnum::ConditionBetween->value] ?? null;
         if (!is_array($values) || count($values) !== 2) {
             throw new ShortNrOperatorException('Between operator requires exactly 2 numbers.');
         }

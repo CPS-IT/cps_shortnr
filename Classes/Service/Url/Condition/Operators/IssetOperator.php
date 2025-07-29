@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -18,7 +19,7 @@ class IssetOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists('isset', $fieldConfig);
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists(ConfigEnum::ConditionIsset->value, $fieldConfig);
     }
 
     /**
@@ -41,7 +42,7 @@ class IssetOperator implements QueryOperatorInterface
         $fieldName = $fieldCondition->getFieldName();
         $queryBuilder = $context->getQueryBuilder();
 
-        $isSet = (bool)$condition['isset'];
+        $isSet = (bool)$condition[ConfigEnum::ConditionIsset->value];
 
         if ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class)) {
             return $isSet

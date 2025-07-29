@@ -9,6 +9,8 @@ use CPSIT\ShortNr\Exception\ShortNrQueryException;
 
 class PageProcessor extends BaseProcessor
 {
+    private const ConditionSlug = 'slug';
+
     public function getType(): string
     {
         return 'page';
@@ -25,14 +27,27 @@ class PageProcessor extends BaseProcessor
     public function decode(string $uri, string $name, ConfigInterface $config, array $matches): ?string
     {
         $condition = $this->mapCondition($config->getCondition($name), $matches);
-        $languageParentField = $config->getLanguageParentField($name);
-        $tableName = $config->getTableName($name);
-        $slug = $config->getValue($name, 'slug');
-        if (!$slug)
-            throw new ShortNrConfigException("Slug config not found");
+        // language overlay ... swap uid with language parent uid and vice versa
+        if ($config->canLanguageOverlay($name)) {
+            $identifierField = $config->getRecordIdentifier($name);
+            $pid = (int)($condition[$identifierField] ?? 0);
+            // page id must exist in the conditions
+            if ($pid > 0) {
+                $condition = $this->mutateConditionForLanguageOverlay($name, $config, $condition, $pid);
+            }
+        }
 
-        $result = $this->shortNrRepository->resolveTable([$slug], $tableName, $condition, $languageParentField);
+        $slug = $config->getValue($name, self::ConditionSlug);
+        if (!$slug)
+            throw new ShortNrConfigException("'".self::ConditionSlug."' config field not found");
+
+        $result = $this->shortNrRepository->resolveTable(
+            [$slug],
+            $config->getTableName($name),
+            $condition
+        );
 
         return null;
+
     }
 }

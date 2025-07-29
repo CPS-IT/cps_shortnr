@@ -1,5 +1,16 @@
 ## Session Updates
 
+### Session Date: 2025-07-29
+**Changes Made**: Completed dual-phase operator architecture refactor - Moved all condition logic from ShortNrRepository to ConditionService with QueryOperatorContext/ResultOperatorContext DTOs, implemented priority-based operator discovery, added comprehensive DTO system with FieldCondition/OperatorContext/OperatorHistory, and updated CLAUDE.md with detailed architecture documentation
+
+**New Insights**:
+
+1. **Dual-Phase Processing Architecture** - Query operators build SQL WHERE conditions leveraging database indexes, while Result operators filter PHP arrays for complex post-query logic - enables optimal performance by using database capabilities first, then handling edge cases that can't be expressed in SQL
+
+2. **Priority-Based Extensibility Pattern** - Multiple operators can support the same condition with priority-based discovery (highest wins) - enables clean overrides for platform-specific behavior without breaking existing code, perfectly supporting "Enable, Don't Enforce" philosophy for multi-platform usage
+
+3. **Context-Driven State Management** - QueryOperatorContext carries QueryBuilder + metadata while ResultOperatorContext carries result arrays + metadata through processing phases - eliminates coupling between repository orchestration and operator logic while maintaining clean separation of concerns
+
 ### Session Date: 2025-07-15
 **Changes Made**: Major condition system architecture - Added ConditionService with 11 operator placeholders, auto-discovery via Symfony DI tagging, enhanced Config DTO with regex grouping, updated vision with "Enable, Don't Enforce" philosophy
 

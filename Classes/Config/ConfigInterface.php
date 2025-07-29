@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Config;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+
 interface ConfigInterface
 {
     /**
@@ -54,12 +56,6 @@ interface ConfigInterface
      * @param string $name
      * @return array
      */
-    public function getRegexGroupMapping(string $name): array;
-
-    /**
-     * @param string $name
-     * @return array
-     */
     public function getPluginConfig(string $name): array;
 
     /**
@@ -67,6 +63,29 @@ interface ConfigInterface
      * @return string|null
      */
     public function getNotFound(string $name): ?string;
+
+    /**
+     * @param string $name
+     * @return string|null
+     */
+    public function getLanguageParentField(string $name): ?string;
+    /**
+     * @param string $name
+     * @return string|null
+     */
+    public function getLanguageField(string $name): ?string;
+
+    /**
+     * @param string $name
+     * @return string|null
+     */
+    public function getRecordIdentifier(string $name): ?string;
+
+    /**
+     * @param string $name
+     * @return bool
+     */
+    public function canLanguageOverlay(string $name): bool;
 
     /**
      * @param string $name

@@ -2,7 +2,6 @@
 
 namespace CPSIT\ShortNr\Service\Url;
 
-use CPSIT\ShortNr\Config\ConfigInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use Generator;
@@ -12,7 +11,7 @@ class DecoderService extends AbstractUrlService
 {
     /**
      * @param ServerRequestInterface $request
-     * @return string|null
+     * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
      * @throws ShortNrConfigException
      */
@@ -23,7 +22,7 @@ class DecoderService extends AbstractUrlService
 
     /**
      * @param string $uri
-     * @return string|null
+     * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
      * @throws ShortNrConfigException
      */
@@ -37,7 +36,7 @@ class DecoderService extends AbstractUrlService
     /**
      *
      * @param string $uri
-     * @return string|null
+     * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
      * @throws ShortNrConfigException
      */

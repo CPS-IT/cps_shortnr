@@ -21,7 +21,7 @@ Classes/
 ├── Config/                                 # Configuration system
 │   ├── ConfigInterface.php, ConfigLoader.php, DTO/Config.php
 │   └── ExtensionSetup.php
-├── Domain/Repository/ShortNrRepository.php # Database operations
+├── Domain/Repository/ShortNrRepository.php # Database orchestration with dual-phase processing
 ├── Exception/                              # Exception hierarchy
 ├── Middleware/ShortNumberMiddleware.php    # Main request handler
 ├── Service/
@@ -32,11 +32,14 @@ Classes/
 │       ├── DecoderService.php            # URL decoding + caching
 │       ├── EncoderService.php            # URL encoding (placeholder)
 │       ├── Condition/
-│       │   ├── ConditionService.php       # Dual-phase processing
-│       │   └── Operators/                 # 12 operators with 4-interface system
-│       │       ├── Interfaces: Operator, Query, Result, Wrapping
-│       │       ├── Implementations: And, Equal, ArrayIn, Between, Greater, Less, Isset, Not, RegexMatch, StringContains/Starts/Ends
-│       │       └── DTO/OperatorHistory*   # Loop prevention
+│       │   ├── ConditionService.php       # Orchestrates dual-phase processing with priority discovery
+│       │   └── Operators/                 # Extensible operator system
+│       │       ├── Interfaces: OperatorInterface, QueryOperatorInterface, ResultOperatorInterface, WrappingOperatorInterface
+│       │       ├── Implementations: AndOperator, EqualOperator, ArrayInOperator, BetweenOperator, GreaterOperator, LessOperator, IssetOperator, NotOperator, RegexMatchOperator, StringContains/Starts/EndsOperator
+│       │       └── DTO/                   # Context objects and loop prevention
+│       │           ├── FieldCondition.php, OperatorContext.php, OperatorHistory.php
+│       │           ├── QueryOperatorContext.php   # Carries QueryBuilder + metadata
+│       │           └── ResultOperatorContext.php  # Carries result arrays + metadata
 │       └── Processor/                     # URL type handlers
 │           ├── ProcessorInterface.php, BaseProcessor.php
 │           └── PageProcessor.php, PluginProcessor.php (placeholders)
@@ -49,16 +52,19 @@ Classes/
 - TYPO3 multi-language UID handling
 
 ### Completed Systems
-- **4-Interface Operator System**: Complete architecture (Operator/Query/Result/Wrapping)
-- **12 Operator Implementations**: All condition operators including AndOperator
-- **ShortNrRepository**: Database ops with condition system integration
-- **Exception Hierarchy**: Comprehensive error handling
-- **Operator History DTO**: Infinite loop prevention
+- **Dual-Phase Operator Architecture**: Complete system with 4-interface separation of concerns
+- **12 Operator Implementations**: Full condition system with priority-based discovery
+- **Repository Integration**: ShortNrRepository orchestrates query/result phases seamlessly
+- **Context System**: QueryOperatorContext/ResultOperatorContext DTOs for clean state management
+- **Loop Prevention**: OperatorHistory tracks wrapping operator recursion
+- **Auto-Discovery DI**: Symfony tagging enables zero-config operator registration
 
 ### Key Patterns
-- **DI + Auto-Discovery**: Constructor injection, Symfony tags, interface segregation
+- **Enable, Don't Enforce**: Extensible operator system supports simple to complex use cases
+- **DI + Auto-Discovery**: Constructor injection, Symfony tags, zero-config operator registration
+- **Context-Driven Processing**: DTOs carry state cleanly between dual phases
+- **Priority-Based Discovery**: Multiple operators compete, highest priority wins (enables overrides)
 - **Multi-Level Caching**: Runtime → File → YAML with atomic writes
-- **Dual-Phase Processing**: QueryOperators (SQL) + ResultOperators (PHP filtering)
 - **Generator Performance**: Lazy eval, early returns in ConditionService
 - **Clean Abstractions**: TYPO3 utilities behind interfaces
 
@@ -73,11 +79,13 @@ Classes/
 - **FastArrayFileCache**: Atomic writes (temp→rename), PHP array serialization
 - **CacheManager**: TYPO3 bridge with graceful degradation
 
-### Condition System (Dual-Phase Processing)
-- **ConditionService**: Two-phase processing with operator injection
-  - **Phase 1 (Query)**: QueryOperators build SQL WHERE conditions
-  - **Phase 2 (Result)**: ResultOperators filter PHP result arrays
-- **Wrapping Operators**: Enable nested logic (AND/NOT) with recursive callbacks
+### Condition System (Dual-Phase Processing Architecture)
+- **ConditionService**: Orchestrates dual-phase processing with auto-discovered operators
+  - **Phase 1 (Query)**: QueryOperators build SQL WHERE conditions (leverage DB indexes)
+  - **Phase 2 (Result)**: ResultOperators filter PHP result arrays (complex logic post-query)
+- **Priority-Based Discovery**: Multiple operators compete, highest priority wins
+- **Context-Driven Processing**: QueryOperatorContext/ResultOperatorContext carry state between phases
+- **Wrapping Operators**: Enable nested logic (AND/NOT) with recursive callbacks + loop prevention
 - **Runtime Caching**: URI+regex composite keys prevent duplicate processing
 
 ### URL Processing
@@ -119,10 +127,6 @@ shortNr:
         notFound: "/"
         # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
         regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
-        regexGroupMapping: # regex group mapping
-            prefix: "{match-1}"
-            uid: "{match-2}"
-            languageUid: "{match-3}"
         condition: # database conditions
             uid: "{match-2}"
             sysLanguageUid: "{match-3}"
@@ -213,17 +217,45 @@ Auto-discovery with operator/processor tagging:
 - **FastArrayFileCache**: Throws ShortNrCacheException
 - **CacheManager**: Null fallback on TYPO3 failures
 
-## Operator System
+## Operator System Architecture
 
-### Dual-Phase Processing
-**Phase 1 (QueryOperator)**: Build SQL WHERE conditions before execution (leverages DB indexes)
-- Examples: EqualOperator, LessOperator, GreaterOperator, IssetOperator
+### "Enable, Don't Enforce" Philosophy
+The operator system enables diverse use cases without enforcing specific patterns:
+- **Simple operators** (EqualOperator) for straightforward conditions
+- **Complex operators** (RegexMatchOperator) for advanced requirements
+- **Platform-specific operators** via DI injection - no core changes needed
+- **Priority overrides** let teams customize behavior without breaking existing code
 
-**Phase 2 (ResultOperator)**: Filter PHP result arrays after execution (complex logic)
-- Examples: RegexMatchOperator, StringContainsOperator
+### 4-Interface System
+**OperatorInterface**: Base contract with `supports()`, `getPriority()` methods
+**QueryOperatorInterface**: Builds SQL WHERE conditions for database phase
+**ResultOperatorInterface**: Filters PHP arrays for post-query processing
+**WrappingOperatorInterface**: Enables nested logic (AND/NOT) with recursive callbacks
 
-**WrappingOperator**: Extends both interfaces for nested logic (AND/NOT)
-- Recursive callbacks with OperatorHistory preventing infinite loops
+### Dual-Phase Processing Flow
+1. **Repository.resolveTable()** calls ConditionService with contexts
+2. **Phase 1 (Query)**: QueryOperators build SQL conditions, execute query
+3. **Phase 2 (Result)**: ResultOperators filter result arrays for complex logic
+4. **Context DTOs** carry state cleanly between phases without coupling
+
+### Priority-Based Operator Discovery
+```php
+// Multiple operators can support same condition
+foreach ($operators as $operator) {
+    if ($operator->supports($fieldCondition, $context, $parent)) {
+        $operatorList[$operator->getPriority()] = $operator;
+    }
+}
+// Highest priority wins - enables clean overrides
+ksort($operatorList, SORT_NUMERIC);
+return $operatorList[array_key_last($operatorList)];
+```
+
+### Extensibility Patterns
+- **New operators**: Implement interface, add DI tag - zero config changes
+- **Platform variations**: Inject different operator sets per environment
+- **Complex conditions**: Wrapping operators with OperatorHistory loop prevention
+- **Performance optimization**: Query operators use DB indexes, Result operators handle edge cases
 
 ## Future Development
 - PageProcessor/PluginProcessor database logic, TYPO3 multi-language handling

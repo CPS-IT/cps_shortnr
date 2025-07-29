@@ -3,11 +3,15 @@
 namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorArrayData;
+use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorResultInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
+use CPSIT\ShortNr\Exception\ShortNrTreeProcessorException;
 use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\Exception;
 use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -26,14 +30,13 @@ class ShortNrRepository
      * @param array $fields
      * @param string $tableName
      * @param array $condition
-     * @param string $languageParentFieldName
      * @return array|false return one db row result or false
      * @throws ShortNrQueryException
      * @throws ShortNrCacheException
      */
-    public function resolveTable(array $fields, string $tableName, array $condition, string $languageParentFieldName = 'l10n_parent'): array|false
+    public function resolveTable(array $fields, string $tableName, array $condition): array|false
     {
-        $fields = [...$fields, ...array_keys($condition), $languageParentFieldName];
+        $fields = [...$fields, ...array_keys($condition)];
         $existingValidFields = $this->getValidFields($fields, $tableName);
         if (empty($existingValidFields)) {
             throw new ShortNrQueryException('No Valid Fields Provided');
@@ -68,6 +71,45 @@ class ShortNrRepository
     }
 
     /**
+     * @return TreeProcessorResultInterface
+     * @throws ShortNrTreeProcessorException
+     */
+    public function getCachedPageTreeData(): TreeProcessorResultInterface
+    {
+        try {
+            $serializedData = $this->cacheManager->getType3CacheValue(
+                'typo3PageTree',
+                fn(): ?string => serialize($this->getPageTreeData()),
+                ttl: 3600
+            );
+
+            if (is_string($serializedData)) {
+                return unserialize($serializedData);
+            }
+
+            throw new ShortNrTreeProcessorException('Unserialized Page Tree Failed');
+        } catch (Throwable $e) {
+            throw new ShortNrTreeProcessorException('Could not load Page Tree', previous: $e);
+        }
+    }
+
+    /**
+     * @return TreeProcessorResultInterface
+     * @throws Exception
+     * @throws ShortNrTreeProcessorException
+     */
+    public function getPageTreeData(): TreeProcessorResultInterface
+    {
+        $qb = $this->getQueryBuilder('pages');
+        $qb->select('uid', 'pid');
+        $qb->from('pages');
+        $data =  $qb->executeQuery()->fetchAllAssociative();
+
+        $tpd = new TreeProcessorArrayData('uid', 'pid', $data);
+        return $tpd->getResult();
+    }
+
+    /**
      * @param array $fields
      * @param string $tableName
      * @return array
@@ -86,7 +128,6 @@ class ShortNrRepository
      */
     private function getFieldFromTable(string $tableName): array
     {
-
         $list = explode(',', $this->cacheManager->getType3CacheValue(
             cacheKey: 'getFieldFromTable_' . $tableName,
             processBlock: fn(): string => implode(',', array_keys($this->getConnection($tableName)->getSchemaInformation()->introspectTable($tableName)->getColumns())),

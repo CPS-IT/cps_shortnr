@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -18,7 +19,7 @@ class StringContainsOperator implements QueryOperatorInterface
     public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists('contains', $fieldConfig);
+        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists(ConfigEnum::ConditionContains->value, $fieldConfig);
     }
 
     /**
@@ -44,13 +45,13 @@ class StringContainsOperator implements QueryOperatorInterface
         if ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class)) {
             return $queryBuilder->expr()->notLike(
                 $fieldName,
-                $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards($condition['contains']) . '%')
+                $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards($condition[ConfigEnum::ConditionContains->value]) . '%')
             );
         }
 
         return $queryBuilder->expr()->like(
             $fieldName,
-            $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards($condition['contains']) . '%')
+            $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards($condition[ConfigEnum::ConditionContains->value]) . '%')
         );
     }
 }

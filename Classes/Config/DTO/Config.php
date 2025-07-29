@@ -2,13 +2,14 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
+use BackedEnum;
 use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use StringBackedEnum;
 
 class Config implements ConfigInterface
 {
     private array $cache = [];
-    private const DEFAULT = '_default';
-    private const ENTRYPOINT = 'shortNr';
 
     /**
      * @param array $data
@@ -24,8 +25,8 @@ class Config implements ConfigInterface
     public function getConfigNames(): array
     {
         return $this->cache['configNames'] ??= array_values(array_filter(
-            array_keys($this->data[self::ENTRYPOINT] ?? []),
-            fn($name) : bool => ($name !== self::DEFAULT)
+            array_keys($this->data[ConfigEnum::ENTRYPOINT->value] ?? []),
+            fn($name) : bool => ($name !== ConfigEnum::DEFAULT_CONFIG->value)
         ));
     }
 
@@ -56,7 +57,7 @@ class Config implements ConfigInterface
      */
     public function getRegex(string $name): ?string
     {
-        return $this->getValue($name, 'regex');
+        return $this->getValue($name, ConfigEnum::Regex);
     }
 
     // Core route properties
@@ -67,7 +68,7 @@ class Config implements ConfigInterface
      */
     public function getPrefix(string $name): ?string
     {
-        return $this->getValue($name, 'prefix');
+        return $this->getValue($name, ConfigEnum::Prefix);
     }
 
     /**
@@ -76,7 +77,7 @@ class Config implements ConfigInterface
      */
     public function getType(string $name): ?string
     {
-        return $this->getValue($name, 'type');
+        return $this->getValue($name, ConfigEnum::Type);
     }
 
     /**
@@ -85,7 +86,7 @@ class Config implements ConfigInterface
      */
     public function getTableName(string $name): ?string
     {
-        return $this->getValue($name, 'table');
+        return $this->getValue($name, ConfigEnum::Table);
     }
 
     /**
@@ -94,16 +95,7 @@ class Config implements ConfigInterface
      */
     public function getCondition(string $name): array
     {
-        return $this->getValue($name, 'condition') ?? [];
-    }
-
-    /**
-     * @param string $name
-     * @return array
-     */
-    public function getRegexGroupMapping(string $name): array
-    {
-        return $this->getValue($name, 'regexGroupMapping') ?? [];
+        return $this->getValue($name, ConfigEnum::Condition) ?? [];
     }
 
     /**
@@ -112,7 +104,7 @@ class Config implements ConfigInterface
      */
     public function getPluginConfig(string $name): array
     {
-        return $this->getValue($name, 'pluginConfig') ?? [];
+        return []; //$this->getValue($name, ConfigEnum::PluginConfig) ?? [];
     }
 
     /**
@@ -121,7 +113,7 @@ class Config implements ConfigInterface
      */
     public function getNotFound(string $name): ?string
     {
-        return $this->getValue($name, 'notFound');
+        return $this->getValue($name, ConfigEnum::NotFound);
     }
 
     /**
@@ -130,18 +122,51 @@ class Config implements ConfigInterface
      */
     public function getLanguageParentField(string $name): ?string
     {
-        return $this->getValue($name, 'languageParentField');
+        return $this->getValue($name, ConfigEnum::LanguageParentField);
     }
 
     /**
      * @param string $name
-     * @param string $key
+     * @return string|null
+     */
+    public function getLanguageField(string $name): ?string
+    {
+        return $this->getValue($name, ConfigEnum::LanguageField);
+    }
+
+    /**
+     * @param string $name
+     * @return string|null
+     */
+    public function getRecordIdentifier(string $name): ?string
+    {
+        return $this->getValue($name, ConfigEnum::IdentifierField);
+    }
+
+    /**
+     * @param string $name
+     * @return bool
+     */
+    public function canLanguageOverlay(string $name): bool
+    {
+        return !empty($this->getRecordIdentifier($name)) && !empty($this->getLanguageField($name));
+    }
+
+    /**
+     * @param string $name
+     * @param string|ConfigEnum $key
      * @return mixed return value, if not found return NULL
      *
      * @internal
      */
-    public function getValue(string $name, string $key): mixed
+    public function getValue(string $name, string|BackedEnum $key): mixed
     {
-        return $this->data[self::ENTRYPOINT][$name][$key] ?? $this->data[self::ENTRYPOINT][self::DEFAULT][$key] ?? null;
+        if ($key instanceof BackedEnum) {
+            $key = $key->value;
+        }
+        $entryPoint = ConfigEnum::ENTRYPOINT->value;
+        $defaultValue = ConfigEnum::DEFAULT_CONFIG->value;
+
+        return $this->data[$entryPoint][$name][$key] ?? $this->data[$entryPoint][$defaultValue][$key] ?? null;
     }
 }
