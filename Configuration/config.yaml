@@ -8,7 +8,7 @@ shortNr:
       uid: "{match-2}"
       sysLanguageUid: "{match-3}"
     languageParentField: "l10n_parent"  # default TYPO3 field name
-    languageField: "sysLanguageUid" # needed for language overlay if omitted or empty = no overlay
+    languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
     identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
 
   pages: # default page

@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Config\Enums\TablePagesEnum;
 use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorArrayData;
 use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorResultInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
@@ -71,42 +72,35 @@ class ShortNrRepository
     }
 
     /**
-     * @return TreeProcessorResultInterface
-     * @throws ShortNrTreeProcessorException
-     */
-    public function getCachedPageTreeData(): TreeProcessorResultInterface
-    {
-        try {
-            $serializedData = $this->cacheManager->getType3CacheValue(
-                'typo3PageTree',
-                fn(): ?string => serialize($this->getPageTreeData()),
-                ttl: 3600
-            );
-
-            if (is_string($serializedData)) {
-                return unserialize($serializedData);
-            }
-
-            throw new ShortNrTreeProcessorException('Unserialized Page Tree Failed');
-        } catch (Throwable $e) {
-            throw new ShortNrTreeProcessorException('Could not load Page Tree', previous: $e);
-        }
-    }
-
-    /**
+     * @param string $indexField
+     * @param string $parentPageField
+     * @param string $languageField
+     * @param string $languageParentField
      * @return TreeProcessorResultInterface
      * @throws Exception
+     * @throws ShortNrCacheException
+     * @throws ShortNrQueryException
      * @throws ShortNrTreeProcessorException
      */
-    public function getPageTreeData(): TreeProcessorResultInterface
+    public function getPageTreeData(string $indexField, string $parentPageField, string $languageField, string $languageParentField): TreeProcessorResultInterface
     {
-        $qb = $this->getQueryBuilder('pages');
-        $qb->select('uid', 'pid');
-        $qb->from('pages');
-        $data =  $qb->executeQuery()->fetchAllAssociative();
+        $tableName = 'pages';
+        $requiredFields = [$indexField, $parentPageField, $languageField, $languageParentField];
+        $referencePageFields = $this->getValidFields($requiredFields, $tableName);
+        if (count($referencePageFields) !== count($requiredFields)) {
+            throw new ShortNrQueryException('Page Reference Fields Provided do not match, pages schema not supported, pages fields in config found: '. implode(',', $requiredFields));
+        }
 
-        $tpd = new TreeProcessorArrayData('uid', 'pid', $data);
-        return $tpd->getResult();
+        $qb = $this->getQueryBuilder($tableName);
+        $qb->select(...$requiredFields);
+        $qb->from($tableName);
+        return (new TreeProcessorArrayData(
+            primaryKey: $indexField,
+            relationKey: $parentPageField,
+            languageKey: $languageField,
+            languageRelationKey: $languageParentField,
+            data: $qb->executeQuery()->fetchAllAssociative()
+        ))->getResult();
     }
 
     /**

@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
 
+use Generator;
+
 interface TreeProcessorResultInterface
 {
     /**
@@ -11,9 +13,9 @@ interface TreeProcessorResultInterface
 
     /**
      * Generator version for memory-efficient iteration over root items
-     * @return \Generator<TreeProcessorResultItemInterface>
+     * @return Generator<TreeProcessorResultItemInterface>
      */
-    public function getRootItemsGenerator(): \Generator;
+    public function getRootItemsGenerator(): Generator;
 
     /**
      * @param int $id
@@ -25,4 +27,11 @@ interface TreeProcessorResultInterface
      * @return int
      */
     public function count(): int;
+
+    /**
+     * detects Overlay system = false, or Multi Tree Single language systems = true (default: false)
+     *
+     * @return bool
+     */
+    public function isMultiTreeLanguageSetup(): bool;
 }

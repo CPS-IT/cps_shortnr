@@ -11,6 +11,7 @@ enum ConfigEnum: string
     case DEFAULT_CONFIG = '_default';
     case Type = 'type';
 
+
     // not found handling
     case NotFound = 'notFound';
 

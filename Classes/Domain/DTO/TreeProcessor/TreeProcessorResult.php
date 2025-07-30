@@ -6,13 +6,17 @@ use Generator;
 
 class TreeProcessorResult implements TreeProcessorGeneratorInterface
 {
+    private string|int|null $primaryKey = null;
+    private string|int|null $relationKey = null;
+    private string|int|null $languageKey = null;
+    private string|int|null $languageRelationKey = null;
     /**
-     * @var TreeProcessorResultItemInterface[]
+     * @var array<int, TreeProcessorResultItemInterface>
      */
     private array $list = [];
 
     /**
-     * @var TreeProcessorResultItemInterface[] - O(1) root item tracking
+     * @var array<int, TreeProcessorResultItemInterface> - O(1) root item tracking
      */
     private array $rootItems = [];
 
@@ -28,6 +32,50 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     {
         $this->rootItems = $data['r'];
         $this->list = $data['l'];
+    }
+
+    /**
+     * @internal
+     * @param int|string|null $primaryKey
+     * @return TreeProcessorGeneratorInterface
+     */
+    public function setPrimaryKey(int|string|null $primaryKey): TreeProcessorGeneratorInterface
+    {
+        $this->primaryKey = $primaryKey;
+        return $this;
+    }
+
+    /**
+     * @internal
+     * @param int|string|null $relationKey
+     * @return TreeProcessorGeneratorInterface
+     */
+    public function setRelationKey(int|string|null $relationKey): TreeProcessorGeneratorInterface
+    {
+        $this->relationKey = $relationKey;
+        return $this;
+    }
+
+    /**
+     * @internal
+     * @param int|string|null $languageKey
+     * @return TreeProcessorGeneratorInterface
+     */
+    public function setLanguageKey(int|string|null $languageKey): TreeProcessorGeneratorInterface
+    {
+        $this->languageKey = $languageKey;
+        return $this;
+    }
+
+    /**
+     * @internal
+     * @param int|string|null $languageRelationKey
+     * @return TreeProcessorGeneratorInterface
+     */
+    public function setLanguageRelationKey(int|string|null $languageRelationKey): TreeProcessorGeneratorInterface
+    {
+        $this->languageRelationKey = $languageRelationKey;
+        return $this;
     }
 
     /**
@@ -47,6 +95,10 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
         yield from $this->rootItems;
     }
 
+    /**
+     * @internal
+     * @return TreeProcessorResultItemInterface
+     */
     protected function getNewItemObject(): TreeProcessorResultItemInterface
     {
         return new TreeProcessorResultItem();
@@ -75,6 +127,7 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     }
 
     /**
+     * @internal
      * @param TreeProcessorDataInterface $data
      * @param mixed $item
      */
@@ -85,7 +138,10 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
             return;
         }
 
-        $itemObj = $this->setItemData($id, $data, $item);
+        $langId = $data->getLanguageIdFromData($item);
+        $langRefId = $data->getLanguageRelationIdFromData($item);
+
+        $itemObj = $this->setItemData($id, $langId, $data, $item);
         $rid = $data->getRelationIdFromData($item);
 
         if ($rid > 0) {
@@ -95,19 +151,54 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
         } else {
             $this->rootItems[$id] = $itemObj;
         }
+
+        $itemObj->setLanguageId($langId);
+        // define what is a baseItem what is a LanguageRefItem
+        if ($langId > 0 && $langRefId > 0) {
+            $defaultLanguageItem = $this->getItem($langRefId, true);
+            $defaultLanguageItem->addLanguageReference($itemObj, $langId);
+        }
     }
 
+    /**
+     * detects Overlay system = false, or Multi Tree Single language systems = true (default: false)
+     *
+     * @return bool
+     */
+    public function isMultiTreeLanguageSetup(): bool
+    {
+        if ($this->languageKey === null || $this->languageRelationKey === null) {
+            return false;
+        }
+
+        foreach ($this->rootItems as $item) {
+            $data = $item->getData();
+            $langId = $data[$this->languageKey] ?? null;
+            $langRefId = $data[$this->languageRelationKey] ?? null;
+            if ($langId > 0 && $langRefId === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * @param int $id
+     * @param int $languageId
      * @param TreeProcessorDataInterface $data
      * @param mixed $item
      * @return TreeProcessorResultItemInterface
+     * @internal
      */
-    protected function setItemData(int $id, TreeProcessorDataInterface $data, mixed $item): TreeProcessorResultItemInterface
+    protected function setItemData(int $id, int $languageId, TreeProcessorDataInterface $data, mixed $item): TreeProcessorResultItemInterface
     {
-        $itemObj = $this->list[$id] ??= $this->getNewItemObject();
-        $itemObj->setData($item);
+        $itemObj = $this->getItem($id, true);
+        if ($itemObj->isFresh()) {
+            $itemObj->setPrimaryId($id);
+            $itemObj->setLanguageId($languageId);
+            $itemObj->setData($item);
+        }
 
         return $itemObj;
     }

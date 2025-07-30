@@ -5,12 +5,16 @@ namespace CPSIT\ShortNr\Service\Url\Processor;
 use CPSIT\ShortNr\Config\ConfigInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Exception\ShortNrProcessorException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 
-class PageProcessor extends BaseProcessor
+class PageProcessor extends AbstractProcessor
 {
     private const ConditionSlug = 'slug';
 
+    /**
+     * @return string
+     */
     public function getType(): string
     {
         return 'page';
@@ -27,19 +31,17 @@ class PageProcessor extends BaseProcessor
     public function decode(string $uri, string $name, ConfigInterface $config, array $matches): ?string
     {
         $condition = $this->mapCondition($config->getCondition($name), $matches);
-        // language overlay ... swap uid with language parent uid and vice versa
-        if ($config->canLanguageOverlay($name)) {
-            $identifierField = $config->getRecordIdentifier($name);
-            $pid = (int)($condition[$identifierField] ?? 0);
-            // page id must exist in the conditions
-            if ($pid > 0) {
-                $condition = $this->mutateConditionForLanguageOverlay($name, $config, $condition, $pid);
-            }
+        $idField = $config->getRecordIdentifier($name);
+        $requestedPageUid = $condition[$idField] ?? null;
+        if ($requestedPageUid === null) {
+            throw new ShortNrProcessorException('Page Uid could not be determined: ' . $uri);
         }
 
+        $condition = $this->languageOverlayService->overlayCondition($condition, $requestedPageUid, $name, $config);
         $slug = $config->getValue($name, self::ConditionSlug);
-        if (!$slug)
+        if (!$slug) {
             throw new ShortNrConfigException("'".self::ConditionSlug."' config field not found");
+        }
 
         $result = $this->shortNrRepository->resolveTable(
             [$slug],

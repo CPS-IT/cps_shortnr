@@ -4,8 +4,11 @@ namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\ConfigInterface;
 
-class PluginProcessor implements ProcessorInterface
+class PluginProcessor extends AbstractProcessor
 {
+    /**
+     * @return string
+     */
     public function getType(): string
     {
         return 'plugin';

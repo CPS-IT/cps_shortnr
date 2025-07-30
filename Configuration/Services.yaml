@@ -8,6 +8,7 @@ services:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Config/DTO'
+      - '../Classes/Domain/DTO'
       - '../Classes/Service/Url/Condition/Operators/DTO'
 
   _instanceof:

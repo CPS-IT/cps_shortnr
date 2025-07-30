@@ -11,15 +11,17 @@ class TreeProcessorArrayData implements TreeProcessorDataInterface
      * TreeProcessorData constructor.
      * @param int|string $primaryKey
      * @param int|string|null $relationKey
+     * @param int|string|null $languageKey
+     * @param int|string|null $languageRelationKey
      * @param array[] $data
      * @throws ShortNrTreeProcessorException
      */
-
-
     public function __construct(
         private readonly int|string $primaryKey,
         private readonly int|string|null $relationKey,
-        private readonly iterable $data
+        private readonly int|string|null $languageKey,
+        private readonly int|string|null $languageRelationKey,
+        private readonly array $data
     ) {
         if (!$this->validateTreeData($primaryKey, $relationKey, $data)) {
             throw new ShortNrTreeProcessorException('Invalid primary key or relation key');
@@ -61,7 +63,7 @@ class TreeProcessorArrayData implements TreeProcessorDataInterface
      */
     public function getPrimaryIdFromData(mixed $data): int
     {
-        return (int)($data[$this->primaryKey] ?? 0);
+        return (int)($data[$this->primaryKey]);
     }
 
     /**
@@ -74,6 +76,24 @@ class TreeProcessorArrayData implements TreeProcessorDataInterface
     }
 
     /**
+     * @param mixed $data
+     * @return int
+     */
+    public function getLanguageIdFromData(mixed $data): int
+    {
+        return (int)($data[$this->languageKey] ?? 0);
+    }
+
+    /**
+     * @param mixed $data
+     * @return int
+     */
+    public function getLanguageRelationIdFromData(mixed $data): int
+    {
+        return (int)($data[$this->languageRelationKey] ?? 0);
+    }
+
+    /**
      * @return iterable
      */
     public function getData(): iterable
@@ -83,7 +103,12 @@ class TreeProcessorArrayData implements TreeProcessorDataInterface
 
     public function getResult(): TreeProcessorResultInterface
     {
-        $tree = $this->getResultObject();
+        $tree = $this->getResultObject()
+            ->setPrimaryKey($this->primaryKey)
+            ->setRelationKey($this->relationKey)
+            ->setLanguageKey($this->languageKey)
+            ->setLanguageRelationKey($this->languageRelationKey);
+
         foreach ($this->getData() as $subItem) {
             $tree->processData($this, $subItem);
         }

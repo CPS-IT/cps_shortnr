@@ -17,6 +17,18 @@ interface TreeProcessorDataInterface
     public function getRelationIdFromData(mixed $data): int;
 
     /**
+     * @param mixed $data
+     * @return int
+     */
+    public function getLanguageIdFromData(mixed $data): int;
+
+    /**
+     * @param mixed $data
+     * @return int
+     */
+    public function getLanguageRelationIdFromData(mixed $data): int;
+
+    /**
      * @return iterable
      */
     public function getData(): iterable;
