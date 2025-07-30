@@ -3,7 +3,6 @@
 namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Config\Enums\TablePagesEnum;
 use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorArrayData;
 use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorResultInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
