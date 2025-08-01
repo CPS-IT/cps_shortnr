@@ -116,6 +116,7 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
     public function setLanguageId(?int $languageId): TreeProcessorResultItemInterface
     {
         $this->languageId = $languageId;
+        $this->addLanguageReference($this, $languageId);
         return $this;
     }
 
@@ -139,7 +140,9 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
         $uid = spl_object_id($reference);
         if (!isset($this->children[$languageId][$uid])) {
             $this->languageReference[$languageId][$uid] = $reference;
-            $reference->setLanguageBaseInternal($this);
+            if ($reference !== $this) {
+                $reference->setLanguageBaseInternal($this);
+            }
         }
     }
 
@@ -185,6 +188,7 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
      */
     public function getRoot(): TreeProcessorResultItemInterface
     {
+        // we use iteration to avoid function jumps (recursion) that are slower and can cause stack overflow
         $current = $this;
         while ($current->parent !== null) {
             $current = $current->parent;

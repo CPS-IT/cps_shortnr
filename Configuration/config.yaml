@@ -6,7 +6,7 @@ shortNr:
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
     condition: # database conditions
       uid: "{match-2}"
-      sysLanguageUid: "{match-3}"
+      sys_language_uid: "{match-3}"
     languageParentField: "l10n_parent"  # default TYPO3 field name
     languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
     identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
@@ -18,7 +18,7 @@ shortNr:
     slug: slug
     condition:
       uid: "{match-2}"
-      sysLanguageUid: "{match-3}"
+      sys_language_uid: "{match-3}"
       is_event:
         contains: "test2"
         not:

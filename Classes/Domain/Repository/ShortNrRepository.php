@@ -30,23 +30,51 @@ class ShortNrRepository
      * @param array $fields
      * @param string $tableName
      * @param array $condition
-     * @return array|false return one db row result or false
+     * @return array try return exact one db row result
      * @throws ShortNrQueryException
      * @throws ShortNrCacheException
      */
-    public function resolveTable(array $fields, string $tableName, array $condition): array|false
+    public function resolveTable(array $fields, string $tableName, array $condition): array
+    {
+        $existingValidFields = $this->validateAndPrepareFields($fields, $condition, $tableName);
+        $queryBuilder = $this->buildQuery($existingValidFields, $tableName, $condition);
+        $allResults = $this->executeQuery($queryBuilder, $tableName);
+        $filteredResults = $this->filterResults($allResults, $existingValidFields, $tableName, $condition);
+
+        return $filteredResults[array_key_first($filteredResults)] ?? [];
+    }
+
+    /**
+     * @param array $fields
+     * @param array $condition
+     * @param string $tableName
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrQueryException
+     */
+    private function validateAndPrepareFields(array $fields, array $condition, string $tableName): array
     {
         $fields = [...$fields, ...array_keys($condition)];
         $existingValidFields = $this->getValidFields($fields, $tableName);
         if (empty($existingValidFields)) {
             throw new ShortNrQueryException('No Valid Fields Provided');
         }
+        return $existingValidFields;
+    }
 
+    /**
+     * @param array $existingValidFields
+     * @param string $tableName
+     * @param array $condition
+     * @return QueryBuilder
+     * @throws ShortNrQueryException
+     */
+    private function buildQuery(array $existingValidFields, string $tableName, array $condition): QueryBuilder
+    {
         $qb = $this->getQueryBuilder($tableName);
         $qb->select(...$existingValidFields);
         $qb->from($tableName);
 
-        // build where conditions based on the config
         $queryConditions = $this->conditionService->buildQueryCondition(
             (new QueryOperatorContext($qb))
                 ->setTableName($tableName)
@@ -58,16 +86,39 @@ class ShortNrRepository
         }
 
         $qb->where(...$queryConditions);
+        return $qb;
+    }
+
+    /**
+     * @param QueryBuilder $queryBuilder
+     * @param string $tableName
+     * @return array
+     * @throws ShortNrQueryException
+     */
+    private function executeQuery(QueryBuilder $queryBuilder, string $tableName): array
+    {
         try {
-            return $this->conditionService->postQueryResultFilterCondition(
-                (new ResultOperatorContext($qb->executeQuery()->fetchAllAssociative()))
-                    ->setTableName($tableName)
-                    ->setExistingFields($existingValidFields)
-                    ->setConfigCondition($condition)
-            );
+            return $queryBuilder->executeQuery()->fetchAllAssociative();
         } catch (Throwable $e) {
             throw new ShortNrQueryException($e->getMessage() . ' | table: ' . $tableName, $e->getCode(), $e);
         }
+    }
+
+    /**
+     * @param array $allResults
+     * @param array $existingValidFields
+     * @param string $tableName
+     * @param array $condition
+     * @return array
+     */
+    private function filterResults(array $allResults, array $existingValidFields, string $tableName, array $condition): array
+    {
+        return $this->conditionService->postQueryResultFilterCondition(
+            (new ResultOperatorContext($allResults))
+                ->setTableName($tableName)
+                ->setExistingFields($existingValidFields)
+                ->setConfigCondition($condition)
+        );
     }
 
     /**

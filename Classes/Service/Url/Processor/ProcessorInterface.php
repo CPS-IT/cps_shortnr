@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 
 interface ProcessorInterface
 {
@@ -18,7 +19,7 @@ interface ProcessorInterface
      * @param string $name
      * @param ConfigInterface $config
      * @param array $matches
-     * @return string|null
+     * @return ProcessorDecodeResultInterface
      */
-    public function decode(string $uri, string $name, ConfigInterface $config, array $matches): ?string;
+    public function decode(string $uri, string $name, ConfigInterface $config, array $matches): ProcessorDecodeResultInterface;
 }

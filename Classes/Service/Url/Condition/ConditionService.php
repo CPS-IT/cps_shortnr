@@ -52,7 +52,7 @@ class ConditionService
     }
 
     /**
-     * Filter Data Direct from Results
+     * Filter Data Direct from Results, returns filtered results array
      *
      * @param ResultOperatorContext $context
      * @return array
@@ -65,22 +65,31 @@ class ConditionService
         }
 
         $conditions = $context->getConfigCondition();
+        $filteredResults = [];
+        
         foreach ($results as $result) {
+            $skipFilterResultFlag = false;
             foreach ($conditions as $fieldName => $condition) {
                 if (
-                    $filteredResults = $this->processPostResultFieldConfig(
+                    $this->processPostResultFieldConfig(
                         $result,
                         new FieldCondition($fieldName, $condition),
                         $context,
                         null
-                    )
+                    ) === null
                 ) {
-                    return $filteredResults;
+                    // one result filter
+                    $skipFilterResultFlag = true;
+                    break;
                 }
+            }
+
+            if (!$skipFilterResultFlag) {
+                $filteredResults[] = $result;
             }
         }
 
-        return $results[array_key_first($results)];
+        return $filteredResults;
     }
 
     /**
@@ -105,6 +114,8 @@ class ConditionService
     }
 
     /**
+     * null means no match / result back means match
+     *
      * @param array $result
      * @param FieldCondition $fieldCondition
      * @param ResultOperatorContext $context
@@ -114,8 +125,9 @@ class ConditionService
     private function processPostResultFieldConfig(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         $operator = $this->findPostResultOperator($fieldCondition, $context, $parent);
+        // no operator found, mark as matched
         if ($operator === null) {
-            return null;
+            return $result;
         }
 
         if ($operator instanceof WrappingOperatorInterface) {

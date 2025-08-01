@@ -4,6 +4,7 @@ namespace CPSIT\ShortNr\Service\Url;
 
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 use Generator;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -51,9 +52,9 @@ class DecoderService extends AbstractUrlService
 
                 // load processor if possible and gives the decode task over with all current available information
                 $processor = $this->getProcessor($config->getType($name));
-                $decodedUri = $processor?->decode($uri, $name, $config, $regexMatches);
-                if ($decodedUri !== null) {
-                    return $decodedUri;
+                $decodedResult = $processor?->decode($uri, $name, $config, $regexMatches);
+                if ($decodedResult instanceof ProcessorDecodeResultInterface && $decodedResult->isValid()) {
+                    return $decodedResult->getUri();
                 }
             }
         }

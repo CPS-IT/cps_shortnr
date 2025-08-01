@@ -152,7 +152,6 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
             $this->rootItems[$id] = $itemObj;
         }
 
-        $itemObj->setLanguageId($langId);
         // define what is a baseItem what is a LanguageRefItem
         if ($langId > 0 && $langRefId > 0) {
             $defaultLanguageItem = $this->getItem($langRefId, true);

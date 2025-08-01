@@ -10,6 +10,7 @@ services:
       - '../Classes/Config/DTO'
       - '../Classes/Domain/DTO'
       - '../Classes/Service/Url/Condition/Operators/DTO'
+      - '../Classes/Service/Url/Processor/DTO'
 
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:
