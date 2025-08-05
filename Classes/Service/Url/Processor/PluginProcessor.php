@@ -2,10 +2,12 @@
 
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
-use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResult;
+use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 
-class PluginProcessor extends AbstractProcessor
+class PluginProcessor implements ProcessorInterface
 {
     /**
      * @return string
@@ -15,7 +17,7 @@ class PluginProcessor extends AbstractProcessor
         return 'plugin';
     }
 
-    public function decode(string $uri, string $name, ConfigInterface $config, array $matches): DTO\ProcessorDecodeResultInterface
+    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ProcessorDecodeResultInterface
     {
         return new ProcessorDecodeResult(null);
     }

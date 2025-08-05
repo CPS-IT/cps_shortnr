@@ -2,20 +2,24 @@
 
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
-use CPSIT\ShortNr\Config\ConfigInterface;
-use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Exception\ShortNrConfigException;
-use CPSIT\ShortNr\Exception\ShortNrProcessorException;
-use CPSIT\ShortNr\Exception\ShortNrQueryException;
-use CPSIT\ShortNr\Exception\ShortNrTreeProcessorException;
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
+use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
+use CPSIT\ShortNr\Service\DataProvider\DTO\PageData;
+use CPSIT\ShortNr\Service\DataProvider\PageDataProvider;
+use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolver;
+use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResult;
 use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 use Symfony\Component\Filesystem\Path;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 
-class PageProcessor extends AbstractProcessor
+class PageProcessor implements ProcessorInterface
 {
-    private const ConditionSlug = 'slug';
+    public function __construct(
+        protected readonly PageDataProvider $pageDataProvider,
+        protected readonly SiteResolver $siteResolver
+    )
+    {}
 
     /**
      * @return string
@@ -26,50 +30,27 @@ class PageProcessor extends AbstractProcessor
     }
 
     /**
-     * @param string $uri
-     * @param string $name
-     * @param ConfigInterface $config
-     * @param array $matches
+     * @param ConfigMatchCandidate $candidate
+     * @param ConfigItemInterface $config
      * @return ProcessorDecodeResultInterface
-     * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
-     * @throws ShortNrProcessorException
-     * @throws ShortNrQueryException
-     * @throws ShortNrTreeProcessorException
-     * @throws SiteNotFoundException
+     * @throws ShortNrSiteFinderException
+     * @throws ShortNrNotFoundException
      */
-    public function decode(string $uri, string $name, ConfigInterface $config, array $matches): ProcessorDecodeResultInterface
+    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ProcessorDecodeResultInterface
     {
-        $condition = $this->mapCondition($config->getCondition($name), $matches);
-        $idField = $config->getRecordIdentifier($name);
-        $requestedPageUid = $condition[$idField] ?? null;
-        if ($requestedPageUid === null) {
-            throw new ShortNrProcessorException('Page Uid could not be determined: ' . $uri);
+        // get the raw condition config merged with config
+        $condition = $this->pageDataProvider->resolveCandidateToCondition($candidate, $config);
+        // load Page Data from DB
+        $pageData = $this->pageDataProvider->getPageData($condition, $config);
+        if ($pageData instanceof PageData) {
+            // load Site and language base path
+            $basePath = $this->siteResolver->getSiteBaseUri($pageData->getUid(), $pageData->getLanguageId());
+
+            // concat the path segments to a complete path
+            return new ProcessorDecodeResult(Path::join($basePath, $pageData->getSlug()));
         }
 
-        $condition = $this->languageOverlayService->overlayCondition($condition, $requestedPageUid, $name, $config);
-        $slug = $config->getValue($name, self::ConditionSlug);
-        if (!$slug) {
-            throw new ShortNrConfigException("'".self::ConditionSlug."' config field not found");
-        }
-
-        $result = $this->shortNrRepository->resolveTable(
-            [$idField, $slug],
-            $config->getTableName($name),
-            $condition
-        );
-
-        if (isset($result[$idField]) && isset($result[$slug])) {
-            $pageId = (int)$result[$idField];
-            try {
-                // TODO: implement getBaseUriForPage
-                $sitebase = $this->languageOverlayService->getBaseUriForPage($pageId);
-                $languageBase = $this->languageOverlayService->getLanguageBaseUriForPage($config, $name, $pageId);
-                return new ProcessorDecodeResult(Path::join($sitebase, $languageBase, $result[$slug]));
-            } catch (ShortNrTreeProcessorException) {}
-        }
-
-        // TODO: resolve NotFound correct ... refactor the decode method and use sub methods that share the same functionality as the normal page decoding
-        return new ProcessorDecodeResult($config->getNotFound($name));
+        // page not found
+        throw new ShortNrNotFoundException();
     }
 }

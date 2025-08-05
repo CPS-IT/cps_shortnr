@@ -2,6 +2,10 @@
 
 namespace CPSIT\ShortNr\Service\PlatformAdapter\FileSystem;
 
+use Error;
+use ParseError;
+use Throwable;
+
 class FileSystem implements FileSystemInterface
 {
     /**
@@ -73,9 +77,9 @@ class FileSystem implements FileSystemInterface
      *
      * @param string $filename Path to the file to be included and evaluated
      * @return mixed The return value of the included file, typically an array for config files
-     * @throws \Error If the file contains a fatal error
-     * @throws \ParseError If the file contains a parse error
-     * @throws \Throwable Any exception thrown by the included file
+     * @throws Error If the file contains a fatal error
+     * @throws ParseError If the file contains a parse error
+     * @throws Throwable Any exception thrown by the included file
      *
      * @link https://php.net/manual/en/function.require.php
      */
@@ -257,5 +261,45 @@ class FileSystem implements FileSystemInterface
     public function filemtime(string $filename): int|false
     {
         return filemtime($filename);
+    }
+
+    /**
+     * List files and directories inside the specified path
+     * @link https://php.net/manual/en/function.scandir.php
+     * @param string $directory <p>
+     * The directory that will be scanned.
+     * </p>
+     * @param int $sorting_order <p>
+     * By default, the sorted order is alphabetical in ascending order. If
+     * the optional sorting_order is set to non-zero,
+     * then the sort order is alphabetical in descending order.
+     * </p>
+     * @param resource $context [optional] <p>
+     * For a description of the context parameter,
+     * refer to the streams section of
+     * the manual.
+     * </p>
+     * @return array|false an array of filenames on success, or false on
+     * failure. If directory is not a directory, then
+     * boolean false is returned, and an error of level
+     * E_WARNING is generated.
+     */
+    public function scandir(string $directory, int $sorting_order = 0, mixed $context = null): array|false
+    {
+        return scandir($directory, $sorting_order, $context);
+    }
+
+    /**
+     * Tells whether the filename is a regular file
+     * @link https://php.net/manual/en/function.is-file.php
+     * @param string $filename <p>
+     * Path to the file.
+     * </p>
+     * @return bool true if the filename exists and is a regular file, false
+     * otherwise.
+     */
+    public function is_file(string $filename): bool
+    {
+        return is_file($filename);
     }
 }

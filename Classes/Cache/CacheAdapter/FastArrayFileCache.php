@@ -12,7 +12,7 @@ use TYPO3\CMS\Core\Core\Environment;
 
 class FastArrayFileCache
 {
-    private static array $runtimeCache = [];
+    private array $runtimeCache = [];
 
     private const FILE_NAME = 'config%s.php';
 
@@ -26,10 +26,12 @@ class FastArrayFileCache
     /**
      * @param string $suffix
      * @return array|null
+     * @throws ShortNrCacheException
      */
-    public function readArrayFileCache(string $suffix = ''): ?array
+    public function readArrayFileCache(string $suffix): ?array
     {
-        return self::$runtimeCache['data']['config'] ??= $this->fetchDataFromFileCache($suffix);
+        $suffix = $this->sanitizeSuffix($suffix);
+        return $this->runtimeCache['data'][$suffix] ??= $this->fetchDataFromFileCache($suffix);
     }
 
     /**
@@ -38,9 +40,10 @@ class FastArrayFileCache
      * @return void
      * @throws ShortNrCacheException
      */
-    public function writeArrayFileCache(array $data, string $suffix = ''): void
+    public function writeArrayFileCache(array $data, string $suffix): void
     {
-        self::$runtimeCache['data']['config'] = $data;
+        $suffix = $this->sanitizeSuffix($suffix);
+        $this->runtimeCache['data'][$suffix] = $data;
         $cacheFile = $this->getArrayCacheFilePath($suffix);
         $this->ensureCacheDirectoryExists($cacheFile);
         $this->writeArrayToFile($data, $cacheFile);
@@ -114,10 +117,12 @@ class FastArrayFileCache
      *
      * @param string $suffix
      * @return void
+     * @throws ShortNrCacheException
      */
-    public function invalidateFileCache(string $suffix = ''): void
+    public function invalidateFileCache(string $suffix): void
     {
-        unset(self::$runtimeCache['data']['config']);
+        $suffix = $this->sanitizeSuffix($suffix);
+        unset($this->runtimeCache['data'][$suffix]);
         $cacheFileLocation = $this->getArrayCacheFilePath($suffix);
         if ($this->fileSystem->file_exists($cacheFileLocation)) {
             $this->fileSystem->unlink($cacheFileLocation);
@@ -125,11 +130,35 @@ class FastArrayFileCache
     }
 
     /**
+     * destroy all files inside the own cache dir
+     *
+     * @return void
+     */
+    public function invalidateCacheDirectory(): void
+    {
+        $dir = $this->getFileCacheDirLocationString();
+        if ($this->fileSystem->file_exists($dir)) {
+            foreach ($this->fileSystem->scandir($dir) as $filePah) {
+                if('.' === $filePah || '..' === $filePah) {
+                    continue;
+                }
+
+                $fullPath = Path::join($dir, $filePah);
+                if ($this->fileSystem->is_file($fullPath)) {
+                    $this->fileSystem->unlink($fullPath);
+                }
+            }
+        }
+    }
+
+    /**
      * @param string $suffix
      * @return int|null
+     * @throws ShortNrCacheException
      */
-    public function getFileModificationTime(string $suffix = ''): ?int
+    public function getFileModificationTime(string $suffix): ?int
     {
+        $suffix = $this->sanitizeSuffix($suffix);
         $mtime = $this->fileSystem->filemtime($this->getArrayCacheFilePath($suffix));
         if($mtime === false){
             return null;
@@ -142,9 +171,9 @@ class FastArrayFileCache
      * @param string $suffix
      * @return string
      */
-    private function getArrayCacheFilePath(string $suffix = ''): string
+    private function getArrayCacheFilePath(string $suffix): string
     {
-        return self::$runtimeCache['path']['cacheArrayFile'] ??= Path::join($this->getFileCacheDirLocationString(), sprintf(self::FILE_NAME, $suffix));
+        return $this->runtimeCache['path']['cacheArrayFile'][$suffix] ??= Path::join($this->getFileCacheDirLocationString(), sprintf(self::FILE_NAME, $suffix));
     }
 
     /**
@@ -152,7 +181,7 @@ class FastArrayFileCache
      */
     protected function getFileCacheDirLocationString(): string
     {
-        return self::$runtimeCache['path']['cacheDir'] ??= Path::join(
+        return $this->runtimeCache['path']['cacheDir'] ??= Path::join(
             Environment::getVarPath(),
             'cache',
             'code',
@@ -171,5 +200,20 @@ class FastArrayFileCache
         }
 
         return true;
+    }
+
+    /**
+     * @param string $suffix
+     * @return string
+     * @throws ShortNrCacheException
+     */
+    private function sanitizeSuffix(string $suffix): string
+    {
+        $suffix = trim(preg_replace('/[^a-zA-Z0-9_-]/', '_', $suffix));
+        if (empty($suffix) || preg_match('/^_+$/', $suffix)) {
+            throw new ShortNrCacheException('Cache suffix cannot be empty or contain only special characters');
+        }
+
+        return $suffix;
     }
 }

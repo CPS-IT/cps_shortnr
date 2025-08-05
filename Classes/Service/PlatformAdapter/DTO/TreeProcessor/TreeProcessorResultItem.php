@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor;
 
 class TreeProcessorResultItem implements TreeProcessorResultItemInterface
 {
@@ -16,7 +16,7 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
     /**
      * [languageId][objectId]
      *
-     * @var array<int, array<int, TreeProcessorResultItemInterface>> - Using object IDs for O(1) lookups
+     * @var array<int, TreeProcessorResultItemInterface> - Using object IDs for O(1) lookups
      */
     private array $languageReference = [];
     /**
@@ -24,10 +24,15 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
      */
     private ?TreeProcessorResultItemInterface $parent = null;
     private ?TreeProcessorResultItemInterface $languageBase = null;
-
-    private ?int $primaryId = null;
     private ?int $languageId = null;
-    private bool $isFresh = true;
+    private bool $shadow = true;
+
+    /**
+     * @param int $primaryId
+     */
+    public function __construct(
+        private readonly int $primaryId
+    ){}
 
     public function __serialize(): array
     {
@@ -51,19 +56,19 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
         $this->languageBase = $data['lb'];
         $this->primaryId = $data['pk'];
         $this->languageId = $data['lk'];
-        $this->isFresh = false;
+        $this->shadow = false;
     }
 
     /**
      * flag if this item already has data initialized
-     * unserialized objects are always NOT fresh
+     * unserialized objects are always NOT shadow
      *
      * @internal
      * @return bool
      */
-    public function isFresh(): bool
+    public function isShadow(): bool
     {
-        return $this->isFresh;
+        return $this->shadow;
     }
 
     /**
@@ -71,7 +76,7 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
      */
     public function setData(mixed $data): void
     {
-        $this->isFresh = false;
+        $this->shadow = false;
         $this->data = $data;
     }
 
@@ -84,21 +89,11 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
     }
 
     /**
-     * @return int|null
+     * @return int
      */
-    public function getPrimaryId(): ?int
+    public function getPrimaryId(): int
     {
         return $this->primaryId;
-    }
-
-    /**
-     * @param int|null $primaryId
-     * @return TreeProcessorResultItemInterface
-     */
-    public function setPrimaryId(?int $primaryId): TreeProcessorResultItemInterface
-    {
-        $this->primaryId = $primaryId;
-        return $this;
     }
 
     /**
@@ -126,7 +121,7 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
     public function addChild(TreeProcessorResultItemInterface ...$children): void
     {
         foreach ($children as $child) {
-            $uid = spl_object_id($child);
+            $uid = $child->getPrimaryId();
             // O(1) duplicate check using object ID as key
             if (!isset($this->children[$uid])) {
                 $this->children[$uid] = $child;
@@ -137,8 +132,8 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
 
     public function addLanguageReference(TreeProcessorResultItemInterface $reference, int $languageId): void
     {
-        $uid = spl_object_id($reference);
-        if (!isset($this->children[$languageId][$uid])) {
+        $uid = $reference->getPrimaryId();
+        if (!isset($this->languageReference[$languageId][$uid])) {
             $this->languageReference[$languageId][$uid] = $reference;
             if ($reference !== $this) {
                 $reference->setLanguageBaseInternal($this);

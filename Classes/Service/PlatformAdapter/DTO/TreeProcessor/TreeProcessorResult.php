@@ -1,6 +1,6 @@
 <?php
 
-namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor;
 
 use Generator;
 
@@ -96,12 +96,13 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     }
 
     /**
-     * @internal
+     * @param int $primaryId
      * @return TreeProcessorResultItemInterface
+     * @internal
      */
-    protected function getNewItemObject(): TreeProcessorResultItemInterface
+    protected function getNewItemObject(int $primaryId): TreeProcessorResultItemInterface
     {
-        return new TreeProcessorResultItem();
+        return new TreeProcessorResultItem(primaryId: $primaryId);
     }
 
     /**
@@ -112,7 +113,7 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     public function getItem(int $id, bool $createIfNotExists = false): ?TreeProcessorResultItemInterface
     {
         if ($createIfNotExists) {
-            return $this->list[$id] ??= $this->getNewItemObject();
+            return $this->list[$id] ??= $this->getNewItemObject($id);
         }
 
         return $this->list[$id] ?? null;
@@ -193,12 +194,45 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     protected function setItemData(int $id, int $languageId, TreeProcessorDataInterface $data, mixed $item): TreeProcessorResultItemInterface
     {
         $itemObj = $this->getItem($id, true);
-        if ($itemObj->isFresh()) {
-            $itemObj->setPrimaryId($id);
+        if ($itemObj->isShadow()) {
             $itemObj->setLanguageId($languageId);
             $itemObj->setData($item);
         }
 
         return $itemObj;
+    }
+
+    /**
+     * Removes all branches that have no data, and remove all related children too.
+     * This method identifies dead branches (nodes with shadow === true) and prunes them.
+     *
+     * @return void
+     */
+    public function removeDeadBranches(): void
+    {
+        foreach (array_filter($this->list, fn($i) => $i->isShadow()) as $zombie) {
+            $this->annihilateNode($zombie);
+        }
+
+        // remove rootItems that are not in the "list" anymore
+        $this->rootItems = array_intersect_key(
+            $this->rootItems,
+            $this->list
+        );
+    }
+
+    /**
+     * Recursively destroys a node and all its children.
+     *
+     * @param TreeProcessorResultItemInterface $item
+     * @return void
+     */
+    private function annihilateNode(TreeProcessorResultItemInterface $item): void
+    {
+        foreach ($item->getChildren() as $child) {
+            $this->annihilateNode($child);
+        }
+
+        unset($this->list[$item->getPrimaryId()]);
     }
 }

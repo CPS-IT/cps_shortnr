@@ -2,7 +2,9 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition;
 
-use CPSIT\ShortNr\Config\ConfigInterface;
+use CPSIT\ShortNr\Config\DTO\ConfigInterface;
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
@@ -16,6 +18,9 @@ use Generator;
 
 class ConditionService
 {
+    public const MATCH_PREFIX_PLACEHOLDER = '{match-';
+    public const DEFAULT_MATCH_REGEX = '/\\'. self::MATCH_PREFIX_PLACEHOLDER .'(\d+)\}/';
+
     private array $cache = [];
 
     /**
@@ -66,7 +71,7 @@ class ConditionService
 
         $conditions = $context->getConfigCondition();
         $filteredResults = [];
-        
+
         foreach ($results as $result) {
             $skipFilterResultFlag = false;
             foreach ($conditions as $fieldName => $condition) {
@@ -195,26 +200,11 @@ class ConditionService
     }
 
     /**
-     * Fast check if any given regex matches the uri
-     *
-     * @param string $uri
-     * @param ConfigInterface $config
-     * @return bool
-     */
-    public function matchAny(string $uri, ConfigInterface $config): bool
-    {
-        foreach ($this->matchGenerator($uri, $config) as $match) {
-            return true; // First match found
-        }
-        return false;
-    }
-
-    /**
      * Return all config names and matches that successfully matched a regex
      *
      * @param string $uri
      * @param ConfigInterface $config
-     * @return Generator
+     * @return Generator<ConfigMatchCandidate>
      */
     public function findAllMatchConfigCandidates(string $uri, ConfigInterface $config): Generator
     {
@@ -226,17 +216,16 @@ class ConditionService
      *
      * @param string $uri
      * @param ConfigInterface $config
-     * @return Generator<array>
+     * @return Generator<ConfigMatchCandidate>
      */
     private function matchGenerator(string $uri, ConfigInterface $config): Generator
     {
+        // one regex can be used for many "Config-Item-Names"
         foreach ($config->getUniqueRegexConfigNameGroup() as $regex => $names) {
+            // match that regex against our potential shortNr URI
             $regexMatches = $this->matchRegex($uri, $regex);
             if ($regexMatches !== null) {
-                yield [
-                    'matches' => $regexMatches,
-                    'names' => $names,
-                ];
+                yield new ConfigMatchCandidate($uri, $names, $regexMatches);
             }
         }
     }
@@ -261,5 +250,31 @@ class ConditionService
         }
 
         return $this->cache['match'][$cacheKey] = null;
+    }
+
+    /**
+     * merged placeholder into condition array
+     *
+     * @param ConfigMatchCandidate $candidate
+     * @param ConfigItemInterface $config
+     * @return array
+     */
+    public function resolveConditionToArray(ConfigMatchCandidate $candidate, ConfigItemInterface $config): array
+    {
+        $rawCondition = $config->getCondition();
+        $matches = $candidate->getMatches();
+
+        array_walk_recursive(
+            $rawCondition,
+            function (&$value) use ($matches): void {
+                if (is_string($value) &&
+                    preg_match(static::DEFAULT_MATCH_REGEX, $value, $m)) {
+                    $idx = (int) $m[1];
+                    $value = $matches[$idx][0] ?? $value;
+                }
+            }
+        );
+
+        return $rawCondition;
     }
 }

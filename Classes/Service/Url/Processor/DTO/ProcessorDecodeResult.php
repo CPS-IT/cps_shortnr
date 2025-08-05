@@ -2,8 +2,12 @@
 
 namespace CPSIT\ShortNr\Service\Url\Processor\DTO;
 
+use CPSIT\ShortNr\Service\Url\ValidateUriTrait;
+
 class ProcessorDecodeResult implements ProcessorDecodeResultInterface
 {
+    use ValidateUriTrait;
+
     /**
      * @param string|null $uri
      */
@@ -25,6 +29,6 @@ class ProcessorDecodeResult implements ProcessorDecodeResultInterface
      */
     public function isValid(): bool
     {
-        return ($this->uri !== null);
+        return ($this->uri !== null && $this->validateUri($this->uri) !== false);
     }
 }

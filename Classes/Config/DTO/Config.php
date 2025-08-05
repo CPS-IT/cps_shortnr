@@ -3,9 +3,8 @@
 namespace CPSIT\ShortNr\Config\DTO;
 
 use BackedEnum;
-use CPSIT\ShortNr\Config\ConfigInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
-use StringBackedEnum;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 
 class Config implements ConfigInterface
 {
@@ -51,11 +50,26 @@ class Config implements ConfigInterface
 
     /**
      * @param string $name
+     * @return ConfigItemInterface
+     * @throws ShortNrConfigException
+     */
+    public function getConfigItem(string $name): ConfigItemInterface
+    {
+        $configNames = $this->getConfigNames();
+        if (!in_array($name, $configNames, true)) {
+            throw new ShortNrConfigException(sprintf('Config name "%s" does not exist. found in config: (%s))', $name, implode(', ', $configNames)));
+        }
+
+        return $this->cache['configItem'][$name] ??= new ConfigItem($name, $this);
+    }
+
+    /**
+     * @param string $name
      * @return string|null return the regex of the given type fall bock on _default if not set.
      *
      * if no regex at all configured NULL is returned
      */
-    public function getRegex(string $name): ?string
+    private function getRegex(string $name): ?string
     {
         return $this->getValue($name, ConfigEnum::Regex);
     }
@@ -63,99 +77,10 @@ class Config implements ConfigInterface
     // Core route properties
 
     /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getPrefix(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::Prefix);
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getType(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::Type);
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getTableName(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::Table);
-    }
-
-    /**
-     * @param string $name
-     * @return array
-     */
-    public function getCondition(string $name): array
-    {
-        return $this->getValue($name, ConfigEnum::Condition) ?? [];
-    }
-
-    /**
-     * @param string $name
-     * @return array
-     */
-    public function getPluginConfig(string $name): array
-    {
-        return []; //$this->getValue($name, ConfigEnum::PluginConfig) ?? [];
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getNotFound(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::NotFound);
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getLanguageParentField(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::LanguageParentField);
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getLanguageField(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::LanguageField);
-    }
-
-    /**
-     * @param string $name
-     * @return string|null
-     */
-    public function getRecordIdentifier(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::IdentifierField);
-    }
-
-    /**
-     * @param string $name
-     * @return bool
-     */
-    public function canLanguageOverlay(string $name): bool
-    {
-        return !empty($this->getRecordIdentifier($name)) && !empty($this->getLanguageField($name));
-    }
-
-    /**
+     *
      * @param string $name
      * @param string|ConfigEnum $key
-     * @return mixed return value, if not found return NULL
+     * @return mixed return value, if not found return NULL, If value is a string trim will be applied
      *
      * @internal
      */

@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor;
 
 use Generator;
 

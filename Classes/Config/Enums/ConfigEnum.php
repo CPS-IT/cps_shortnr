@@ -2,8 +2,6 @@
 
 namespace CPSIT\ShortNr\Config\Enums;
 
-use StringBackedEnum;
-
 enum ConfigEnum: string
 {
     // default names

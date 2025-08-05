@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 
-namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor;
 
 use CPSIT\ShortNr\Exception\ShortNrTreeProcessorException;
 
@@ -112,6 +112,8 @@ class TreeProcessorArrayData implements TreeProcessorDataInterface
         foreach ($this->getData() as $subItem) {
             $tree->processData($this, $subItem);
         }
+
+        $tree->removeDeadBranches();
         return $tree;
     }
 }

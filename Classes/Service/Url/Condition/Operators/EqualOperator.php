@@ -51,7 +51,7 @@ class EqualOperator implements QueryOperatorInterface
             'integer' => Connection::PARAM_INT,
             'NULL' => Connection::PARAM_NULL,
             'boolean' => Connection::PARAM_BOOL,
-            default => Connection::PARAM_INT_ARRAY
+            default => Connection::PARAM_STR
         };
         if ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class)) {
             return $queryBuilder->expr()->neq($fieldName, $queryBuilder->createNamedParameter($condition, $type));

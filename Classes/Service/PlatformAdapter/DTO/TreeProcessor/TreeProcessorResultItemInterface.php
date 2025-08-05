@@ -1,17 +1,17 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor;
 
 interface TreeProcessorResultItemInterface
 {
     /**
      * flag if this item already has data initialized
-     * unserialized objects are always NOT fresh
+     * unserialized objects are always NOT shadow
      *
      * @internal
      * @return bool
      */
-    public function isFresh(): bool;
+    public function isShadow(): bool;
     /**
      * @internal
      * @param mixed $data
@@ -24,16 +24,9 @@ interface TreeProcessorResultItemInterface
     public function getData(): mixed;
 
     /**
-     * @return int|null
+     * @return int
      */
-    public function getPrimaryId(): ?int;
-
-    /**
-     * @internal
-     * @param int|null $primaryId
-     * @return TreeProcessorResultItemInterface
-     */
-    public function setPrimaryId(?int $primaryId): TreeProcessorResultItemInterface;
+    public function getPrimaryId(): int;
 
     /**
      * @return int|null

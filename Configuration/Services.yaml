@@ -9,8 +9,11 @@ services:
     exclude:
       - '../Classes/Config/DTO'
       - '../Classes/Domain/DTO'
+      - '../Classes/Service/Url/Condition/DTO'
       - '../Classes/Service/Url/Condition/Operators/DTO'
       - '../Classes/Service/Url/Processor/DTO'
+      - '../Classes/Service/PlatformAdapter/DTO'
+      - '../Classes/Service/DataProvider/DTO'
 
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:
@@ -42,3 +45,11 @@ services:
   CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface:
     alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver
     public: true
+
+  CPSIT\ShortNr\EventListener\CacheEventListener:
+    tags:
+      - name: event.listener
+        method: handleEvents
+        identifier: 'iki-sitepackage/news-event-listener'
+        event:
+          - TYPO3\CMS\Core\Cache\Event\CacheFlushEvent

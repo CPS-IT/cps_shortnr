@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Domain\DTO\TreeProcessor;
+namespace CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor;
 
 interface TreeProcessorGeneratorInterface extends TreeProcessorResultInterface
 {
@@ -40,4 +40,12 @@ interface TreeProcessorGeneratorInterface extends TreeProcessorResultInterface
      * @return TreeProcessorResultItemInterface|null
      */
     public function getItem(int $id, bool $createIfNotExists = false): ?TreeProcessorResultItemInterface;
+
+    /**
+     * Removes all branches that have no data, and remove all related children too.
+     * This method identifies dead branches (nodes with shadow === true) and prunes them.
+     *
+     * @return void
+     */
+    public function removeDeadBranches(): void;
 }

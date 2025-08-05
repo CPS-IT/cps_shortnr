@@ -64,9 +64,7 @@ class CacheManager
     protected function getCache(): ?FrontendInterface
     {
         try {
-            /** @var Typo3CacheManager $tcm */
-            $tcm = GeneralUtility::makeInstance(Typo3CacheManager::class);
-            return $this->cache ??= $tcm->getCache(ExtensionSetup::CACHE_KEY);
+            return $this->cache ??= GeneralUtility::makeInstance(Typo3CacheManager::class)->getCache(ExtensionSetup::CACHE_KEY);
         } catch (Throwable) {
             return $this->cache = null;
         }

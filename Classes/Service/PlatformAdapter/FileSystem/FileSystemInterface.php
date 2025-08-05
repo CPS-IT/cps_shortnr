@@ -231,4 +231,38 @@ interface FileSystemInterface
      * suitable for the date function.
      */
     public function filemtime(string $filename): int|false;
+
+    /**
+     * List files and directories inside the specified path
+     * @link https://php.net/manual/en/function.scandir.php
+     * @param string $directory <p>
+     * The directory that will be scanned.
+     * </p>
+     * @param int $sorting_order <p>
+     * By default, the sorted order is alphabetical in ascending order. If
+     * the optional sorting_order is set to non-zero,
+     * then the sort order is alphabetical in descending order.
+     * </p>
+     * @param resource $context [optional] <p>
+     * For a description of the context parameter,
+     * refer to the streams section of
+     * the manual.
+     * </p>
+     * @return array|false an array of filenames on success, or false on
+     * failure. If directory is not a directory, then
+     * boolean false is returned, and an error of level
+     * E_WARNING is generated.
+     */
+    public function scandir(string $directory, int $sorting_order = 0, mixed $context = null): array|false;
+
+    /**
+     * Tells whether the filename is a regular file
+     * @link https://php.net/manual/en/function.is-file.php
+     * @param string $filename <p>
+     * Path to the file.
+     * </p>
+     * @return bool true if the filename exists and is a regular file, false
+     * otherwise.
+     */
+    public function is_file(string $filename): bool;
 }

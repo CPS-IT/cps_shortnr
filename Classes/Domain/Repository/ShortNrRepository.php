@@ -3,15 +3,11 @@
 namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorArrayData;
-use CPSIT\ShortNr\Domain\DTO\TreeProcessor\TreeProcessorResultInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
-use CPSIT\ShortNr\Exception\ShortNrTreeProcessorException;
 use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
-use Doctrine\DBAL\Exception;
 use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -30,7 +26,7 @@ class ShortNrRepository
      * @param array $fields
      * @param string $tableName
      * @param array $condition
-     * @return array try return exact one db row result
+     * @return array return all matching records that are active
      * @throws ShortNrQueryException
      * @throws ShortNrCacheException
      */
@@ -39,9 +35,7 @@ class ShortNrRepository
         $existingValidFields = $this->validateAndPrepareFields($fields, $condition, $tableName);
         $queryBuilder = $this->buildQuery($existingValidFields, $tableName, $condition);
         $allResults = $this->executeQuery($queryBuilder, $tableName);
-        $filteredResults = $this->filterResults($allResults, $existingValidFields, $tableName, $condition);
-
-        return $filteredResults[array_key_first($filteredResults)] ?? [];
+        return $this->filterResults($allResults, $existingValidFields, $tableName, $condition);
     }
 
     /**
@@ -122,35 +116,36 @@ class ShortNrRepository
     }
 
     /**
+     * @param string $tableName
      * @param string $indexField
      * @param string $parentPageField
      * @param string $languageField
      * @param string $languageParentField
-     * @return TreeProcessorResultInterface
-     * @throws Exception
-     * @throws ShortNrCacheException
+     * @return array tree data from table
      * @throws ShortNrQueryException
-     * @throws ShortNrTreeProcessorException
      */
-    public function getPageTreeData(string $indexField, string $parentPageField, string $languageField, string $languageParentField): TreeProcessorResultInterface
+    public function getPageTreeData(string $tableName, string $indexField, string $parentPageField, string $languageField, string $languageParentField): array
     {
-        $tableName = 'pages';
         $requiredFields = [$indexField, $parentPageField, $languageField, $languageParentField];
-        $referencePageFields = $this->getValidFields($requiredFields, $tableName);
-        if (count($referencePageFields) !== count($requiredFields)) {
-            throw new ShortNrQueryException('Page Reference Fields Provided do not match, pages schema not supported, pages fields in config found: '. implode(',', $requiredFields));
+        try {
+            $referencePageFields = $this->getValidFields($requiredFields, $tableName);
+            if (count($referencePageFields) !== count($requiredFields)) {
+                throw new ShortNrQueryException('Page Reference Fields Provided do not match, \''.$tableName.'\' schema not supported, \''.$tableName.'\' fields in config found: '. implode(',', $requiredFields));
+            }
+        } catch (ShortNrCacheException) {
+            // let it through, we catch the error later
         }
+
 
         $qb = $this->getQueryBuilder($tableName);
         $qb->select(...$requiredFields);
         $qb->from($tableName);
-        return (new TreeProcessorArrayData(
-            primaryKey: $indexField,
-            relationKey: $parentPageField,
-            languageKey: $languageField,
-            languageRelationKey: $languageParentField,
-            data: $qb->executeQuery()->fetchAllAssociative()
-        ))->getResult();
+
+        try {
+            return $qb->executeQuery()->fetchAllAssociative();
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
+        }
     }
 
     /**

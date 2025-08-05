@@ -4,8 +4,8 @@ namespace CPSIT\ShortNr\Service\Url;
 
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
-use Generator;
 use Psr\Http\Message\ServerRequestInterface;
 
 class DecoderService extends AbstractUrlService
@@ -29,30 +29,37 @@ class DecoderService extends AbstractUrlService
      */
     public function decode(string $uri): ?string
     {
-        $uri = $this->normalizeShortNrUri($uri);
+        $shortNr = $this->normalizeShortNrUri($uri);
         // cache for one day
-        return $this->cacheManager->getType3CacheValue('decode_'.$uri, fn() => $this->decodeUri($uri), 86_400);
+        return $this->cacheManager->getType3CacheValue('decode_'.$shortNr, fn() => $this->decodeShortNr($shortNr), 86_400);
     }
 
     /**
      *
-     * @param string $uri
+     * @param string $shortNr
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
+     * @throws ShortNrConfigException|ShortNrNotFoundException
      */
-    private function decodeUri(string $uri): ?string
+    private function decodeShortNr(string $shortNr): ?string
     {
-        $candidates = $this->findConfigCandidates($uri);
-        $config = $this->configLoader->getConfig();
-
-        foreach ($candidates as $candidate) {
-            $regexMatches = $candidate['matches'] ?? [];
-            foreach ($candidate['names']??[] as $name) {
-
+        $config = $this->getConfig();
+        foreach ($this->conditionService->findAllMatchConfigCandidates($shortNr, $config) as $candidate) {
+            foreach ($candidate->getNames() as $name) {
                 // load processor if possible and gives the decode task over with all current available information
-                $processor = $this->getProcessor($config->getType($name));
-                $decodedResult = $processor?->decode($uri, $name, $config, $regexMatches);
+                try {
+                    $configItem = $config->getConfigItem($name);
+                } catch (ShortNrConfigException) {
+                    // could not load config for that name, skip processing
+                    continue;
+                }
+
+                try {
+                    $decodedResult =  $this->getProcessor($configItem)?->decode($candidate, $configItem);
+                } catch (ShortNrNotFoundException) {
+                    $decodedResult = $this->getNotFoundProcessor($configItem)?->decode($candidate, $configItem);
+                }
+
                 if ($decodedResult instanceof ProcessorDecodeResultInterface && $decodedResult->isValid()) {
                     return $decodedResult->getUri();
                 }
@@ -60,18 +67,5 @@ class DecoderService extends AbstractUrlService
         }
 
         return null;
-    }
-
-    /**
-     * @param string $uri
-     * @return Generator
-     * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
-     */
-    private function findConfigCandidates(string $uri): Generator
-    {
-        $config = $this->configLoader->getConfig();
-        // Find all potential route matches
-        return $this->conditionService->findAllMatchConfigCandidates($uri, $config);
     }
 }

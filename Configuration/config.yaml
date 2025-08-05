@@ -1,6 +1,6 @@
 shortNr:
   _default:
-    # support page id or hard-coded slug (detects it via is_numeric)
+    # support page id or hard-coded URI (detects it via is_numeric)
     notFound: "/"
     # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
