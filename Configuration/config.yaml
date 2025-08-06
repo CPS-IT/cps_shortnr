@@ -4,6 +4,9 @@ shortNr:
     notFound: "/"
     # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
+    prefixMatch: "{match-1}"
+    # hidden notfoundOverwrite type to replace the stock NotfoundProcessor with a custom Processor
+    # notFoundType: customNotFound
     condition: # database conditions
       uid: "{match-2}"
       sys_language_uid: "{match-3}"

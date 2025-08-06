@@ -6,6 +6,7 @@ use CPSIT\ShortNr\Cache\CacheManager;
 use CPSIT\ShortNr\Config\ConfigLoader;
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
@@ -90,7 +91,7 @@ abstract class AbstractUrlService
     protected function getNotFoundProcessor(ConfigItemInterface $configItem): ?ProcessorInterface
     {
         // hidden config for overwrite the notFound Processor with a different Processor
-        $type = $configItem->getValue('notFoundType') ?? NotFoundProcessor::NOT_FOULD_PROCESSOR_TYPE;
+        $type = $configItem->getValue(ConfigEnum::NotFoundType) ?? NotFoundProcessor::NOT_FOULD_PROCESSOR_TYPE;
         if($type !== NotFoundProcessor::NOT_FOULD_PROCESSOR_TYPE) {
 
             return $this->getProcessorByType($type) ?? $this->getProcessorByType(NotFoundProcessor::NOT_FOULD_PROCESSOR_TYPE);

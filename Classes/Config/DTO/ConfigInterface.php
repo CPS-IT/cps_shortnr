@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\DTO;
 
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use BackedEnum;
 
 interface ConfigInterface
 {
@@ -34,16 +35,25 @@ interface ConfigInterface
     public function getConfigItem(string $name): ConfigItemInterface;
 
     /**
+     * Create a scoped config accessor for a specific config item based on the Prefix, since Prefixes are UNIQUE
+     *
+     * @param string $prefix
+     * @return ConfigItemInterface
+     * @throws ShortNrConfigException
+     */
+    public function getConfigItemByPrefix(string $prefix): ConfigItemInterface;
+
+    /**
      * Get a config value with _default fallback (internal use only)
      *
      * Checks config[name][key] first, then config[_default][key] as fallback.
      * Used internally by ConfigItem delegate methods.
      *
      * @param string $name Config name to look up
-     * @param string $key Config key to retrieve
+     * @param string|BackedEnum $key Config key to retrieve
      * @return mixed return value, if not found return NULL, If value is a string trim will be applied
      *
      * @internal Use ConfigItem methods instead of calling this directly
      */
-    public function getValue(string $name, string $key): mixed;
+    public function getValue(string $name, string|BackedEnum $key): mixed;
 }

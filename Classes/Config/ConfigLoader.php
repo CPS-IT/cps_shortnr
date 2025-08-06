@@ -6,6 +6,7 @@ use CPSIT\ShortNr\Cache\CacheManager;
 use CPSIT\ShortNr\Config\ConfigLoader\YamlConfigSanitizer;
 use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
@@ -166,12 +167,45 @@ class ConfigLoader
 
         if ($this->fileSystem->file_exists($configFile)) {
             $config = Yaml::parse($this->fileSystem->file_get_contents($configFile), Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
-            if (is_array($config)) {
-                return $this->yamlConfigSanitizer->sanitize($config);
+            // check if config is valid and entryPoint exists
+            if (is_array($config) and !empty($config[ConfigEnum::ENTRYPOINT->value])) {
+                $clearConfig = $this->yamlConfigSanitizer->sanitize($config);
+                // add fast lookup map to match prefix and configName
+                $clearConfig[Config::PREFIX_MAP_KEY] = $this->generateFastPrefixLookupMap($clearConfig);
+                return $clearConfig;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Generate a fast lookUp map that map all PREFIX (CASE INSENSITIVE) to the corresponding config Names
+     *
+     * @param array $configArray
+     * @return array
+     */
+    private function generateFastPrefixLookupMap(array $configArray): array
+    {
+        // load default config
+        $defaultConfigName = ConfigEnum::DEFAULT_CONFIG->value;
+        $configPrefixKey = ConfigEnum::Prefix->value;
+        $defaultConfig = $configArray[ConfigEnum::ENTRYPOINT->value][$defaultConfigName] ?? [];
+
+        $lookupMap = [];
+        foreach ($configArray[ConfigEnum::ENTRYPOINT->value] ?? [] as $configName => $configItemData) {
+            // skip default config entry
+            if ($configName === $defaultConfigName) {
+                continue;
+            }
+
+            $prefix = strtolower($configItemData[$configPrefixKey] ?? '');
+            if (!empty($prefix)) {
+                $lookupMap[$prefix] = $configName;
+            }
+        }
+
+        return $lookupMap;
     }
 
     /**

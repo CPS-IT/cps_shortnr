@@ -3,16 +3,24 @@
 namespace CPSIT\ShortNr\Config\DTO;
 
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use BackedEnum;
 
 interface ConfigItemInterface
 {
     /**
      * Get Custom Config Information like user defined custom config
      *
-     * @param string $configField
+     * @param string|BackedEnum $configField
      * @return string|null
      */
-    public function getValue(string $configField): ?string;
+    public function getValue(string|BackedEnum $configField): ?string;
+
+    /**
+     * Get the config Item PrefixMatch Value like: "{match-1}" so we know what match value is the prefix
+     *
+     * @return string
+     */
+    public function getPrefixMatch(): string;
 
     /**
      * Get the config item name this instance is scoped to

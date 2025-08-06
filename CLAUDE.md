@@ -94,15 +94,17 @@ Classes/
 │       │           ├── FieldCondition.php, OperatorContext.php, OperatorHistory.php
 │       │           ├── QueryOperatorContext.php   # Carries QueryBuilder + metadata
 │       │           └── ResultOperatorContext.php  # Carries result arrays + metadata
-│       └── Processor/                     # URL type handlers
-│           ├── ProcessorInterface.php, BaseProcessor.php
-│           └── PageProcessor.php, PluginProcessor.php (placeholders)
+│       └── Processor/                     # URL type handlers (simplified interface)
+│           ├── ProcessorInterface.php     # Returns ?string instead of DTO
+│           ├── PageProcessor.php          # Full implementation with URI validation
+│           ├── PluginProcessor.php        # Placeholder
+│           └── NotFoundProcessor.php      # Handles fallback URLs
 └── ViewHelpers/ShortUrlViewHelper.php     # Fluid integration (placeholder)
 ```
 
 ### Missing Components
 - EncoderService business logic, ShortUrlViewHelper logic
-- PageProcessor/PluginProcessor implementations
+- PluginProcessor implementation
 - TYPO3 multi-language UID handling
 
 ### Completed Systems
@@ -112,6 +114,9 @@ Classes/
 - **Context System**: QueryOperatorContext/ResultOperatorContext DTOs for clean state management
 - **Loop Prevention**: OperatorHistory tracks wrapping operator recursion
 - **Auto-Discovery DI**: Symfony tagging enables zero-config operator registration
+- **Processor System Rewrite**: Simplified interface returning ?string, eliminated 4 DTO classes
+- **PageProcessor**: Full implementation with URI validation and error handling
+- **NotFoundProcessor**: Handles fallback logic for missing pages
 
 ### Key Patterns
 - **Enable, Don't Enforce**: Extensible operator system supports simple to complex use cases
@@ -144,8 +149,8 @@ Classes/
 
 ### URL Processing
 - **AbstractUrlService**: Base with processor injection, config access, condition integration
-- **DecoderService**: 24h caching, processor delegation, candidate iteration
-- **ProcessorInterface**: Type identification via config `types`, auto-discovery DI
+- **DecoderService**: 24h caching, processor delegation, centralized NotFound fallback
+- **ProcessorInterface**: Simplified ?string return, built-in URI validation, exception-driven NotFound
 
 ### Abstractions
 - **PathResolverInterface**: TYPO3 path resolution isolation
@@ -312,9 +317,27 @@ return $operatorList[array_key_last($operatorList)];
 - **Performance optimization**: Query operators use DB indexes, Result operators handle edge cases
 
 ## Future Development
-- PageProcessor/PluginProcessor database logic, TYPO3 multi-language handling
+- PluginProcessor database logic, TYPO3 multi-language handling  
 - EncoderService with collision handling, ViewHelper integration
 - Cache warming, monitoring metrics
+
+## Recent Architecture Changes (Latest Session)
+
+### Processor Interface Simplification
+**Before**: Complex DTO hierarchy with ProcessorResultInterface, ProcessorDecodeResultInterface, ProcessorDecodeResult
+**After**: Direct ?string return with ValidateUriTrait at processor level
+**Benefit**: -36 lines, eliminated 4 classes, faster execution path
+
+### Error Handling Consolidation 
+**DecoderService** now catches ShortNrNotFoundException and triggers NotFoundProcessor fallback in single location
+**ProcessorInterface** throws exceptions for control flow instead of wrapping in DTOs
+**Cache keys** use MD5 hashing to prevent collision with complex URI patterns
+
+### Performance Optimizations
+- Cache key collision prevention via MD5 normalization
+- URI validation moved to processor level (fail fast)
+- Eliminated DTO instantiation overhead in decode path
+- Direct string returns bypass validation wrapper logic
 
 ## Session Updates
 Update SESSION_UPDATE.md with:

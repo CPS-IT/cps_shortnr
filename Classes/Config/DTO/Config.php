@@ -8,15 +8,26 @@ use CPSIT\ShortNr\Exception\ShortNrConfigException;
 
 class Config implements ConfigInterface
 {
+    public const PREFIX_MAP_KEY = '__prefix_map';
+
+    private readonly array $prefixMap;
+
     private array $cache = [];
 
     /**
      * @param array $data
+     * @throws ShortNrConfigException
      */
     public function __construct(
         private readonly array $data
     )
-    {}
+    {
+        // we use the map as indicator to know if the Config is "empty"
+        if (empty($this->data[static::PREFIX_MAP_KEY])) {
+            throw new ShortNrConfigException('No Configuration Items found (Prefix Map is Empty)');
+        }
+        $this->prefixMap = $this->data[static::PREFIX_MAP_KEY];
+    }
 
     /**
      * @return string[]
@@ -61,6 +72,28 @@ class Config implements ConfigInterface
         }
 
         return $this->cache['configItem'][$name] ??= new ConfigItem($name, $this);
+    }
+
+    /**
+     * return the ConfigItem based on the Prefix, since Prefixes are UNIQUE
+     *
+     * @param string $prefix
+     * @return ConfigItemInterface
+     * @throws ShortNrConfigException
+     */
+    public function getConfigItemByPrefix(string $prefix): ConfigItemInterface
+    {
+        // the configLoader uses strtolower() to generate the map, (case-insensitive)
+        $configName = $this->prefixMap[strtolower($prefix)] ?? null;
+        if ($configName === null) {
+            throw new ShortNrConfigException('Prefix \''. $prefix .'\' does not exist in PrefixMap does not exist, available prefixes are: '. implode(', ', array_keys($this->prefixMap)));
+        }
+
+        try {
+            return $this->getConfigItem($configName);
+        } catch (ShortNrConfigException $e) {
+            throw new ShortNrConfigException(sprintf('Prefix %s that is defined in PrefixMap and resolves to Name %s did not exists', $prefix, $configName), $e->getCode(), $e);
+        }
     }
 
     /**

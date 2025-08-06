@@ -4,6 +4,7 @@ namespace CPSIT\ShortNr\Config\DTO;
 
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use BackedEnum;
 
 class ConfigItem implements ConfigItemInterface
 {
@@ -21,9 +22,17 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getValue(string $configField): ?string
+    public function getValue(string|BackedEnum $configField): ?string
     {
         return $this->config->getValue($this->name, $configField) ?? null;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getPrefixMatch(): string
+    {
+        return $this->config->getValue($this->name, ConfigEnum::PrefixMatch);
     }
 
     /**

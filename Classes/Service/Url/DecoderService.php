@@ -45,36 +45,36 @@ class DecoderService extends AbstractUrlService
     private function decodeShortNr(string $shortNr): ?string
     {
         $config = $this->getConfig();
-        $configItem = null;
-        $candidate = null;
-        $notfound = false;
+        $thrownNotFoundExceptionInConfigItem = [];
         foreach ($this->conditionService->findAllMatchConfigCandidates($shortNr, $config) as $candidate) {
-            foreach ($candidate->getNames() as $name) {
-                // load processor if possible and gives the decode task over with all current available information
-                try {
-                    $configItem = $config->getConfigItem($name);
-                } catch (ShortNrConfigException) {
-                    // could not load config for that name, skip processing
-                    continue;
-                }
 
+            // extract the Prefix from the candidate using the config
+            $configItem = $this->conditionService->getConfigItem($candidate, $config);
+            if ($configItem === null) {
+                continue;
+            }
+
+            try {
+                $result = $this->getProcessor($configItem)?->decode($candidate, $configItem);
+            } catch (ShortNrNotFoundException) {
+                // handle not found only AT the end ... try other candidates too first
+                $thrownNotFoundExceptionInConfigItem = [
+                    'configItem' => $configItem,
+                    'candidate' => $candidate,
+                ];
                 $result = null;
-                try {
-                    $result = $this->getProcessor($configItem)?->decode($candidate, $configItem);
-                } catch (ShortNrNotFoundException) {
-                    $notfound = true;
-                }
+            }
 
-                if ($result) {
-                    return $result;
-                }
+            if ($result !== null) {
+                return $result;
             }
         }
 
-        if ($notfound && $configItem instanceof ConfigItemInterface && $candidate instanceof ConfigMatchCandidate) {
-            try {
-                return $this->getNotFoundProcessor($configItem)?->decode($candidate, $configItem);
-            } catch (ShortNrNotFoundException) {}
+        if (!empty($thrownNotFoundExceptionInConfigItem)) {
+            $configItem = $thrownNotFoundExceptionInConfigItem['configItem'];
+            $candidate = $thrownNotFoundExceptionInConfigItem['candidate'];
+            // NotFoundProcessor should not throw a ShortNrNotFoundException
+            return $this->getNotFoundProcessor($configItem)?->decode($candidate, $configItem);
         }
 
         return null;

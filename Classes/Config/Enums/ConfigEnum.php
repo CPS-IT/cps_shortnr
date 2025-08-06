@@ -12,10 +12,12 @@ enum ConfigEnum: string
 
     // not found handling
     case NotFound = 'notFound';
+    case NotFoundType = 'notFoundType';
 
     // regex
     case Regex = 'regex';
     case Prefix = 'prefix';
+    case PrefixMatch = 'prefixMatch';
 
     // database fields
     case Table = 'table';

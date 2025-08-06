@@ -90,15 +90,11 @@ class PageDataProvider
         if (!$configItem->canLanguageOverlay())
             return $candidate;
 
-        $uidMatchId = $this->getMatchIdFromField($configItem->getRecordIdentifier(), $candidate, $configItem);
-        $languageMatchId = $this->getMatchIdFromField($configItem->getLanguageField(), $candidate, $configItem);
-
-        $languageId = null;
-        if ($languageMatchId !== null && ($languageId = $candidate->getMatches()[$languageMatchId][0] ?? null) !== null) {
+        if (($languageId = $candidate->getValueFromMatchesViaMatchGroupString($configItem->getLanguageField())) !== null) {
             $languageId = (int)$languageId;
         }
 
-        if ($uidMatchId !== null && ($shortNrUid = $candidate->getMatches()[$uidMatchId][0] ?? null) !== null) {
+        if (($shortNrUid = $candidate->getValueFromMatchesViaMatchGroupString($configItem->getRecordIdentifier())) !== null) {
             $shortNrUid = (int)$shortNrUid;
             $pageTree = $this->pageTreeResolver->getPageTree();
             // no overlay available in multitree systems
@@ -120,7 +116,7 @@ class PageDataProvider
                 throw new ShortNrProcessorException('Page with id ' . $shortNrUid . 'has no language child with language id ' . $languageId);
             }
 
-
+            $uidMatchId = $candidate->extractIdFromMatchGroupPlaceholder($configItem->getRecordIdentifier());
             // base id mismatch with given shortnr uid... replace!
             if ($targetUid !== $shortNrUid) {
                 $updatedMatches = $candidate->getMatches();
@@ -134,28 +130,6 @@ class PageDataProvider
         }
 
         return $candidate;
-    }
-
-    /**
-     * @param string $fieldName
-     * @param ConfigMatchCandidate $candidate
-     * @param ConfigItemInterface $configItem
-     * @return int|null
-     */
-    private function getMatchIdFromField(string $fieldName, ConfigMatchCandidate $candidate, ConfigItemInterface $configItem): ?int
-    {
-        $condition = $configItem->getCondition();
-        if (isset($condition[$fieldName]) && str_starts_with((string)$condition[$fieldName],ConditionService::MATCH_PREFIX_PLACEHOLDER)) {
-            $matchField = $condition[$fieldName];
-            if(preg_match(ConditionService::DEFAULT_MATCH_REGEX, $matchField, $m)) {
-                $idx = $m[1] ?? null;
-                if (is_numeric($idx)) {
-                    return (int)$idx;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**

@@ -33,7 +33,6 @@ class NotFoundProcessor extends PageProcessor
      * @param ConfigMatchCandidate $candidate
      * @param ConfigItemInterface $config
      * @return string|null
-     * @throws ShortNrNotFoundException
      * @throws ShortNrProcessorException
      * @throws ShortNrSiteFinderException
      */
@@ -53,9 +52,15 @@ class NotFoundProcessor extends PageProcessor
 
         // numeric not found config found treat it as PageUid and resolve it
         if (is_numeric($notFound)) {
-            $pageData = $this->pageDataProvider->getPageData([
-                'uid' => (int)$notFound
-            ], $config);
+            try {
+                $pageData = $this->pageDataProvider->getPageData([
+                    'uid' => (int)$notFound
+                ], $config);
+            } catch (ShortNrNotFoundException) {
+                // we dont handle ShortNrNotFoundException inside the NotFound Processor, that would be a loop!
+                return null;
+            }
+
             if ($pageData instanceof PageData) {
                 // Load Site and language base path
                 $basePath = $this->siteResolver->getSiteBaseUri($pageData->getUid(), $pageData->getLanguageId());

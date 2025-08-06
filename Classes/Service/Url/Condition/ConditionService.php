@@ -4,6 +4,7 @@ namespace CPSIT\ShortNr\Service\Url\Condition;
 
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
@@ -18,9 +19,6 @@ use Generator;
 
 class ConditionService
 {
-    public const MATCH_PREFIX_PLACEHOLDER = '{match-';
-    public const DEFAULT_MATCH_REGEX = '/\\'. self::MATCH_PREFIX_PLACEHOLDER .'(\d+)\}/';
-
     private array $cache = [];
 
     /**
@@ -95,6 +93,67 @@ class ConditionService
         }
 
         return $filteredResults;
+    }
+
+    /**
+     * Return all config names and matches that successfully matched a regex
+     *
+     * @param string $uri
+     * @param ConfigInterface $config
+     * @return Generator<ConfigMatchCandidate>
+     */
+    public function findAllMatchConfigCandidates(string $uri, ConfigInterface $config): Generator
+    {
+        return $this->matchGenerator($uri, $config);
+    }
+
+    /**
+     * merged placeholder into condition array
+     *
+     * @param ConfigMatchCandidate $candidate
+     * @param ConfigItemInterface $config
+     * @return array
+     */
+    public function resolveConditionToArray(ConfigMatchCandidate $candidate, ConfigItemInterface $config): array
+    {
+        $rawCondition = $config->getCondition();
+        array_walk_recursive(
+            $rawCondition,
+            function (&$value) use ($candidate): void {
+                if (is_string($value)) {
+                    $checkValue = $candidate->getValueFromMatchesViaMatchGroupString($value);
+                    if ($checkValue !== null) {
+                        $value = $checkValue;
+                    }
+                }
+            }
+        );
+
+        return $rawCondition;
+    }
+
+    /**
+     * @param ConfigMatchCandidate $candidate
+     * @param ConfigInterface $config
+     * @return ConfigItemInterface|null
+     */
+    public function getConfigItem(ConfigMatchCandidate $candidate, ConfigInterface $config): ?ConfigItemInterface
+    {
+        foreach ($candidate->getNames() as $name) {
+            // if no config item exists for that name ... skip
+            try {
+                $configItem = $config->getConfigItem($name);
+            } catch (ShortNrConfigException) {
+                continue;
+            }
+
+            $prefix = $candidate->getValueFromMatchesViaMatchGroupString($configItem->getPrefixMatch());
+            if ($configItem->getPrefix() === $prefix) {
+                return $configItem;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -200,18 +259,6 @@ class ConditionService
     }
 
     /**
-     * Return all config names and matches that successfully matched a regex
-     *
-     * @param string $uri
-     * @param ConfigInterface $config
-     * @return Generator<ConfigMatchCandidate>
-     */
-    public function findAllMatchConfigCandidates(string $uri, ConfigInterface $config): Generator
-    {
-        return $this->matchGenerator($uri, $config);
-    }
-
-    /**
      * Generator that yields matches for each successful regex
      *
      * @param string $uri
@@ -233,48 +280,22 @@ class ConditionService
     /**
      * gives the matches of the regex check
      *
-     * @param string $uri
+     * @param string $shortNr
      * @param string $regex
      * @return array|null
      */
-    private function matchRegex(string $uri, string $regex): ?array
+    private function matchRegex(string $shortNr, string $regex): ?array
     {
-        $cacheKey = $uri.'::'.$regex;
+        $cacheKey = $shortNr.'::'.$regex;
         if (isset($this->cache['match'][$cacheKey])) {
             return $this->cache['match'][$cacheKey];
         }
 
         $matches = [];
-        if (preg_match($regex, $uri, $matches, PREG_OFFSET_CAPTURE)) {
+        if (preg_match($regex, $shortNr, $matches, PREG_OFFSET_CAPTURE)) {
             return $this->cache['match'][$cacheKey] = $matches;
         }
 
         return $this->cache['match'][$cacheKey] = null;
-    }
-
-    /**
-     * merged placeholder into condition array
-     *
-     * @param ConfigMatchCandidate $candidate
-     * @param ConfigItemInterface $config
-     * @return array
-     */
-    public function resolveConditionToArray(ConfigMatchCandidate $candidate, ConfigItemInterface $config): array
-    {
-        $rawCondition = $config->getCondition();
-        $matches = $candidate->getMatches();
-
-        array_walk_recursive(
-            $rawCondition,
-            function (&$value) use ($matches): void {
-                if (is_string($value) &&
-                    preg_match(static::DEFAULT_MATCH_REGEX, $value, $m)) {
-                    $idx = (int) $m[1];
-                    $value = $matches[$idx][0] ?? $value;
-                }
-            }
-        );
-
-        return $rawCondition;
     }
 }

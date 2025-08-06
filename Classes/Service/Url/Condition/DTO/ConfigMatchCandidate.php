@@ -10,6 +10,11 @@ namespace CPSIT\ShortNr\Service\Url\Condition\DTO;
  */
 class ConfigMatchCandidate
 {
+    private array $cache = [];
+
+    public const MATCH_PREFIX_PLACEHOLDER = '{match-';
+    public const DEFAULT_MATCH_REGEX = '/'. self::MATCH_PREFIX_PLACEHOLDER .'(\d+)}/';
+
     /**
      * Create a config match candidate from successful regex matching
      *
@@ -59,5 +64,49 @@ class ConfigMatchCandidate
     public function getShortNrUri(): string
     {
         return $this->shortNrUri;
+    }
+
+    /**
+     * extract Value from Matches via MatchGroup Placeholder
+     *
+     * @param string $matchGroupString
+     * @return mixed
+     */
+    public function getValueFromMatchesViaMatchGroupString(string $matchGroupString): mixed
+    {
+        if (isset($this->cache['valueExtract'][$matchGroupString])) {
+            return $this->cache['valueExtract'][$matchGroupString];
+        }
+
+        $value = null;
+        $idx = $this->extractIdFromMatchGroupPlaceholder($matchGroupString);
+        if ($idx !== null) {
+            $value = $this->getMatches()[$idx][0] ?? null;
+        }
+
+        return $this->cache['valueExtract'][$matchGroupString] = $value;
+    }
+
+    /**
+     * extract MatchGroup ID From $matchGroupPlaceholder
+     *
+     * @param string $matchGroupString
+     * @return int|null
+     */
+    public function extractIdFromMatchGroupPlaceholder(string $matchGroupString): ?int
+    {
+        if (isset($this->cache['idExtract'][$matchGroupString])) {
+            return $this->cache['idExtract'][$matchGroupString];
+        }
+
+        $idFound = null;
+        if (preg_match(static::DEFAULT_MATCH_REGEX, $matchGroupString, $m) !== false) {
+            $idx = $m[1] ?? null;
+            if($idx !== null) {
+                $idFound = (int)$idx;
+            }
+        }
+
+        return $this->cache['idExtract'][$matchGroupString] = $idFound;
     }
 }
