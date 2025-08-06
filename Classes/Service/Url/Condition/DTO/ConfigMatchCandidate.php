@@ -109,4 +109,15 @@ class ConfigMatchCandidate
 
         return $this->cache['idExtract'][$matchGroupString] = $idFound;
     }
+
+    /**
+     * heuristic check if that string is might be a MatchGroup pattern
+     *
+     * @param string $matchGroupString
+     * @return bool
+     */
+    public function isMatchGroupString(string $matchGroupString): bool
+    {
+        return str_starts_with($matchGroupString, static::MATCH_PREFIX_PLACEHOLDER);
+    }
 }

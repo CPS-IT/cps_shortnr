@@ -27,7 +27,8 @@ class ConditionService
      */
     public function __construct(
         private readonly iterable $queryOperators,
-        private readonly iterable $resultOperators
+        private readonly iterable $resultOperators,
+        private readonly PlaceholderResolver $placeholderResolver,
     )
     {}
 
@@ -116,20 +117,10 @@ class ConditionService
      */
     public function resolveConditionToArray(ConfigMatchCandidate $candidate, ConfigItemInterface $config): array
     {
-        $rawCondition = $config->getCondition();
-        array_walk_recursive(
-            $rawCondition,
-            function (&$value) use ($candidate): void {
-                if (is_string($value)) {
-                    $checkValue = $candidate->getValueFromMatchesViaMatchGroupString($value);
-                    if ($checkValue !== null) {
-                        $value = $checkValue;
-                    }
-                }
-            }
-        );
-
-        return $rawCondition;
+        // replace all matchPlaceholder with the candidate match result
+        $conditions =  $this->placeholderResolver->replace($config->getCondition(), $candidate);
+        // remove all orphan matchPlaceholder that are still exists.
+        return $this->placeholderResolver->strip($conditions, $candidate);
     }
 
     /**

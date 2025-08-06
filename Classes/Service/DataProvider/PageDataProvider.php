@@ -67,69 +67,52 @@ class PageDataProvider
     public function resolveCandidateToCondition(ConfigMatchCandidate $candidate, ConfigItemInterface $configItem): array
     {
         try {
-            $candidate = $this->normalizeCandidate($candidate, $configItem);
-            return $this->conditionService->resolveConditionToArray($candidate, $configItem);
+            $condition = $this->conditionService->resolveConditionToArray($candidate, $configItem);
+            return $this->handleLanguageOverlay($condition, $configItem);
         } catch (Throwable $e) {
             throw new ShortNrNotFoundException($e->getMessage(), $e->getCode(), $e);
         }
     }
 
     /**
-     * we only want the base UID for resolving data
-     *
-     * @param ConfigMatchCandidate $candidate
+     * @param array $condition
      * @param ConfigItemInterface $configItem
-     * @return ConfigMatchCandidate
-     * @throws ShortNrCacheException
-     * @throws ShortNrProcessorException
-     * @throws ShortNrQueryException
-     * @throws ShortNrTreeProcessorException
+     * @return array
      */
-    private function normalizeCandidate(ConfigMatchCandidate $candidate, ConfigItemInterface $configItem): ConfigMatchCandidate
+    private function handleLanguageOverlay(array $condition, ConfigItemInterface $configItem): array
     {
         if (!$configItem->canLanguageOverlay())
-            return $candidate;
+            return $condition;
 
-        if (($languageId = $candidate->getValueFromMatchesViaMatchGroupString($configItem->getLanguageField())) !== null) {
-            $languageId = (int)$languageId;
+        if (($uidField =$configItem->getRecordIdentifier()) !== null && isset($condition[$uidField])) {
+            $uidValue = (int)$condition[$uidField];
+        } else {
+            return $condition;
         }
 
-        if (($shortNrUid = $candidate->getValueFromMatchesViaMatchGroupString($configItem->getRecordIdentifier())) !== null) {
-            $shortNrUid = (int)$shortNrUid;
+        $languageValue = null;
+        if (($languageField =$configItem->getLanguageField()) !== null && isset($condition[$languageField])) {
+            $languageValue = (int)$condition[$languageField];
+        }
+
+        try {
             $pageTree = $this->pageTreeResolver->getPageTree();
-            // no overlay available in multitree systems
-            if ($pageTree->isMultiTreeLanguageSetup())
-                return $candidate;
-
-            if (($treeItem = $pageTree->getItem($shortNrUid)) === null) {
-                throw new ShortNrProcessorException('Page with id ' . $shortNrUid . ' not found');
+            if ($pageTree->isMultiTreeLanguageSetup()) {
+                return $condition;
             }
-
-            if ($languageId !== null) {
-                // fallback to base translation
-                $targetUid = $treeItem->getTranslation($languageId)?->getPrimaryId();
-            } else {
-                $targetUid = $treeItem->getBaseTranslation()->getPrimaryId();
-            }
-
-            if ($targetUid === null) {
-                throw new ShortNrProcessorException('Page with id ' . $shortNrUid . 'has no language child with language id ' . $languageId);
-            }
-
-            $uidMatchId = $candidate->extractIdFromMatchGroupPlaceholder($configItem->getRecordIdentifier());
-            // base id mismatch with given shortnr uid... replace!
-            if ($targetUid !== $shortNrUid) {
-                $updatedMatches = $candidate->getMatches();
-                $updatedMatches[$uidMatchId][0] = $targetUid;
-                return new ConfigMatchCandidate(
-                    $candidate->getShortNrUri(),
-                    $candidate->getNames(),
-                    $updatedMatches
-                );
-            }
+        } catch (Throwable) {
+            return $condition;
         }
 
-        return $candidate;
+
+        $item = $pageTree->getItem($uidValue);
+        if ($languageValue !== null) {
+            $condition[$uidField] = $item->getTranslation($languageValue)->getPrimaryId() ?? $uidValue;
+        } else {
+            $condition[$uidField] = $item->getBaseTranslation()->getPrimaryId();
+        }
+
+        return $condition;
     }
 
     /**
