@@ -8,8 +8,6 @@ use CPSIT\ShortNr\Exception\ShortNrProcessorException;
 use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
 use CPSIT\ShortNr\Service\DataProvider\DTO\PageData;
 use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResult;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 use CPSIT\ShortNr\Service\Url\ValidateUriTrait;
 use Symfony\Component\Filesystem\Path;
 
@@ -34,23 +32,23 @@ class NotFoundProcessor extends PageProcessor
     /**
      * @param ConfigMatchCandidate $candidate
      * @param ConfigItemInterface $config
-     * @return ProcessorDecodeResultInterface
-     * @throws ShortNrSiteFinderException
+     * @return string|null
      * @throws ShortNrNotFoundException
      * @throws ShortNrProcessorException
+     * @throws ShortNrSiteFinderException
      */
-    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ProcessorDecodeResultInterface
+    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ?string
     {
         $notFound = $config->getNotFound();
         // empty or missing config deactivate the notFound Logic and return an NULL processorResult. That will continue the Middleware typo3 stack
         if (empty($notFound)) {
             // NotFound logic is disabled
-            return new ProcessorDecodeResult(null);
+            return null;
         }
 
         // full uri / domain as notFound Handling found use that instead
         if ($this->validateUri($notFound)) {
-            return new ProcessorDecodeResult($notFound);
+            return $notFound;
         }
 
         // numeric not found config found treat it as PageUid and resolve it
@@ -62,8 +60,11 @@ class NotFoundProcessor extends PageProcessor
                 // Load Site and language base path
                 $basePath = $this->siteResolver->getSiteBaseUri($pageData->getUid(), $pageData->getLanguageId());
 
-                // Concat the path segments to a complete path
-                return new ProcessorDecodeResult(Path::join($basePath, $pageData->getSlug()));
+                $uri = Path::join($basePath, $pageData->getSlug());
+                // did not check if it is reachable it only checks if it is a valid URI
+                if ($this->validateUri($uri)) {
+                    return $uri;
+                }
             }
         }
 

@@ -2,10 +2,11 @@
 
 namespace CPSIT\ShortNr\Service\Url;
 
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
+use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 use Psr\Http\Message\ServerRequestInterface;
 
 class DecoderService extends AbstractUrlService
@@ -31,7 +32,7 @@ class DecoderService extends AbstractUrlService
     {
         $shortNr = $this->normalizeShortNrUri($uri);
         // cache for one day
-        return $this->cacheManager->getType3CacheValue('decode_'.$shortNr, fn() => $this->decodeShortNr($shortNr), 86_400);
+        return $this->cacheManager->getType3CacheValue('decode_'.md5(strtolower($shortNr)), fn() => $this->decodeShortNr($shortNr), 86_400);
     }
 
     /**
@@ -44,6 +45,9 @@ class DecoderService extends AbstractUrlService
     private function decodeShortNr(string $shortNr): ?string
     {
         $config = $this->getConfig();
+        $configItem = null;
+        $candidate = null;
+        $notfound = false;
         foreach ($this->conditionService->findAllMatchConfigCandidates($shortNr, $config) as $candidate) {
             foreach ($candidate->getNames() as $name) {
                 // load processor if possible and gives the decode task over with all current available information
@@ -54,16 +58,23 @@ class DecoderService extends AbstractUrlService
                     continue;
                 }
 
+                $result = null;
                 try {
-                    $decodedResult =  $this->getProcessor($configItem)?->decode($candidate, $configItem);
+                    $result = $this->getProcessor($configItem)?->decode($candidate, $configItem);
                 } catch (ShortNrNotFoundException) {
-                    $decodedResult = $this->getNotFoundProcessor($configItem)?->decode($candidate, $configItem);
+                    $notfound = true;
                 }
 
-                if ($decodedResult instanceof ProcessorDecodeResultInterface && $decodedResult->isValid()) {
-                    return $decodedResult->getUri();
+                if ($result) {
+                    return $result;
                 }
             }
+        }
+
+        if ($notfound && $configItem instanceof ConfigItemInterface && $candidate instanceof ConfigMatchCandidate) {
+            try {
+                return $this->getNotFoundProcessor($configItem)?->decode($candidate, $configItem);
+            } catch (ShortNrNotFoundException) {}
         }
 
         return null;

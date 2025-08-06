@@ -29,14 +29,17 @@ class ShortNumberMiddleware implements MiddlewareInterface
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
+        $t = microtime(true);
         if ($this->decoderService->isShortNrRequest($request)) {
             // process and return redirect result to real url (move permanent)
             $realUri = $this->decoderService->decodeRequest($request);
-            if ($realUri !== null)
+            if ($realUri !== null) {
+                $t = (microtime(true) - $t) * 1000;
                 return new RedirectResponse($realUri, 301, [
                     'Cache-Control' => 'no-cache, no-store, must-revalidate',
                     'X-Robots-Tag' => 'noindex, nofollow'
                 ]);
+            }
         }
 
         return $handler->handle($request);

@@ -5,7 +5,6 @@ namespace CPSIT\ShortNr\Service\Url\Processor;
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 
 interface ProcessorInterface
 {
@@ -17,12 +16,12 @@ interface ProcessorInterface
     public function getType(): string;
 
     /**
-     * Return a ProcessorDecodeResultInterface or throws ShortNrNotFoundException to trigger the notFound Fallback
+     * Return a string (full URI) or throws ShortNrNotFoundException to trigger the notFound Fallback
      *
      * @param ConfigMatchCandidate $candidate
      * @param ConfigItemInterface $config
-     * @return ProcessorDecodeResultInterface
+     * @return string|null
      * @throws ShortNrNotFoundException
      */
-    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ProcessorDecodeResultInterface;
+    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ?string;
 }

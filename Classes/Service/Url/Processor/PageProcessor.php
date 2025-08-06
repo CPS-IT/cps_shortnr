@@ -9,12 +9,13 @@ use CPSIT\ShortNr\Service\DataProvider\DTO\PageData;
 use CPSIT\ShortNr\Service\DataProvider\PageDataProvider;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolver;
 use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResult;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
+use CPSIT\ShortNr\Service\Url\ValidateUriTrait;
 use Symfony\Component\Filesystem\Path;
 
 class PageProcessor implements ProcessorInterface
 {
+    use ValidateUriTrait;
+
     public function __construct(
         protected readonly PageDataProvider $pageDataProvider,
         protected readonly SiteResolver $siteResolver
@@ -32,11 +33,11 @@ class PageProcessor implements ProcessorInterface
     /**
      * @param ConfigMatchCandidate $candidate
      * @param ConfigItemInterface $config
-     * @return ProcessorDecodeResultInterface
-     * @throws ShortNrSiteFinderException
+     * @return string|null
      * @throws ShortNrNotFoundException
+     * @throws ShortNrSiteFinderException
      */
-    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ProcessorDecodeResultInterface
+    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ?string
     {
         // get the raw condition config merged with config
         $condition = $this->pageDataProvider->resolveCandidateToCondition($candidate, $config);
@@ -45,9 +46,12 @@ class PageProcessor implements ProcessorInterface
         if ($pageData instanceof PageData) {
             // load Site and language base path
             $basePath = $this->siteResolver->getSiteBaseUri($pageData->getUid(), $pageData->getLanguageId());
-
             // concat the path segments to a complete path
-            return new ProcessorDecodeResult(Path::join($basePath, $pageData->getSlug()));
+            $uri = Path::join($basePath, $pageData->getSlug());
+            // did not check if it is reachable it only check if it is a valid URI
+            if ($this->validateUri($uri)) {
+                return $uri;
+            }
         }
 
         // page not found

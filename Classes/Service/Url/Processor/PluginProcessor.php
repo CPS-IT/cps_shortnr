@@ -3,9 +3,8 @@
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResult;
-use CPSIT\ShortNr\Service\Url\Processor\DTO\ProcessorDecodeResultInterface;
 
 class PluginProcessor implements ProcessorInterface
 {
@@ -17,8 +16,13 @@ class PluginProcessor implements ProcessorInterface
         return 'plugin';
     }
 
-    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ProcessorDecodeResultInterface
+    /**
+     * @param ConfigMatchCandidate $candidate
+     * @param ConfigItemInterface $config
+     * @return string|null
+     */
+    public function decode(ConfigMatchCandidate $candidate, ConfigItemInterface $config): ?string
     {
-        return new ProcessorDecodeResult(null);
+        return null;
     }
 }
