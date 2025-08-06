@@ -1,5 +1,4 @@
-<?php
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace CPSIT\ShortNr\Service\Url\Condition;
 
@@ -8,13 +7,23 @@ use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 /**
  * Replaces or strips placeholders that appear inside a condition array.
  */
-final class PlaceholderResolver
+class PlaceholderResolver
 {
+    /**
+     * @param array $condition
+     * @param ConfigMatchCandidate $candidate
+     * @return array
+     */
     public function replace(array $condition, ConfigMatchCandidate $candidate): array
     {
         return $this->walk($condition, $candidate, false);
     }
 
+    /**
+     * @param array $condition
+     * @param ConfigMatchCandidate $candidate
+     * @return array
+     */
     public function strip(array $condition, ConfigMatchCandidate $candidate): array
     {
         return $this->walk($condition, $candidate, true);
