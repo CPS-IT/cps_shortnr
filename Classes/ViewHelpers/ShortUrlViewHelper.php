@@ -53,6 +53,6 @@ final class ShortUrlViewHelper extends AbstractViewHelper
         $absolute = $this->arguments['absolute'] ?? false;
         $parameters = $this->arguments['parameters'] ?? [];
 
-        return 'TODO: RETURN SHORT URL';
+        return 'TODO ADD SHORT LINK VIEWHELPER';
     }
 }

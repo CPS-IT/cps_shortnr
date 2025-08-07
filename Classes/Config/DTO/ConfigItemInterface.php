@@ -23,6 +23,15 @@ interface ConfigItemInterface
     public function getPrefixMatch(): string;
 
     /**
+     * return the Priority of the Item; default 0
+     *
+     * User configs always have default higher priority then Default configs (by +1), IF NOT USER DEFINED
+     *
+     * @return int
+     */
+    public function getPriority(): int;
+
+    /**
      * Get the config item name this instance is scoped to
      *
      * @return string Config name like 'pages', 'plugins', 'events'

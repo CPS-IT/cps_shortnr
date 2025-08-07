@@ -9,8 +9,10 @@ use CPSIT\ShortNr\Exception\ShortNrConfigException;
 class Config implements ConfigInterface
 {
     public const PREFIX_MAP_KEY = '__prefix_map';
+    public const SORTED_REGEX_LIST_KEY = '__sorted_regex_list';
 
     private readonly array $prefixMap;
+    private readonly array $regexList;
 
     private array $cache = [];
 
@@ -23,10 +25,13 @@ class Config implements ConfigInterface
     )
     {
         // we use the map as indicator to know if the Config is "empty"
-        if (empty($this->data[static::PREFIX_MAP_KEY])) {
-            throw new ShortNrConfigException('No Configuration Items found (Prefix Map is Empty)');
+        if (empty($this->data[static::PREFIX_MAP_KEY]) || empty($this->data[static::SORTED_REGEX_LIST_KEY])) {
+            throw new ShortNrConfigException('Malformed Configuration detected (Regex / Prefix maps could not be found)');
         }
         $this->prefixMap = $this->data[static::PREFIX_MAP_KEY];
+
+        // Use pre-built sorted regex list from ConfigLoader
+        $this->regexList = $this->data[static::SORTED_REGEX_LIST_KEY];
     }
 
     /**
@@ -41,22 +46,13 @@ class Config implements ConfigInterface
     }
 
     /**
-     * gather all regex of all names and create a regex per name list.
+     * Get pre-built regex list grouped by regex pattern, sorted by priority (high to low)
      *
      * @return array<string, array>
      */
     public function getUniqueRegexConfigNameGroup(): array
     {
-        if (!empty($this->cache['regexList'])) {
-            return $this->cache['regexList'];
-        }
-
-        $regexNameList = [];
-        foreach ($this->getConfigNames() as $configName) {
-            $regexNameList[$this->getRegex($configName)][] = $configName;
-        }
-
-        return $this->cache['regexList'] = $regexNameList;
+        return $this->regexList;
     }
 
     /**
@@ -94,17 +90,6 @@ class Config implements ConfigInterface
         } catch (ShortNrConfigException $e) {
             throw new ShortNrConfigException(sprintf('Prefix %s that is defined in PrefixMap and resolves to Name %s did not exists', $prefix, $configName), $e->getCode(), $e);
         }
-    }
-
-    /**
-     * @param string $name
-     * @return string|null return the regex of the given type fall bock on _default if not set.
-     *
-     * if no regex at all configured NULL is returned
-     */
-    private function getRegex(string $name): ?string
-    {
-        return $this->getValue($name, ConfigEnum::Regex);
     }
 
     // Core route properties

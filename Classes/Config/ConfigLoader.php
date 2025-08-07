@@ -17,6 +17,7 @@ use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 
 class ConfigLoader
 {
+    private const DEFAULT_CONFIG_PATH = 'EXT:'. ExtensionSetup::EXT_KEY .'/Configuration/config.yaml';
     private const COMPILED_REGEX_KEY = 'regex';
     private const CONFIG_KEY = 'config';
     private array $runtimeCache = [];
@@ -46,7 +47,7 @@ class ConfigLoader
         return $this->runtimeCache[self::CONFIG_KEY] ??= new Config(
             $this->getConfigArray(
                 self::CONFIG_KEY,
-                fn(): array => $this->parseYamlConfigFile($this->getYamlConfigFilePath())
+                $this->parseAndMergeConfigFiles(...)
             )
         );
     }
@@ -61,6 +62,8 @@ class ConfigLoader
 
     /**
      * store the fast lookup regex into
+     *
+     * depends on getConfig()
      *
      * @return string|null
      * @throws ShortNrCacheException
@@ -78,6 +81,7 @@ class ConfigLoader
      * compiled ALL configs into one regex for a fast lookup
      *
      * @return array<string, string>
+     * @throws ShortNrConfigException
      */
     private function compileYamlConfigRegex(): array
     {
@@ -111,6 +115,7 @@ class ConfigLoader
             // 4. Re-assemble with a single set of delimiters and global modifiers
             $compiled = '/' . implode('|', $parts) . '/i';
         } catch (Throwable) {
+            throw new ShortNrConfigException('Could not generate Compiled Regex Lookup String');
         }
 
         return [self::COMPILED_REGEX_KEY => $compiled];
@@ -155,24 +160,52 @@ class ConfigLoader
     }
 
     /**
-     * @param string|null $configFile
+     * load and merge config also implement the Priority Value if not set
+     *
      * @return array|null
      * @throws ShortNrConfigException
      */
-    private function parseYamlConfigFile(?string $configFile): ?array
+    private function parseAndMergeConfigFiles(): ?array
     {
-        if ($configFile === null) {
-            return null;
+        $config = [];
+        $priority = 0;
+        $entryPointKey = ConfigEnum::ENTRYPOINT->value;
+        $priorityKey = ConfigEnum::Priority->value;
+        $defaultKey = ConfigEnum::DEFAULT_CONFIG->value;
+        foreach ($this->getAllConfigurationFiles() as $file) {
+            $subConfig = $this->parseYamlConfigFile($file);
+            if (is_array($subConfig) && !empty($subConfig)) {
+                // increase the priority of each SubConfig if not already set
+                foreach ($subConfig[$entryPointKey]??[] as $subConfigKey => $subConfigValue) {
+                    if ($subConfigKey === $defaultKey) {
+                        continue;
+                    }
+                    $subConfig[$entryPointKey][$subConfigKey][$priorityKey] ??= $priority;
+                }
+                $config[] = $subConfig;
+            }
+            $priority++;
         }
 
+        $mergedConfig = $config === [] ? null : array_replace_recursive(...$config);
+        // this list is mandatory since it also indicate if the List is empty for some reason
+        $mergedConfig[Config::PREFIX_MAP_KEY] = $this->generateFastPrefixLookupMap($mergedConfig);
+        $mergedConfig[Config::SORTED_REGEX_LIST_KEY] = $this->generateSortedRegexList($mergedConfig);
+        return $mergedConfig;
+    }
+
+    /**
+     * @param string $configFile
+     * @return array|null
+     * @throws ShortNrConfigException
+     */
+    private function parseYamlConfigFile(string $configFile): ?array
+    {
         if ($this->fileSystem->file_exists($configFile)) {
             $config = Yaml::parse($this->fileSystem->file_get_contents($configFile), Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
             // check if config is valid and entryPoint exists
             if (is_array($config) and !empty($config[ConfigEnum::ENTRYPOINT->value])) {
-                $clearConfig = $this->yamlConfigSanitizer->sanitize($config);
-                // add fast lookup map to match prefix and configName
-                $clearConfig[Config::PREFIX_MAP_KEY] = $this->generateFastPrefixLookupMap($clearConfig);
-                return $clearConfig;
+                return $this->yamlConfigSanitizer->sanitize($config);
             }
         }
 
@@ -209,26 +242,74 @@ class ConfigLoader
     }
 
     /**
+     * Generate sorted regex list grouped by regex pattern, sorted by priority (high to low)
+     *
+     * @param array $configArray
+     * @return array<string, array>
+     */
+    private function generateSortedRegexList(array $configArray): array
+    {
+        $defaultConfigName = ConfigEnum::DEFAULT_CONFIG->value;
+        $entryPointKey = ConfigEnum::ENTRYPOINT->value;
+        $regexKey = ConfigEnum::Regex->value;
+        $priorityKey = ConfigEnum::Priority->value;
+        $defaultConfig = $configArray[$entryPointKey][$defaultConfigName] ?? [];
+
+        $configData = [];
+        foreach ($configArray[$entryPointKey] ?? [] as $configName => $configItemData) {
+            // skip default config entry
+            if ($configName === $defaultConfigName) {
+                continue;
+            }
+
+            $regex = $configItemData[$regexKey] ?? $defaultConfig[$regexKey] ?? null;
+            if ($regex === null) {
+                continue;
+            }
+
+            $priority = (int)($configItemData[$priorityKey] ?? 0);
+            $configData[] = [
+                'name' => $configName,
+                'priority' => $priority,
+                'regex' => $regex
+            ];
+        }
+
+        // Sort by priority (high to low)
+        usort($configData, fn($a, $b) => $b['priority'] <=> $a['priority']);
+
+        // Build regex list grouped by regex pattern
+        $regexNameList = [];
+        foreach ($configData as $config) {
+            $regexNameList[$config['regex']][] = $config['name'];
+        }
+
+        return $regexNameList;
+    }
+
+    /**
      * @throws ShortNrConfigException
      */
     protected function isConfigCacheValid(string $suffix): bool
     {
         // is yaml file is more up to date then cache file ... it's considered not valid
         // we only run this check once per execution
-        return ($this->runtimeCache['file']['valid'] ??= (function(string $suffix): ?bool {
-            $yamlConfigPath = $this->getYamlConfigFilePath();
-            if ($yamlConfigPath === null) {
-                return null; // No config file configured
-            }
+        return ($this->runtimeCache['file']['valid'][$suffix] ??= (function(string $suffix): bool {
 
-            $yamlMTime = $this->fileSystem->filemtime($yamlConfigPath);
+            // load all config files, user and default
             $cacheMTime = $this->cacheManager->getArrayFileCache()->getFileModificationTime($suffix);
+            foreach ($this->getAllConfigurationFiles() as $configurationFile) {
+                $yamlMTime = $this->fileSystem->filemtime($configurationFile);
+                if ($yamlMTime === false || $cacheMTime === null) {
+                    return false;
+                }
 
-            if ($yamlMTime === false || $cacheMTime === null) {
-                return null;
+                if ($yamlMTime > $cacheMTime) {
+                    return false;
+                }
             }
-
-            return $yamlMTime <= $cacheMTime;
+            // no anomalies found / seems valid (not outdated)
+            return true;
         })($suffix)) ?? false;
     }
 
@@ -240,26 +321,51 @@ class ConfigLoader
      */
     public function getYamlConfigFileSuffix(): string
     {
-        return $this->runtimeCache['file']['hash'] ??= md5($this->getYamlConfigFilePath() ?? '');
+        return $this->runtimeCache['file']['hash'] ??= md5(implode(',', $this->getAllConfigurationFiles()));
+    }
+
+    /**
+     * @return array
+     * @throws ShortNrConfigException
+     */
+    private function getAllConfigurationFiles(): array
+    {
+        return $this->runtimeCache['file']['list'] = array_filter(array_unique([
+            $this->getDefaultYamlConfigFilePath(),
+            $this->getUserYamlConfigFilePath()
+        ]));
+    }
+
+    /**
+     * default config
+     * @return string
+     */
+    private function getDefaultYamlConfigFilePath(): string
+    {
+        return $this->runtimeCache['file']['default_path'] ??= $this->processYamlConfigFilePath(
+            self::DEFAULT_CONFIG_PATH
+        );
     }
 
     /**
      * @return string|null
      * @throws ShortNrConfigException
      */
-    protected function getYamlConfigFilePath(): ?string
+    private function getUserYamlConfigFilePath(): ?string
     {
-        return $this->runtimeCache['file']['path'] ??= $this->processYamlConfigFilePath();
+        return $this->runtimeCache['file']['path'] ??= $this->processYamlConfigFilePath(
+            $this->getTypo3Configuration()['configFile'] ?? null
+        );
     }
 
     /**
+     * process the user given Config from the Extension Configuration
+     *
+     * @param string|null $configFilePath
      * @return string|null
-     * @throws ShortNrConfigException
      */
-    private function processYamlConfigFilePath(): ?string
+    private function processYamlConfigFilePath(?string $configFilePath): ?string
     {
-        $configFile = $this->getTypo3Configuration();
-        $configFilePath = $configFile['configFile'] ?? null;
         if ($configFilePath) {
             return $this->prepareYamlConfigFilePath($configFilePath);
         }

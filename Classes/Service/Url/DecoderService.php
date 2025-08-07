@@ -2,11 +2,9 @@
 
 namespace CPSIT\ShortNr\Service\Url;
 
-use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
-use CPSIT\ShortNr\Service\Url\Condition\DTO\ConfigMatchCandidate;
 use Psr\Http\Message\ServerRequestInterface;
 
 class DecoderService extends AbstractUrlService
@@ -15,7 +13,7 @@ class DecoderService extends AbstractUrlService
      * @param ServerRequestInterface $request
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
+     * @throws ShortNrConfigException|ShortNrNotFoundException
      */
     public function decodeRequest(ServerRequestInterface $request): ?string
     {
@@ -26,7 +24,7 @@ class DecoderService extends AbstractUrlService
      * @param string $uri
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
+     * @throws ShortNrConfigException|ShortNrNotFoundException
      */
     public function decode(string $uri): ?string
     {
@@ -58,7 +56,7 @@ class DecoderService extends AbstractUrlService
                 $result = $this->getProcessor($configItem)?->decode($candidate, $configItem);
             } catch (ShortNrNotFoundException) {
                 // handle not found only AT the end ... try other candidates too first
-                $thrownNotFoundExceptionInConfigItem = [
+                $thrownNotFoundExceptionInConfigItem[$configItem->getName()] = [
                     'configItem' => $configItem,
                     'candidate' => $candidate,
                 ];
@@ -71,8 +69,9 @@ class DecoderService extends AbstractUrlService
         }
 
         if (!empty($thrownNotFoundExceptionInConfigItem)) {
-            $configItem = $thrownNotFoundExceptionInConfigItem['configItem'];
-            $candidate = $thrownNotFoundExceptionInConfigItem['candidate'];
+            $firstKey = array_key_first($thrownNotFoundExceptionInConfigItem);;
+            $configItem = $thrownNotFoundExceptionInConfigItem[$firstKey]['configItem'];
+            $candidate = $thrownNotFoundExceptionInConfigItem[$firstKey]['candidate'];
             // NotFoundProcessor should not throw a ShortNrNotFoundException
             return $this->getNotFoundProcessor($configItem)?->decode($candidate, $configItem);
         }

@@ -50,8 +50,6 @@ abstract class AbstractUrlService
      */
     public function isShortNrRequest(ServerRequestInterface $request): bool
     {
-        // TODO: detect ressource requests maybe by the browser header
-
         return $this->isShortNr($request->getUri()->getPath());
     }
 

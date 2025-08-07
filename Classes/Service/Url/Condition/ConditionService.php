@@ -15,6 +15,7 @@ use CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\WrappingOperatorInterface;
+use CPSIT\ShortNr\Service\Url\Processor\NotFoundProcessor;
 use Generator;
 
 class ConditionService
@@ -139,7 +140,7 @@ class ConditionService
             }
 
             $prefix = $candidate->getValueFromMatchesViaMatchGroupString($configItem->getPrefixMatch());
-            if ($configItem->getPrefix() === $prefix) {
+            if (strtolower($configItem->getPrefix()) === strtolower($prefix)) {
                 return $configItem;
             }
         }
