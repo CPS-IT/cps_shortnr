@@ -2,7 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-abstract class EncoderDemand implements EncoderDemandInterface
+abstract class EncoderDemand extends Demand implements EncoderDemandInterface
 {
 
 }
