@@ -2,9 +2,9 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrOperatorException;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
@@ -14,12 +14,12 @@ use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
 class BetweenOperator implements QueryOperatorInterface
 {
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param OperatorContext $context
      * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
+    public function supports(FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $condition = $fieldCondition->getCondition();
         return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && array_key_exists(ConfigEnum::ConditionBetween->value, $condition);
@@ -34,13 +34,13 @@ class BetweenOperator implements QueryOperatorInterface
     }
 
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return CompositeExpression
      * @throws ShortNrOperatorException
      */
-    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): CompositeExpression
+    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): CompositeExpression
     {
         $condition = $fieldCondition->getCondition();
         $fieldName = $fieldCondition->getFieldName();

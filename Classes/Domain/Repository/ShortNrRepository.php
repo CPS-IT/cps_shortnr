@@ -3,11 +3,13 @@
 namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\Exception;
 use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -25,7 +27,7 @@ class ShortNrRepository
     /**
      * @param array $fields
      * @param string $tableName
-     * @param array $condition
+     * @param array<string, FieldConditionInterface|mixed> $condition
      * @return array return all matching records that are active
      * @throws ShortNrQueryException
      * @throws ShortNrCacheException
@@ -36,6 +38,83 @@ class ShortNrRepository
         $queryBuilder = $this->buildQuery($existingValidFields, $tableName, $condition);
         $allResults = $this->executeQuery($queryBuilder, $tableName);
         return $this->filterResults($allResults, $existingValidFields, $tableName, $condition);
+    }
+
+    /**
+     * Returns an array  [sys_language_uid => uid]  for the requested page and
+     * all its translations.  Works for any table that uses the “translation pointer”
+     * pattern (uid, sys_language_uid, l10n_parent).
+     *
+     * @throws ShortNrQueryException
+     */
+    public function resolveCorrectUidWithLanguageUid(
+        string $table,
+        string $uidField,
+        string $languageField,
+        string $languageParentField,
+        int    $uid
+    ): array {
+
+        /* ---------- 1st query: find the base uid ------------------------------ */
+        $qb = $this->getQueryBuilder($table);
+        $qb->select($uidField, $languageParentField)
+            ->from($table)
+            ->where(
+                $qb->expr()->or(
+                    $qb->expr()->eq($uidField,           $uid),
+                    $qb->expr()->eq($languageParentField, $uid)
+                )
+            );
+
+        try {
+            $rows = $qb->executeQuery()->fetchAllAssociative();
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        if (empty($rows)) {
+            return [];
+        }
+
+        // Determine the real base uid
+        $baseUid = null;
+        foreach ($rows as $row) {
+            if ((int)($row[$languageParentField] ?? 0) === 0) {
+                $baseUid = (int)($row[$uidField] ?? 0);
+                break;
+            }
+        }
+        if ($baseUid === null) {
+            // row 203 itself is a translation; find its parent
+            $baseUid = (int)($rows[0][$languageParentField] ?? 0);
+        }
+
+        /* ---------- 2nd query: load all language variants --------------------- */
+        $qb = $this->getQueryBuilder($table);
+        $qb->select($uidField, $languageField)
+            ->from($table)
+            ->where(
+                $qb->expr()->or(
+                    $qb->expr()->eq($uidField,           $baseUid),
+                    $qb->expr()->eq($languageParentField, $baseUid)
+                )
+            );
+
+        try {
+            $result = $qb->executeQuery()->fetchAllAssociative();
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
+        }
+
+        /* ---------- build [sys_language_uid => uid] map ----------------------- */
+        $list = [];
+        foreach ($result as $row) {
+            $lang = (int)($row[$languageField] ?? 0);
+            $id   = (int)($row[$uidField]     ?? 0);
+            $list[$lang] = $id;
+        }
+
+        return $list;
     }
 
     /**
@@ -59,7 +138,7 @@ class ShortNrRepository
     /**
      * @param array $existingValidFields
      * @param string $tableName
-     * @param array $condition
+     * @param array<string, FieldConditionInterface|mixed> $condition
      * @return QueryBuilder
      * @throws ShortNrQueryException
      */

@@ -9,11 +9,12 @@ services:
     exclude:
       - '../Classes/Config/DTO'
       - '../Classes/Domain/DTO'
-      - '../Classes/Service/Url/Condition/DTO'
       - '../Classes/Service/Url/Condition/Operators/DTO'
       - '../Classes/Service/Url/Processor/DTO'
       - '../Classes/Service/PlatformAdapter/DTO'
-      - '../Classes/Service/DataProvider/DTO'
+      - '../Classes/Service/Url/Demand'
+      - '../Classes/Service/Url/Regex/MatchResult.php'
+      - '../Classes/Event'
 
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:
@@ -28,24 +29,31 @@ services:
       $queryOperators: !tagged 'cps_shortnr.query.operators'
       $resultOperators: !tagged 'cps_shortnr.result.operators'
 
-  CPSIT\ShortNr\Service\Url\AbstractUrlService:
+  CPSIT\ShortNr\Service\AbstractUrlService:
     arguments:
       $processors: !tagged 'cps_shortnr.processors'
 
   # Concrete services inherit
-  CPSIT\ShortNr\Service\Url\DecoderService:
-    parent: CPSIT\ShortNr\Service\Url\AbstractUrlService
-  CPSIT\ShortNr\Service\Url\EncoderService:
-    parent: CPSIT\ShortNr\Service\Url\AbstractUrlService
+  CPSIT\ShortNr\Service\DecoderService:
+    parent: CPSIT\ShortNr\Service\AbstractUrlService
+  CPSIT\ShortNr\Service\EncoderService:
+    parent: CPSIT\ShortNr\Service\AbstractUrlService
 
+# Interface announcement
   CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
     alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
     public: true
-
   CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface:
     alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver
     public: true
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolver
+    public: true
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PageTreeResolver
+    public: true
 
+# event listener
   CPSIT\ShortNr\EventListener\CacheEventListener:
     tags:
       - name: event.listener
@@ -53,3 +61,25 @@ services:
         identifier: 'iki-sitepackage/news-event-listener'
         event:
           - TYPO3\CMS\Core\Cache\Event\CacheFlushEvent
+# Config Resolver listener
+  CPSIT\ShortNr\EventListener\DecodeConfigResolverListener:
+    tags:
+      - name: event.listener
+        method: handleEvents
+        identifier: 'shortNrConfigDecodeResolver'
+        event:
+          - CPSIT\ShortNr\Event\ShortNrDecodeConfigResolverEvent
+  CPSIT\ShortNr\EventListener\EncodeConfigResolverListener:
+    tags:
+      - name: event.listener
+        method: handleEvents
+        identifier: 'shortNrConfigEncodeResolve'
+        event:
+          - CPSIT\ShortNr\Event\ShortNrEncodeConfigResolverEvent
+  CPSIT\ShortNr\EventListener\DecodeVerifyListenerListener:
+    tags:
+      - name: event.listener
+        method: handleEvents
+        identifier: 'shortNrVerifyRequest'
+        event:
+          - CPSIT\ShortNr\Event\ShortNrVerifyRequestEvent

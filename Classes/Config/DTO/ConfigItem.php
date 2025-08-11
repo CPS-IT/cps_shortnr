@@ -8,6 +8,8 @@ use BackedEnum;
 
 class ConfigItem implements ConfigItemInterface
 {
+    private array $cache = [];
+
     /**
      * Create a scoped config accessor for a specific config item
      *
@@ -96,7 +98,21 @@ class ConfigItem implements ConfigItemInterface
      */
     public function getCondition(): array
     {
-        return $this->config->getValue($this->name, ConfigEnum::Condition) ?? [];
+        return $this->cache['conditions'] ??= $this->generateFieldConditions($this->config->getValue($this->name, ConfigEnum::Condition) ?? []);
+    }
+
+    /**
+     * @param array $conditions
+     * @return array<string, FieldConditionInterface> [FieldName => Condition]
+     */
+    private function generateFieldConditions(array $conditions): array
+    {
+        $list = [];
+        foreach ($conditions as $fieldName => $condition) {
+            $list[$fieldName] = new FieldCondition($fieldName, $condition);
+        }
+
+        return $list;
     }
 
     /**

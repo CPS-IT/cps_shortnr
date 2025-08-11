@@ -2,7 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
+use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
@@ -11,15 +12,27 @@ use Doctrine\DBAL\ArrayParameterType;
 class ArrayInOperator implements QueryOperatorInterface
 {
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param OperatorContext $context
      * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
+    public function supports(FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $condition = $fieldCondition->getCondition();
-        return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && array_is_list($condition);
+        return
+            // field exists in context
+            $context->fieldExists($fieldCondition->getFieldName()) &&
+            // we only support arrays
+            is_array($condition) &&
+            (
+                // is an indirect IN statement
+                    array_is_list($condition)
+                ||
+                    // or defined via "in"
+                    !empty($condition[ConfigEnum::ConditionInArray->value]) &&
+                    is_array($condition[ConfigEnum::ConditionInArray->value])
+            );
     }
 
     /**
@@ -31,12 +44,12 @@ class ArrayInOperator implements QueryOperatorInterface
     }
 
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return string
      */
-    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): string
+    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): string
     {
         $condition = $fieldCondition->getCondition();
         $fieldName = $fieldCondition->getFieldName();

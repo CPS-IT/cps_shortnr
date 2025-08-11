@@ -15,6 +15,13 @@ interface ConfigInterface
     public function getConfigNames(): array;
 
     /**
+     * Get all available config names (excluding _default)
+     *
+     * @return iterable<ConfigItemInterface> List of config items ... name as key
+     */
+    public function getConfigItems(): iterable;
+
+    /**
      * Group config names by their regex patterns for route matching
      *
      * Creates a map where identical regex patterns are grouped together

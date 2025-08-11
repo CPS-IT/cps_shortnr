@@ -88,7 +88,7 @@ interface ConfigItemInterface
      * Contains field mappings and values for building SQL WHERE clauses.
      * Supports placeholder replacement like '{match-1}' from regex captures.
      *
-     * @return array Condition array like ['uid' => '{match-1}', 'hidden' => 0]
+     * @return array<string, FieldConditionInterface> [FieldName => ConditionObject]
      */
     public function getCondition(): array;
 

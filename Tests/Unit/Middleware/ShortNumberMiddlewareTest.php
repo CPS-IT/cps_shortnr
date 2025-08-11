@@ -3,7 +3,7 @@
 namespace CPSIT\ShortNr\Tests\Unit\Middleware;
 
 use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
-use CPSIT\ShortNr\Service\Url\DecoderService;
+use CPSIT\ShortNr\Service\DecoderService;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -21,7 +21,7 @@ class ShortNumberMiddlewareTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->decoderService = $this->createMock(DecoderService::class);
         $this->middleware = new ShortNumberMiddleware($this->decoderService);
         $this->handler = $this->createMock(RequestHandlerInterface::class);
@@ -42,7 +42,7 @@ class ShortNumberMiddlewareTest extends TestCase
         $request = $this->createRequestMock($requestPath);
         $this->decoderService->method('isShortNrRequest')->willReturn($isShortNrRequest);
         $this->decoderService->method('decodeRequest')->willReturn($decodedUrl);
-        
+
         if ($expectsHandlerCall) {
             $this->handler
                 ->expects($this->once())
@@ -113,15 +113,15 @@ class ShortNumberMiddlewareTest extends TestCase
     public function testMiddlewareCallsDecoderServiceForEveryRequest(): void
     {
         $request = $this->createRequestMock('/any-path');
-        
+
         $this->decoderService
             ->expects($this->once())
             ->method('isShortNrRequest')
             ->with($request)
             ->willReturn(false);
-        
+
         $this->handler->method('handle')->willReturn($this->handlerResponse);
-        
+
         $this->middleware->process($request, $this->handler);
     }
 
@@ -129,10 +129,10 @@ class ShortNumberMiddlewareTest extends TestCase
     {
         $uri = $this->createMock(UriInterface::class);
         $uri->method('getPath')->willReturn($path);
-        
+
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
-        
+
         return $request;
     }
 }

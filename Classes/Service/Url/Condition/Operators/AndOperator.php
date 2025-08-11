@@ -2,7 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
+use CPSIT\ShortNr\Config\DTO\FieldCondition;
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
@@ -12,12 +13,12 @@ use Doctrine\DBAL\Query\Expression\CompositeExpression;
 class AndOperator implements WrappingOperatorInterface
 {
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param OperatorContext $context
      * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
+    public function supports(FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $condition = $fieldCondition->getCondition();
         return $context->fieldExists($fieldCondition->getFieldName()) && is_array($condition) && count($condition) > 1 && !array_is_list($condition);
@@ -32,24 +33,24 @@ class AndOperator implements WrappingOperatorInterface
     }
 
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return string|null
      */
-    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): ?string
+    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): ?string
     {
         return null;
     }
 
     /**
      * @param array $result
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param ResultOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return array|null
      */
-    public function postResultProcess(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
+    public function postResultProcess(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         return null;
     }
@@ -57,13 +58,13 @@ class AndOperator implements WrappingOperatorInterface
     /**
      * adds an and condition to the DB query
      *
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return null|CompositeExpression
      */
-    public function wrap(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?CompositeExpression
+    public function wrap(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?CompositeExpression
     {
         $condition = $fieldCondition->getCondition();
         // early exit with no deep branching here since its empty
@@ -98,13 +99,13 @@ class AndOperator implements WrappingOperatorInterface
      * filter Query Results based on the config
      *
      * @param array $result
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param ResultOperatorContext $context
      * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return array|null
      */
-    public function postResultWrap(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
+    public function postResultWrap(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
     {
         $condition = $fieldCondition->getCondition();
         // Early return for empty config

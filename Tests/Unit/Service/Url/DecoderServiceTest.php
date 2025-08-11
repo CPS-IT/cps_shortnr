@@ -3,7 +3,7 @@
 namespace CPSIT\ShortNr\Tests\Unit\Service\Url;
 
 use CPSIT\ShortNr\Config\ConfigLoader;
-use CPSIT\ShortNr\Service\Url\DecoderService;
+use CPSIT\ShortNr\Service\DecoderService;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
@@ -16,7 +16,7 @@ class DecoderServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->configLoader = $this->createMock(ConfigLoader::class);
         $this->decoderService = new DecoderService($this->configLoader);
     }
@@ -100,10 +100,10 @@ class DecoderServiceTest extends TestCase
     {
         $uri = $this->createMock(UriInterface::class);
         $uri->method('getPath')->willReturn($path);
-        
+
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
-        
+
         return $request;
     }
 }

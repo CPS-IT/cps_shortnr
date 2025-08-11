@@ -2,8 +2,9 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\DTO\FieldCondition;
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
@@ -13,12 +14,12 @@ use Doctrine\DBAL\Query\Expression\CompositeExpression;
 class NotOperator implements WrappingOperatorInterface
 {
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param OperatorContext $context
      * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
+    public function supports(FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
         return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists(ConfigEnum::ConditionNot->value, $fieldConfig);
@@ -33,36 +34,36 @@ class NotOperator implements WrappingOperatorInterface
     }
 
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return mixed
      */
-    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed
+    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed
     {
         return null;
     }
 
     /**
      * @param array $result
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param ResultOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return array|null
      */
-    public function postResultProcess(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
+    public function postResultProcess(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         return null;
     }
 
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return array|string|CompositeExpression|null
      */
-    public function wrap(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): null|string|array|CompositeExpression
+    public function wrap(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): null|string|array|CompositeExpression
     {
         $condition = $fieldCondition->getCondition();
         if (!array_key_exists(ConfigEnum::ConditionNot->value, $condition)) {
@@ -83,13 +84,13 @@ class NotOperator implements WrappingOperatorInterface
      * filter Query Results based on the config
      *
      * @param array $result
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param ResultOperatorContext $context
      * @param OperatorHistory|null $parent
      * @param callable $nestedCallback
      * @return array|null
      */
-    public function postResultWrap(array $result, FieldCondition $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
+    public function postResultWrap(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
     {
         $condition = $fieldCondition->getCondition();
         if (!array_key_exists(ConfigEnum::ConditionNot->value, $condition)) {

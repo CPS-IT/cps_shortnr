@@ -34,6 +34,7 @@ enum ConfigEnum: string
     case ConditionContains = 'contains';
     case ConditionNot = 'not';
     case ConditionEqual = 'eq';
+    case ConditionInArray = 'in';
     case ConditionGreaterThanEqual = 'gte';
     case ConditionGreaterThan = 'gt';
     case ConditionLessThan = 'lt';

@@ -2,10 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\PlatformAdapter\Typo3;
 
-use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
-use CPSIT\ShortNr\Exception\ShortNrTreeProcessorException;
+use Psr\Http\Message\ServerRequestInterface;
 use Throwable;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
@@ -14,10 +12,11 @@ use TYPO3\CMS\Core\Site\SiteFinder;
 class SiteResolver implements SiteResolverInterface
 {
     private array $siteCache = [];
+    private array $languageCache = [];
 
     public function __construct(
         private readonly SiteFinder $siteFinder,
-        private readonly Typo3PageTreeResolver $pageTreeResolver
+        private readonly PageTreeResolverInterface $pageTreeResolver
     )
     {}
 
@@ -32,6 +31,43 @@ class SiteResolver implements SiteResolverInterface
     public function getSiteBaseUri(int $pageUid, int $languageId): string
     {
         return $this->getLanguageByPageUid($pageUid, $languageId)?->getBase()->getPath() ?? '';
+    }
+
+    /**
+     * [LanguageId => SiteLanguage]
+     * @param SiteInterface $site
+     * @return array<int, SiteLanguage>
+     */
+    public function getLanguagesBySite(SiteInterface $site): array
+    {
+        return $this->languageCache[$site->getIdentifier()] ??= $site->getLanguages();
+    }
+
+    /**
+     * [LanguageId => SiteLanguage]
+     * @param ServerRequestInterface $request
+     * @return array<int, SiteLanguage>
+     * @throws ShortNrSiteFinderException
+     */
+    public function getLanguagesByRequest(ServerRequestInterface $request): array
+    {
+        $site = $request->getAttribute('site');
+        if (!$site instanceof SiteInterface) {
+            throw new ShortNrSiteFinderException('Site not found in request');
+        }
+
+        return $this->getLanguagesBySite($site);
+    }
+
+    /**
+     * [LanguageId => SiteLanguage]
+     * @param int $rootPageUid
+     * @return array<int, SiteLanguage>
+     * @throws ShortNrSiteFinderException
+     */
+    public function getLanguagesByRootPageUid(int $rootPageUid): array
+    {
+        return $this->getLanguagesBySite($this->getSiteByPageUid($rootPageUid));
     }
 
     /**
@@ -54,10 +90,7 @@ class SiteResolver implements SiteResolverInterface
     /**
      * @param int $pageUid
      * @return SiteInterface|null
-     * @throws ShortNrCacheException
-     * @throws ShortNrQueryException
      * @throws ShortNrSiteFinderException
-     * @throws ShortNrTreeProcessorException
      */
     private function getSiteByPageUid(int $pageUid): ?SiteInterface
     {
@@ -88,12 +121,9 @@ class SiteResolver implements SiteResolverInterface
      *
      * @param int $uid
      * @return int
-     * @throws ShortNrCacheException
-     * @throws ShortNrQueryException
-     * @throws ShortNrTreeProcessorException
      */
     private function getRootPageId(int $uid): int
     {
-        return (int)$this->pageTreeResolver->getPageTree()->getItem($uid)?->getBaseTranslation()->getRoot()->getPrimaryId();
+        return (int)($this->pageTreeResolver->getPageTree()->getItem($uid)?->getBaseTranslation()->getRoot()->getPrimaryId());
     }
 }

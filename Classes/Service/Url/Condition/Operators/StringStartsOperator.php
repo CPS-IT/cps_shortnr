@@ -2,8 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
@@ -11,12 +11,12 @@ use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 class StringStartsOperator implements QueryOperatorInterface
 {
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param OperatorContext $context
      * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function supports(FieldCondition $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
+    public function supports(FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool
     {
         $fieldConfig = $fieldCondition->getCondition();
         return $context->fieldExists($fieldCondition->getFieldName()) && is_array($fieldConfig) && array_key_exists(ConfigEnum::ConditionStingStarts->value, $fieldConfig);
@@ -31,12 +31,12 @@ class StringStartsOperator implements QueryOperatorInterface
     }
 
     /**
-     * @param FieldCondition $fieldCondition
+     * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return string|null
      */
-    public function process(FieldCondition $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): ?string
+    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): ?string
     {
         $condition = $fieldCondition->getCondition();
         $fieldName = $fieldCondition->getFieldName();

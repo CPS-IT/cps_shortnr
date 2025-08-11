@@ -46,6 +46,19 @@ class Config implements ConfigInterface
     }
 
     /**
+     * Get all available config names (excluding _default)
+     *
+     * @return iterable<ConfigItemInterface> List of config items ... name as key
+     * @throws ShortNrConfigException
+     */
+    public function getConfigItems(): iterable
+    {
+        foreach ($this->getConfigNames() as $configName) {
+            yield $this->getConfigItem($configName);
+        }
+    }
+
+    /**
      * Get pre-built regex list grouped by regex pattern, sorted by priority (high to low)
      *
      * @return array<string, array>
