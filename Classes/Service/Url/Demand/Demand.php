@@ -3,9 +3,11 @@
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 abstract class Demand implements DemandInterface
 {
+    protected ?ServerRequestInterface $request = null;
     protected ?ConfigItemInterface $configItem = null;
     /**
      * Extract and normalize the ShortNr segment from any URI
@@ -44,5 +46,24 @@ abstract class Demand implements DemandInterface
     public function setConfigItem(ConfigItemInterface $configItem): void
     {
         $this->configItem = $configItem;
+    }
+
+    /**
+     * @return ServerRequestInterface|null
+     */
+    public function getRequest(): ?ServerRequestInterface
+    {
+        return $this->request;
+    }
+
+    /**
+     * @param ServerRequestInterface|null $request
+     * @return Demand
+     */
+    public function setRequest(?ServerRequestInterface $request): static
+    {
+        $this->request = $request;
+
+        return $this;
     }
 }

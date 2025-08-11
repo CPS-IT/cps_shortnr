@@ -19,7 +19,7 @@ class DecoderDemand extends Demand implements DecoderDemandInterface
 
     public static function makeFromRequest(ServerRequestInterface $request): DecoderDemandInterface
     {
-        return new static(static::normalizeShortNrUri($request->getUri()->getPath()));
+        return (new static(static::normalizeShortNrUri($request->getUri()->getPath())))->setRequest($request);
     }
 
     /**

@@ -2,10 +2,13 @@
 
 namespace CPSIT\ShortNr\ViewHelpers;
 
-use CPSIT\ShortNr\Config\Enums\ViewHelperEncodingType;
 use CPSIT\ShortNr\Exception\ShortNrViewHelperException;
 use CPSIT\ShortNr\Service\EncoderService;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
+use CPSIT\ShortNr\Service\Url\Demand\ConfigNameEncoderDemand;
+use CPSIT\ShortNr\Service\Url\Demand\EncoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\EnvironmentEncoderDemand;
+use CPSIT\ShortNr\Service\Url\Demand\ObjectEncoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
@@ -26,12 +29,17 @@ final class ShortUrlViewHelper extends AbstractViewHelper
         $this->registerArgument(
             name:'name',
             type: 'string',
-            description: 'Supported ShortNr TableName'
+            description: 'Supported ShortNr Config Item Name'
         );
         $this->registerArgument(
             name: 'uid',
             type: 'string',
             description: 'Supported ShortNr Uid'
+        );
+        $this->registerArgument(
+            name: 'object',
+            type: 'object',
+            description: 'Object that is supported like a DomainRecord Entity'
         );
         $this->registerArgument(
             name: 'languageUid',
@@ -58,44 +66,41 @@ final class ShortUrlViewHelper extends AbstractViewHelper
      */
     public function render(): string
     {
-        /* TODO:
-         * 1. use direct object insertion // i think that will be the most complex since we must use operator logic to determine what config is used
-         * 2. uid + config-name combination
-         * 3. Environment lookup in the (request queryParams or Attributes, maybe use the current page ID as indicator or go the same route as direct Object)
-         */
+        $demand = $this->getEncodingDemand($this->getRequest());
+        if ($demand === null) {
+            return $this->parseChildren(['uri' => null]);
+        }
 
-        // use the request to acquire the queryParams where the Plugin and record information are embedded
-        // iterate thu all 3 types (to-do up) and then iterate through every config based on the Priority
-
-        $request = $this->getRequest();
-        $absoluteUrl = (bool)($this->arguments['absolute'] ?? false);
-        $languageid = $this->getLanguageUid($request, $this->arguments['languageUid']);
-
-        /*$uri = match ($this->getCallType()) {
-            ViewHelperEncodingType::configName => $this->encoderService->encode(),
-            ViewHelperEncodingType::object =>  $this->encoderService->encode(),
-            default => $this->encoderService->encode()
-        };*/
-
-        $uri = 'WIP'; // replace with encoding
-
-        return $this->parseChildren(['uri' => $uri]);
+        return $this->parseChildren(['uri' => $this->encoderService->encode($demand)]);
     }
 
     /**
-     * @return ViewHelperEncodingType
+     * @param ServerRequestInterface $request
+     * @return EncoderDemandInterface|null
+     * @throws ShortNrViewHelperException
      */
-    private function getCallType(): ViewHelperEncodingType
+    private function getEncodingDemand(ServerRequestInterface $request): ?EncoderDemandInterface
     {
-        if (!empty($this->arguments['object'])) {
-            return ViewHelperEncodingType::object;
+        if (($this->arguments['name'] ?? false) && ($this->arguments['uid'] ?? false)) {
+            $demand = new ConfigNameEncoderDemand(
+                (string) $this->arguments['name'],
+                (int) $this->arguments['uid']
+            );
+        } elseif (!empty($this->arguments['object']) && is_object($this->arguments['object'])) {
+            $demand = new ObjectEncoderDemand($this->arguments['object']);
+        } else {
+            $demand = new EnvironmentEncoderDemand(
+                $request->getQueryParams(),
+                $request->getAttribute('frontend.controller')?->page ?? [],
+                $request->getAttribute('routing'),
+                $request->getAttribute('extbase')
+            );
         }
 
-        if (!empty($this->arguments['name']) && !empty($this->arguments['uid'])) {
-            return ViewHelperEncodingType::configName;
-        }
-
-        return ViewHelperEncodingType::environment;
+        return $demand
+            ->setRequest($request)
+            ->setLanguageId($this->getLanguageUid($request, $this->arguments['languageUid']))
+            ->setAbsolute((bool)($this->arguments['absolute'] ?? false));
     }
 
     /**
