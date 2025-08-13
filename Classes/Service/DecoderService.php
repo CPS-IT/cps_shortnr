@@ -3,17 +3,26 @@
 namespace CPSIT\ShortNr\Service;
 
 use CPSIT\ShortNr\Event\ShortNrBeforeProcessorDecodingEvent;
-use CPSIT\ShortNr\Event\ShortNrDecodeConfigResolverEvent;
+use CPSIT\ShortNr\Event\ShortNrConfigItemProcessedEvent;
 use CPSIT\ShortNr\Event\ShortNrUriFinishDecodingEvent;
 use CPSIT\ShortNr\Event\ShortNrVerifyRequestEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
+use CPSIT\ShortNr\Service\Language\LanguageOverlayService;
+use CPSIT\ShortNr\Service\Url\ConfigResolver\ConfigItemResolveProcessor;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 class DecoderService extends AbstractUrlService
 {
+    public function __construct(
+        private readonly ConfigItemResolveProcessor $configItemResolveProcessor,
+        private readonly LanguageOverlayService $languageOverlayService,
+    )
+    {}
+
     /**
      * Check if that Request is a shortNr Request
      *
@@ -22,7 +31,7 @@ class DecoderService extends AbstractUrlService
      */
     public function getDecoderDemandFromRequest(ServerRequestInterface $request): ?DecoderDemandInterface
     {
-        $event = $this->eventDispatcher->dispatch(new ShortNrVerifyRequestEvent($request, DecoderDemand::makeFromRequest($request)));
+        $event = $this->getEventDispatcher()->dispatch(new ShortNrVerifyRequestEvent($request, DecoderDemand::makeFromRequest($request)));
         if ($event instanceof ShortNrVerifyRequestEvent && $event->isShortNrRequest()) {
             return $event->getDecoderDemand();
         }
@@ -34,43 +43,43 @@ class DecoderService extends AbstractUrlService
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
      * @throws ShortNrNotFoundException
      */
     public function decode(DecoderDemandInterface $demand): ?string
     {
         // cache for one day
-        return $this->cacheManager->getType3CacheValue('decode_'.md5(strtolower($demand->getShortNr())), fn() => $this->decodeDemand($demand), 86_400);
+        return $this->getCacheManager()->getType3CacheValue('decode_'.md5(strtolower($demand->getShortNr())), fn() => $this->decodeDemand($demand), 86_400);
     }
 
     /**
      *
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
+     * @throws ShortNrCacheException
      * @throws ShortNrNotFoundException
+     * @throws ShortNrConfigException
      */
     private function decodeDemand(DecoderDemandInterface $demand): ?string
     {
-        /** @var ShortNrDecodeConfigResolverEvent $event */
-        $event = $this->eventDispatcher->dispatch(new ShortNrDecodeConfigResolverEvent($demand));
-        $demand = $event->getDecoderDemand();
-        $configItem = $event->getConfigItem();
-        $matchResult = $event->getMatchResult();
+        $configItem = $this->configItemResolveProcessor->parseDecoderDemand($demand, $this->getConfig());
+        // used to alter / manipulate or replace the configItem that will be used ... it contains all the Match and condition information
+        $configItem = $this->getEventDispatcher()->dispatch(new ShortNrConfigItemProcessedEvent($demand, $configItem))->getConfigItem();
+
         // early exit no config item found, so we give that request free for other middleware
-        if ($configItem === null || $matchResult === null) {
+        if ($configItem === null) {
             return null;
         }
 
         $demand->setConfigItem($configItem);
-        $demand->setMatchResult($matchResult);
-
         // handle language overlay normalisation
         // if key information missing in the config for that item, overlay is disabled
         if ($configItem->canLanguageOverlay()) {
             // replace to the needed UID
-            $this->languageOverlayService->resolveLanguageOverlay($matchResult);
+            $this->languageOverlayService->resolveLanguageOverlay($configItem);
         }
 
-        $demand = $this->eventDispatcher->dispatch(new ShortNrBeforeProcessorDecodingEvent($demand))->getDemand();
+        $demand = $this->getEventDispatcher()->dispatch(new ShortNrBeforeProcessorDecodingEvent($demand))->getDemand();
         try {
             // update processor to use the new MatchResult and The new FieldCondition Value system
             $uri = $this->getProcessor($configItem)?->decode($demand);
@@ -86,7 +95,7 @@ class DecoderService extends AbstractUrlService
         }
 
         /** @var ShortNrUriFinishDecodingEvent $event */
-        $event = $this->eventDispatcher->dispatch(new ShortNrUriFinishDecodingEvent($demand, $uri, $notFound));
+        $event = $this->getEventDispatcher()->dispatch(new ShortNrUriFinishDecodingEvent($demand, $uri, $notFound));
         return $event->getUri();
     }
 }

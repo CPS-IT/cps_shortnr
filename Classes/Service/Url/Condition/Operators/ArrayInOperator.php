@@ -4,12 +4,13 @@ namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
 use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\EncodingOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use Doctrine\DBAL\ArrayParameterType;
 
-class ArrayInOperator implements QueryOperatorInterface
+class ArrayInOperator implements QueryOperatorInterface, EncodingOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -62,6 +63,19 @@ class ArrayInOperator implements QueryOperatorInterface
         }
 
         return $qb->expr()->in($fieldName, $placeholder);
+    }
+
+    /**
+     * @param array $data
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return bool
+     */
+    public function encodingProcess(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): bool
+    {
+        // for encoding we don't need to respect the NOT operator since he can handle himself
+        return in_array($data[$fieldCondition->getFieldName()] ?? [] ,$fieldCondition->getCondition());
     }
 
     /**

@@ -4,6 +4,8 @@ namespace CPSIT\ShortNr\Config\DTO;
 
 class FieldConditionMatch
 {
+    private bool $isInitialized = false;
+
     public function __construct(
         private mixed $value,
         private readonly int $idx,
@@ -40,6 +42,15 @@ class FieldConditionMatch
      */
     public function setValue(mixed $value): void
     {
+        $this->isInitialized = true;
         $this->value = $value;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isInitialized(): bool
+    {
+        return $this->isInitialized;
     }
 }

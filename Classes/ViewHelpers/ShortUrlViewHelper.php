@@ -97,6 +97,11 @@ final class ShortUrlViewHelper extends AbstractViewHelper
             );
         }
 
+        $demand = new ConfigNameEncoderDemand(
+            (string) 'pages',
+            (int)$request->getAttribute('frontend.controller')?->page['uid']
+        );
+
         return $demand
             ->setRequest($request)
             ->setLanguageId($this->getLanguageUid($request, $this->arguments['languageUid']))

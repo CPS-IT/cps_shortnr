@@ -5,8 +5,9 @@ namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
+use CPSIT\ShortNr\Traits\PriorityAwareInterface;
 
-interface OperatorInterface
+interface OperatorInterface extends PriorityAwareInterface
 {
     /**
      * check if that operator can handle the given fieldConfig
@@ -17,11 +18,4 @@ interface OperatorInterface
      * @return bool return true if the operator can support that fieldConfig otherwise false
      */
     public function supports(FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): bool;
-
-    /**
-     * if more than one operator can serve the same operation, the one with the highest priority will be used
-     *
-     * @return int (default: 0)
-     */
-    public function getPriority(): int;
 }

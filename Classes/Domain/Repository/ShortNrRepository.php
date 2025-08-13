@@ -34,6 +34,7 @@ class ShortNrRepository
      */
     public function resolveTable(array $fields, string $tableName, array $condition): array
     {
+        // normalize Conditions
         $existingValidFields = $this->validateAndPrepareFields($fields, $condition, $tableName);
         $queryBuilder = $this->buildQuery($existingValidFields, $tableName, $condition);
         $allResults = $this->executeQuery($queryBuilder, $tableName);

@@ -13,6 +13,7 @@ services:
       - '../Classes/Service/Url/Processor/DTO'
       - '../Classes/Service/PlatformAdapter/DTO'
       - '../Classes/Service/Url/Demand'
+      - '../Classes/Service/Url/EncodingDemandNormalizer/Normalizer/DTO'
       - '../Classes/Service/Url/Regex/MatchResult.php'
       - '../Classes/Event'
 
@@ -21,17 +22,29 @@ services:
       tags: ['cps_shortnr.query.operators']
     CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface:
       tags: ['cps_shortnr.result.operators']
+    CPSIT\ShortNr\Service\Url\Condition\Operators\EncodingOperatorInterface:
+      tags: [ 'cps_shortnr.encoding.operators' ]
     CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
       tags: [ 'cps_shortnr.processors' ]
+    CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\EncodingDemandNormalizerInterface:
+      tags: [ 'cps_shortnr.demand.normalizers' ]
 
   CPSIT\ShortNr\Service\Url\Condition\ConditionService:
     arguments:
       $queryOperators: !tagged 'cps_shortnr.query.operators'
       $resultOperators: !tagged 'cps_shortnr.result.operators'
+      $encodingOperators: !tagged 'cps_shortnr.encoding.operators'
+
+  CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\EncodingDemandNormalizationService:
+    arguments:
+      $normalizers: !tagged 'cps_shortnr.demand.normalizers'
 
   CPSIT\ShortNr\Service\AbstractUrlService:
-    arguments:
-      $processors: !tagged 'cps_shortnr.processors'
+    calls:
+      - setProcessors: [!tagged 'cps_shortnr.processors']
+      - setConfigLoader: ['@CPSIT\ShortNr\Config\ConfigLoader']
+      - setCacheManager: ['@CPSIT\ShortNr\Cache\CacheManager']
+      - setEventDispatcher: ['@Psr\EventDispatcher\EventDispatcherInterface']
 
   # Concrete services inherit
   CPSIT\ShortNr\Service\DecoderService:
@@ -62,13 +75,6 @@ services:
         event:
           - TYPO3\CMS\Core\Cache\Event\CacheFlushEvent
 # Config Resolver listener
-  CPSIT\ShortNr\EventListener\DecodeConfigResolverListener:
-    tags:
-      - name: event.listener
-        method: handleEvents
-        identifier: 'shortNrConfigDecodeResolver'
-        event:
-          - CPSIT\ShortNr\Event\ShortNrDecodeConfigResolverEvent
   CPSIT\ShortNr\EventListener\EncodeConfigResolverListener:
     tags:
       - name: event.listener

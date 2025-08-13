@@ -96,9 +96,7 @@ class ConfigLoader
                 return [self::COMPILED_REGEX_KEY => $regexList[0]];
             }
 
-
             $parts = [];
-
             foreach ($regexList as $rx) {
                 // 1. Split into delimiter, body, modifiers
                 if (!preg_match('/^(.)(.*)\1([a-zA-Z]*)$/s', $rx, $m)) {
@@ -223,6 +221,7 @@ class ConfigLoader
         // load default config
         $defaultConfigName = ConfigEnum::DEFAULT_CONFIG->value;
         $configPrefixKey = ConfigEnum::Prefix->value;
+        $prefixMatch = ConfigEnum::PrefixMatch->value;
         $defaultConfig = $configArray[ConfigEnum::ENTRYPOINT->value][$defaultConfigName] ?? [];
 
         $lookupMap = [];
@@ -232,9 +231,15 @@ class ConfigLoader
                 continue;
             }
 
-            $prefix = strtolower($configItemData[$configPrefixKey] ?? '');
-            if (!empty($prefix)) {
-                $lookupMap[$prefix] = $configName;
+
+
+            if (!empty($prefix = strtolower($configItemData[$configPrefixKey] ?? ''))) {
+                // load match group for that prefix
+
+                $prefixMatchValue = $configItemData[$prefixMatch] ?? $defaultConfig[$prefixMatch] ?? null;
+                if (!empty($prefixMatchValue)) {
+                    $lookupMap[$prefix] = ['name' => $configName, $prefixMatch => $prefixMatchValue];
+                }
             }
         }
 

@@ -60,9 +60,9 @@ interface ConfigItemInterface
     /**
      * Get the URL prefix for this config type
      *
-     * @return string|null Prefix like 'PAGE', 'PLUGIN' or null if not configured
+     * @return FieldConditionInterface
      */
-    public function getPrefix(): ?string;
+    public function getPrefix(): FieldConditionInterface;
 
     // Processor Configuration
 
@@ -90,7 +90,7 @@ interface ConfigItemInterface
      *
      * @return array<string, FieldConditionInterface> [FieldName => ConditionObject]
      */
-    public function getCondition(): array;
+    public function getConditions(): array;
 
     /**
      * Get plugin-specific configuration (not yet implemented)

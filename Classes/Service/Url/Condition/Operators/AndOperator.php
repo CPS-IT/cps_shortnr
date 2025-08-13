@@ -4,13 +4,14 @@ namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
 use CPSIT\ShortNr\Config\DTO\FieldCondition;
 use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\EncodingOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
 
-class AndOperator implements WrappingOperatorInterface
+class AndOperator implements WrappingOperatorInterface, EncodingOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -53,6 +54,18 @@ class AndOperator implements WrappingOperatorInterface
     public function postResultProcess(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         return null;
+    }
+
+    /**
+     * @param array $data
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return bool
+     */
+    public function encodingProcess(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): bool
+    {
+        return false;
     }
 
     /**
@@ -133,5 +146,40 @@ class AndOperator implements WrappingOperatorInterface
 
         // All conditions passed
         return $result;
+    }
+
+    /**
+     * @param array $data
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param operatorhistory|null $parent
+     * @param callable $nestedCallback
+     * @return bool
+     */
+    public function encodingWrap(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): bool
+    {
+        $condition = $fieldCondition->getCondition();
+        // Early return for empty config
+        if (empty($condition)) {
+            return true;
+        }
+
+        $operatorHistory = new OperatorHistory($parent, $this);
+        foreach ($condition as $operatorName => $fieldConfigSegment) {
+            // if any subCondition fails, ALL FAIL
+            if(!$nestedCallback(
+                $data,
+                new FieldCondition(
+                    $fieldCondition->getFieldName(),
+                    [$operatorName => $fieldConfigSegment]
+                ),
+                $context,
+                $operatorHistory
+            )) {
+                return false;
+            }
+        }
+        // all sub conditions match So AND is Satisfied
+        return true;
     }
 }

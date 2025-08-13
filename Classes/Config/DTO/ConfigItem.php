@@ -72,9 +72,9 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getPrefix(): ?string
+    public function getPrefix(): FieldConditionInterface
     {
-        return $this->config->getValue($this->name, ConfigEnum::Prefix);
+        return $this->config->getPrefixFieldConditions()[$this->name];
     }
 
     /**
@@ -96,7 +96,7 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getCondition(): array
+    public function getConditions(): array
     {
         return $this->cache['conditions'] ??= $this->generateFieldConditions($this->config->getValue($this->name, ConfigEnum::Condition) ?? []);
     }

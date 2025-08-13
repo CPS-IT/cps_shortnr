@@ -5,6 +5,13 @@ namespace CPSIT\ShortNr\Config\DTO;
 interface FieldConditionInterface
 {
     /**
+     * return true if there is ANY match placeholder in the Config Conditions
+     *
+     * @return bool
+     */
+    public function hasStaticElements(): bool;
+
+    /**
      * @return string
      */
     public function getFieldName(): string;
@@ -20,15 +27,21 @@ interface FieldConditionInterface
     public function getRawCondition(): mixed;
 
     /**
-     * @param string|null $path
-     * @param int $matchIndex
-     * @param mixed $value
-     * @return FieldConditionMatch
+     * @return array<FieldConditionMatch>
      */
-    public function addMatch(?string $path, int $matchIndex, mixed $value): FieldConditionMatch;
+    public function getMatches(): array;
 
     /**
      * @return array<FieldConditionMatch>
      */
-    public function getMatches(): array;
+    public function getProcessedMatches(): array;
+
+    /**
+     * expect a clean ID => VALUE list (no nested array from REGEX PARSER)
+     * return if any matching was processed
+     *
+     * @param array $matches
+     * @return bool
+     */
+    public function processMatches(array $matches): bool;
 }

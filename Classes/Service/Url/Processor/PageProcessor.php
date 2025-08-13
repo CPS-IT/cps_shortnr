@@ -6,7 +6,7 @@ use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\DataProvider\PageDataProvider;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
-use CPSIT\ShortNr\Service\Url\ValidateUriTrait;
+use CPSIT\ShortNr\Traits\ValidateUriTrait;
 
 class PageProcessor implements ProcessorInterface
 {
@@ -33,12 +33,11 @@ class PageProcessor implements ProcessorInterface
      */
     public function decode(DecoderDemandInterface $demand): ?string
     {
-        $conditions = $demand->getConditions();
-
-        if (empty($conditions)) {
+        $configItem = $demand->getConfigItem();
+        if (!$configItem || empty($conditions = $configItem->getConditions())) {
             return null;
         }
 
-        return $this->pageDataProvider->getPageData($conditions, $demand->getConfigItem());
+        return $this->pageDataProvider->getPageData($conditions, $configItem);
     }
 }

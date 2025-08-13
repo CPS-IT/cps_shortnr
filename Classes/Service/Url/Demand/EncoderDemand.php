@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
+use CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\DTO\EncoderDemandNormalizationResult;
+
 abstract class EncoderDemand extends Demand implements EncoderDemandInterface
 {
     /**
@@ -12,6 +14,7 @@ abstract class EncoderDemand extends Demand implements EncoderDemandInterface
     protected bool $absolute = false;
 
     protected ?int $languageId = null;
+    protected ?EncoderDemandNormalizationResult $normalizationResult;
 
     /**
      * @return bool
@@ -46,6 +49,24 @@ abstract class EncoderDemand extends Demand implements EncoderDemandInterface
     public function setLanguageId(?int $languageId): static
     {
         $this->languageId = $languageId;
+        return $this;
+    }
+
+    /**
+     * @return EncoderDemandNormalizationResult|null
+     */
+    public function getNormalizationResult(): ?EncoderDemandNormalizationResult
+    {
+        return $this->normalizationResult;
+    }
+
+    /**
+     * @param EncoderDemandNormalizationResult|null $normalizationResult
+     * @return EncoderDemand
+     */
+    public function setNormalizationResult(?EncoderDemandNormalizationResult $normalizationResult): static
+    {
+        $this->normalizationResult = $normalizationResult;
         return $this;
     }
 }

@@ -1,11 +1,11 @@
 shortNr:
   _default:
     # support page id or hard-coded URI (detects it via is_numeric)
-    notFound: "/"
+    notFound: "37"
     # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
     regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
     prefixMatch: "{match-1}"
-    condition: # database conditions
+    condition: # conditions
       uid: "{match-2}"
       sys_language_uid: "{match-3}"
     languageParentField: "l10n_parent"  # default TYPO3 field name
@@ -17,3 +17,7 @@ shortNr:
     prefix: PAGE
     table: pages
     slug: slug
+    condition:
+      uid: "{match-2}"
+      sys_language_uid: "{match-3}"
+      type: [0, 1, 2, 3, 4, 5]

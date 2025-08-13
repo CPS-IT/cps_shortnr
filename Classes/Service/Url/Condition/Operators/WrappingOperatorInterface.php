@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 
 use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\EncodingOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
@@ -30,4 +31,16 @@ interface WrappingOperatorInterface extends QueryOperatorInterface, ResultOperat
      * @return array|null
      */
     public function postResultWrap(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array;
+
+    /**
+     * encoding validation, only validate static variables, ignores any dynamic "placeholder" (match-N)
+     *
+     * @param array $data
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @param callable $nestedCallback
+     * @return bool
+     */
+    public function encodingWrap(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): bool;
 }

@@ -2,13 +2,11 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-use CPSIT\ShortNr\Service\Url\Regex\MatchResult;
+use CPSIT\ShortNr\Config\DTO\FieldCondition;
 use Psr\Http\Message\ServerRequestInterface;
 
 class DecoderDemand extends Demand implements DecoderDemandInterface
 {
-    protected ?MatchResult $matchResult = null;
-
     /**
      * @param string $shortNr provide a clean and sanitized shortNr NO URI
      */
@@ -33,24 +31,10 @@ class DecoderDemand extends Demand implements DecoderDemandInterface
     }
 
     /**
-     * @return MatchResult|null
+     * @return FieldCondition[]
      */
-    public function getMatchResult(): ?MatchResult
-    {
-        return $this->matchResult;
-    }
-
-    /**
-     * @param MatchResult $matchResult
-     * @return void
-     */
-    public function setMatchResult(MatchResult $matchResult): void
-    {
-        $this->matchResult = $matchResult;
-    }
-
     public function getConditions(): array
     {
-        return $this->configItem->getCondition() ?? [];
+        return $this->configItem->getConditions() ?? [];
     }
 }

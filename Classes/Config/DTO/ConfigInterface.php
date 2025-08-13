@@ -8,9 +8,17 @@ use BackedEnum;
 interface ConfigInterface
 {
     /**
+     * @param string $name
+     * @return bool true if the name exists, false if the name not exists
+     */
+    public function hasConfigItemName(string $name): bool;
+
+    /**
      * Get all available config names (excluding _default)
      *
-     * @return string[] List of config names like ['pages', 'plugins', 'events']
+     * all configNames will be in a key value list where the key and the value is the same configName
+     *
+     * @return array<string, string> List of config names like ['pages' => 'pages', 'myPlugins' => 'myPlugins', 'events' => 'events']
      */
     public function getConfigNames(): array;
 
@@ -49,6 +57,25 @@ interface ConfigInterface
      * @throws ShortNrConfigException
      */
     public function getConfigItemByPrefix(string $prefix): ConfigItemInterface;
+
+    /**
+     * [configName = FieldConditionInterface]
+     *
+     * FieldConditionInterface::$name = prefix
+     * FieldConditionInterface::$condition = Condition_match
+     *
+     * @return array<string, FieldConditionInterface>
+     */
+    public function getPrefixFieldConditions(): array;
+
+    /**
+     * Create a scoped config accessor for a specific config items based on the TableName
+     *
+     * @param string $tableName
+     * @return array<ConfigItemInterface>
+     * @throws ShortNrConfigException
+     */
+    public function getConfigItemsByTableName(string $tableName): array;
 
     /**
      * Get a config value with _default fallback (internal use only)

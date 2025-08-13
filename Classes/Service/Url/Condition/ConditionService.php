@@ -4,26 +4,51 @@ namespace CPSIT\ShortNr\Service\Url\Condition;
 
 use CPSIT\ShortNr\Config\DTO\FieldCondition;
 use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\EncodingOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\EncodingOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\OperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\WrappingOperatorInterface;
+use CPSIT\ShortNr\Traits\SortPriorityIterableTrait;
 
 class ConditionService
 {
+    use SortPriorityIterableTrait;
+
+    /**
+     * @var array<QueryOperatorInterface>
+     */
+    private readonly array $queryOperators;
+    /**
+     * @var array<ResultOperatorInterface>
+     */
+    private readonly array $resultOperators;
+    /**
+     * @var array<ResultOperatorInterface>
+     */
+    private readonly array $encodingOperators;
+
+
     /**
      * @param iterable<QueryOperatorInterface> $queryOperators
      * @param iterable<ResultOperatorInterface> $resultOperators
      */
     public function __construct(
-        private readonly iterable $queryOperators,
-        private readonly iterable $resultOperators
+        iterable $queryOperators,
+        iterable $resultOperators,
+        iterable $encodingOperators
     )
-    {}
+    {
+        // sort By Priority
+        $this->queryOperators = $this->sortIteratableByPrioity($queryOperators);
+        $this->resultOperators = $this->sortIteratableByPrioity($resultOperators);
+        $this->encodingOperators = $this->sortIteratableByPrioity($encodingOperators);
+    }
 
     /**
      * creates pre query where conditions
@@ -90,6 +115,29 @@ class ConditionService
     }
 
     /**
+     * @param EncodingOperatorContext $context
+     * @return bool
+     */
+    public function encodingOperatorCondition(EncodingOperatorContext $context): bool
+    {
+        $fieldData = $context->getData();
+        if (empty($fieldData)) {
+            return false;
+        }
+
+        $fieldConditions = $context->getConfigCondition();
+        foreach ($fieldConditions as $fieldName => $fieldCondition) {
+            // the ROOT conditions are always handled with AND logic, (one fail = ALL FAIL)
+            if (!$this->processEncodingConditions($fieldData, $this->generateFieldCondition($fieldName, $fieldCondition), $context, null)) {
+                return false;
+            }
+        }
+
+        // NO FAIL DETECTED = all match
+        return true;
+    }
+
+    /**
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
@@ -135,6 +183,21 @@ class ConditionService
         return $operator->postResultProcess($result, $fieldCondition, $context, $parent);
     }
 
+    private function processEncodingConditions(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): bool
+    {
+        $operator = $this->findEncodingOperator($fieldCondition, $context, $parent);
+        if ($operator === null) {
+            return true;
+        }
+
+        if ($operator instanceof WrappingOperatorInterface) {
+            // do magic to unwrap
+            return $operator->encodingWrap($data, $fieldCondition, $context, $parent, fn(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): bool => $this->processEncodingConditions($data, $fieldCondition, $context, $parent));
+        }
+
+        return $operator->encodingProcess($data, $fieldCondition, $context, $parent);
+    }
+
     /**
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
@@ -168,6 +231,22 @@ class ConditionService
     }
 
     /**
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return EncodingOperatorInterface|null
+     */
+    private function findEncodingOperator(FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): ?EncodingOperatorInterface
+    {
+        $operator = $this->findOperator($this->encodingOperators, $fieldCondition, $context, $parent);
+        if ($operator instanceof EncodingOperatorInterface) {
+            return $operator;
+        }
+
+        return null;
+    }
+
+    /**
      * @param iterable<OperatorInterface> $operators
      * @param FieldConditionInterface $fieldCondition
      * @param OperatorContext $context
@@ -176,19 +255,13 @@ class ConditionService
      */
     private function findOperator(iterable $operators, FieldConditionInterface $fieldCondition, OperatorContext $context, ?OperatorHistory $parent): ?OperatorInterface
     {
-        $operatorList = [];
         foreach ($operators as $operator) {
             if ($operator->supports($fieldCondition, $context, $parent)) {
-                $operatorList[$operator->getPriority()] ??= $operator;
+                return $operator;
             }
         }
 
-        if (empty($operatorList)) {
-            return null;
-        }
-
-        ksort($operatorList, SORT_NUMERIC);
-        return $operatorList[array_key_last($operatorList)] ?? null;
+        return null;
     }
 
     /**

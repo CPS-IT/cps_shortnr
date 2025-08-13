@@ -3,8 +3,6 @@
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
 use CPSIT\ShortNr\Config\DTO\FieldCondition;
-use CPSIT\ShortNr\Service\Url\Regex\MatchResult;
-use TYPO3\CMS\Scheduler\Domain\Repository\SchedulerTaskRepository;
 
 interface DecoderDemandInterface extends DemandInterface
 {
@@ -14,17 +12,6 @@ interface DecoderDemandInterface extends DemandInterface
      * @return string
      */
     public function getShortNr(): string;
-
-    /**
-     * @return ?MatchResult
-     */
-    public function getMatchResult(): ?MatchResult;
-
-    /**
-     * @param MatchResult $matchResult
-     * @return void
-     */
-    public function setMatchResult(MatchResult $matchResult): void;
 
     /**
      * get resolved conditions

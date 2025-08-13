@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
+use CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\DTO\EncoderDemandNormalizationResult;
+
 interface EncoderDemandInterface extends DemandInterface
 {
     /**
@@ -25,4 +27,8 @@ interface EncoderDemandInterface extends DemandInterface
      * @return EncoderDemand
      */
     public function setLanguageId(?int $languageId): static;
+
+    public function setNormalizationResult(EncoderDemandNormalizationResult $normalizationResult): static;
+
+    public function getNormalizationResult(): ?EncoderDemandNormalizationResult;
 }

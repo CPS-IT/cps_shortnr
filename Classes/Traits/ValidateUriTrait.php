@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\Url;
+namespace CPSIT\ShortNr\Traits;
 
 use Symfony\Component\Filesystem\Path;
 

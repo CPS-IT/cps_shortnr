@@ -2,10 +2,10 @@
 
 namespace CPSIT\ShortNr\Service\Language;
 
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface;
-use CPSIT\ShortNr\Service\Url\Regex\MatchResult;
 
 class LanguageOverlayService
 {
@@ -14,48 +14,60 @@ class LanguageOverlayService
         private readonly ShortNrRepository $repository
     ) {}
 
-    public function resolveLanguageOverlay(MatchResult $matchResult): MatchResult
+    /**
+     * @param ConfigItemInterface $configItem
+     * @return ConfigItemInterface
+     */
+    public function resolveLanguageOverlay(ConfigItemInterface $configItem): ConfigItemInterface
     {
         // special pages optimization
-        if ($matchResult->getConfigItem()->getTableName() === 'pages') {
-            return $this->overlayPage($matchResult);
+        if ($configItem->getTableName() === 'pages') {
+            //return $this->overlayPage($configItem);
         }
 
-        return $this->overlayGeneric($matchResult);
+        return $this->overlayGeneric($configItem);
     }
 
     /**
-     * @param MatchResult $matchResult
-     * @return MatchResult
+     * @param ConfigItemInterface $configItem
+     * @return ConfigItemInterface
      */
-    private function overlayPage(MatchResult $matchResult): MatchResult
+    private function overlayPage(ConfigItemInterface $configItem): ConfigItemInterface
     {
-        $idFieldCondition = $matchResult->getIdentifierFieldCondition();
-        $languageFieldCondition = $matchResult->getLanguageFieldCondition();
+        $conditions = $configItem->getConditions();
+        $idFieldCondition = $conditions[$configItem->getRecordIdentifier() ?? ''] ?? null;
+
+        // we only support non-nested conditions
 
         $uidMatch = $idFieldCondition?->getMatches()[0] ?? null;
-        if ($uidMatch === null) {
-            return $matchResult;
+
+        if ($uidMatch === null || !$uidMatch->isInitialized()) {
+            return $configItem;
         }
 
+        // resolve page
         $uid = (int)$uidMatch->getValue();
         $pageTree = $this->pageTreeResolver->getPageTree();
         if ($pageTree->isMultiTreeLanguageSetup() || ($pageItem = $pageTree->getItem($uid)) === null) {
             // skip multi tree setups
-            return $matchResult;
+            return $configItem;
         }
 
+        // language resolving
+        $languageFieldCondition = $conditions[$configItem->getLanguageField() ?? ''] ?? null;
+        // we only support non-nested conditions
         $langIdMatch = $languageFieldCondition?->getMatches()[0] ?? null;
         if ($langIdMatch === null || !$this->isPageSupportLanguageUid($uid, (int)$langIdMatch->getValue())) {
             $langId = $this->getPageDefaultLanguageIdForPageUid($uid);
         } else {
             $langId = (int)$langIdMatch->getValue();
         }
+
         $currentLanguagePageItem = $pageItem->getTranslation($langId);
         $uidMatch->setValue($currentLanguagePageItem?->getPrimaryId());
         $langIdMatch?->setValue($currentLanguagePageItem?->getLanguageId());
 
-        return $matchResult;
+        return $configItem;
     }
 
     /**
@@ -78,39 +90,43 @@ class LanguageOverlayService
     }
 
     /**
-     * @param MatchResult $matchResult
-     * @return MatchResult
+     * @param ConfigItemInterface $configItem
+     * @return ConfigItemInterface
      */
-    private function overlayGeneric(MatchResult $matchResult): MatchResult
+    private function overlayGeneric(ConfigItemInterface $configItem): ConfigItemInterface
     {
-        $idFieldCondition = $matchResult->getIdentifierFieldCondition();
-        $languageFieldCondition = $matchResult->getLanguageFieldCondition();
+        $conditions = $configItem->getConditions();
 
+        // UID extraction
+        $idFieldCondition = $conditions[$configItem->getRecordIdentifier() ?? ''] ?? null;
         $uidMatch = $idFieldCondition?->getMatches()[0] ?? null;
         if ($uidMatch === null) {
-            return $matchResult;
+            return $configItem;
         }
         $uid = (int)$uidMatch->getValue();
+
+        // lang ID extraction
+        $languageFieldCondition = $conditions[$configItem->getLanguageField() ?? ''] ?? null;
         $langIdMatch = $languageFieldCondition?->getMatches()[0] ?? null;
-        if ($langIdMatch?->getValue() === null) {
+        if (!($langIdMatch?->isInitialized() ?? false)) {
             // default language
             $langId = 0;
         } else {
             $langId = (int)($langIdMatch?->getValue());
         }
 
-        $table = $matchResult->getConfigItem()->getTableName();
-        $uidField = $matchResult->getConfigItem()->getRecordIdentifier();
-        $languageField = $matchResult->getConfigItem()->getLanguageField();
-        $languageParentField = $matchResult->getConfigItem()->getLanguageParentField();
+        $table = $configItem->getTableName();
+        $uidField = $configItem->getRecordIdentifier();
+        $languageField = $configItem->getLanguageField();
+        $languageParentField = $configItem->getLanguageParentField();
         if (!$table || !$languageParentField || !$languageField) {
-            return $matchResult;
+            return $configItem;
         }
 
         try {
             $resolvement = $this->repository->resolveCorrectUidWithLanguageUid($table, $uidField, $languageField, $languageParentField, $uid);
         } catch (ShortNrQueryException) {
-            return $matchResult;
+            return $configItem;
         }
 
         $resolvedUid = $resolvement[$langId] ?? null;
@@ -119,10 +135,11 @@ class LanguageOverlayService
             // language not available -> fall back to base (0)
             $resolvedUid = $resolvement[0] ?? $uid;
             $langIdMatch?->setValue(0);        // update the regex match as well
+        } else {
+            $langIdMatch?->setValue($langId);
         }
-
         $uidMatch->setValue($resolvedUid);
 
-        return $matchResult;
+        return $configItem;
     }
 }

@@ -5,13 +5,14 @@ namespace CPSIT\ShortNr\Service\Url\Condition\Operators;
 use CPSIT\ShortNr\Config\DTO\FieldCondition;
 use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\EncodingOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
 
-class NotOperator implements WrappingOperatorInterface
+class NotOperator implements WrappingOperatorInterface, EncodingOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -57,6 +58,18 @@ class NotOperator implements WrappingOperatorInterface
     }
 
     /**
+     * @param array $data
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return bool
+     */
+    public function encodingProcess(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): bool
+    {
+        return false;
+    }
+
+    /**
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
@@ -99,6 +112,36 @@ class NotOperator implements WrappingOperatorInterface
 
         return $nestedCallback(
             $result,
+            new FieldCondition(
+                $fieldCondition->getFieldName(),
+                $condition[ConfigEnum::ConditionNot->value]
+            ),
+            $context,
+            new OperatorHistory($parent, $this)
+        );
+    }
+
+    /**
+     * encoding validation, only validate static variables, ignores any dynamic "placeholder" (match-N)
+     *
+     * @param array $data
+     * @param FieldConditionInterface $fieldCondition
+     * @param EncodingOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @param callable $nestedCallback
+     * @return bool
+     */
+    public function encodingWrap(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): bool
+    {
+        $condition = $fieldCondition->getCondition();
+        if (!array_key_exists(ConfigEnum::ConditionNot->value, $condition)) {
+            // noting to do here
+            return true;
+        }
+
+        // negate all sub Conditions
+        return !$nestedCallback(
+            $data,
             new FieldCondition(
                 $fieldCondition->getFieldName(),
                 $condition[ConfigEnum::ConditionNot->value]
