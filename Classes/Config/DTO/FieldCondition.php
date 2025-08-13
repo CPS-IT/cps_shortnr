@@ -46,10 +46,9 @@ class FieldCondition implements FieldConditionInterface
      *
      * @return bool
      */
-    public function hasStaticElements(): bool
+    public function hasMatches(): bool
     {
-        die('WIP');
-        return false;
+        return !empty($this->matches);
     }
 
     /**

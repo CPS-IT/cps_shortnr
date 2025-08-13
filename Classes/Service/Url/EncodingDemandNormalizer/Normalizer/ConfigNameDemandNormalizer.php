@@ -3,11 +3,12 @@
 namespace CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer;
 
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
+use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Demand\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\DTO\EncoderDemandNormalizationResult;
-use CPSIT\ShortNr\Service\Url\ConfigResolver\MatchResult;
+use phpDocumentor\Reflection\Types\This;
 
 class ConfigNameDemandNormalizer implements EncodingDemandNormalizerInterface
 {
@@ -41,9 +42,33 @@ class ConfigNameDemandNormalizer implements EncodingDemandNormalizerInterface
 
         $configItem = $config->getConfigItem($demand->getConfigName());
 
-        $mr = new MatchResult($configItem, []);
+        $matchFieldConditions = [];
+        foreach ($configItem->getConditions() as $fieldname => $condition) {
+            if ($condition->hasMatches()) {
+                $matchFieldConditions[$fieldname] = $condition;
+            }
+        }
+
+
 
         return new EncoderDemandNormalizationResult([], $configItem);
+    }
+
+    /**
+     * @param array<string, FieldConditionInterface> $conditions conditions that need to be populated
+     * @param array<string, mixed> $matches data to populate the conditions
+     * @return array<string, FieldConditionInterface> return the remaining open conditions that has not matched
+     */
+    private function populateConditionMatches(array $conditions, array $matches): array
+    {
+        foreach ($matches as $fieldName => $value) {
+            $condition = $conditions[$fieldName] ?? null;
+            if ($condition instanceof FieldConditionInterface) {
+                $condition->processMatches($matches);
+            }
+        }
+
+        return $conditions;
     }
 
     /**

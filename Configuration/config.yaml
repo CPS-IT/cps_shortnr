@@ -19,5 +19,5 @@ shortNr:
     slug: slug
     condition:
       uid: "{match-2}"
-      sys_language_uid: "{match-3}"
-      type: [0, 1, 2, 3, 4, 5]
+      sys_language_uid:
+        in: ["{match-3}", "{match-4}"]

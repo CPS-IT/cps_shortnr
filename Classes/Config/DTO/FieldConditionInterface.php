@@ -9,7 +9,7 @@ interface FieldConditionInterface
      *
      * @return bool
      */
-    public function hasStaticElements(): bool;
+    public function hasMatches(): bool;
 
     /**
      * @return string
