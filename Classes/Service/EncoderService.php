@@ -2,9 +2,6 @@
 
 namespace CPSIT\ShortNr\Service;
 
-use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Exception\ShortNrConfigException;
-use CPSIT\ShortNr\Exception\ShortNrDemandNormalizationException;
 use CPSIT\ShortNr\Service\Url\Demand\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\EncodingDemandNormalizationService;
 
@@ -21,9 +18,6 @@ class EncoderService extends AbstractUrlService
     /**
      * @param EncoderDemandInterface $demand
      * @return string|null
-     * @throws ShortNrDemandNormalizationException
-     * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
      */
     public function encode(EncoderDemandInterface $demand): ?string
     {
@@ -37,10 +31,10 @@ class EncoderService extends AbstractUrlService
          */
 
         // normalize Demand
-        $demand->setNormalizationResult(
+        /*$demand->setNormalizationResult(
             $this->demandNormalizationService->normalize($demand, $this->getConfig())
-        );
+        );*/
 
-        return null;
+        return 'WIP ENCODING';
     }
 }

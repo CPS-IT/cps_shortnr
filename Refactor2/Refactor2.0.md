@@ -92,11 +92,11 @@ modifier    = "?" | "!" | "*"
 
 Examples
 
-| Pattern | Meaning |
-|---|---|
-| `NEWS{uid:int}` | mandatory integer uid |
-| `BLOG{slug:slug}-{lang?:int=0}` | optional language suffix |
-| `VID{youtubeId:str}` | plain string |
+| Pattern                                            | Meaning |
+|----------------------------------------------------|---|
+| `NEWS{uid:int}`                                    | mandatory integer uid |
+| `BLOG{slug:slug}-{lang?:int(default=0)}`           | optional language suffix |
+| `VID{youtubeId:str(maxLen=30, allowed=a-zA-Z0-9)}` | plain string |
 
 ---
 
@@ -184,18 +184,18 @@ Given a record row:
 - Cache invalidation on TCA change
 - CLI command `shortnr:compile`
 - Event `AfterShortNrDecodedEvent` for extensibility
-- Optional checksum at the end (`{uid:int}-{lang?:int=0}-{crc32}`)
+- Optional checksum at the end (`{uid:int}(-{lang:int(default=0)})-{crc32}`)
 
 ---
 
 ## 10. One-Page Cheat Sheet
 
 ```
-pattern: "PREFIX{uid:int}-{lang?:int=0}"
+pattern: "PREFIX{uid:int}(-{lang:int(default=0)})?"
          └literal┘└───placeholder──┘
 ```
 
-- `?` optional, `int` type, `=0` default
+- `?` optional, `int` type, `(default=0)` default
 - No OR allowed in `condition:`
 - One compiled regex per cache file
 - One hash lookup per request
