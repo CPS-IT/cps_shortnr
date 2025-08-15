@@ -29,8 +29,9 @@ final class IntType extends Type
      */
     public function parseValue(mixed $value, array $constraints = []): mixed
     {
-        $value = (int)$value;
-        return parent::parseValue($value, $constraints);
+        // Apply constraints first (including defaults), then convert to int
+        $value = parent::parseValue($value, $constraints);
+        return (int)$value;
     }
 
     /**

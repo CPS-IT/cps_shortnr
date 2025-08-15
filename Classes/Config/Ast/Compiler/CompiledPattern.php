@@ -76,9 +76,34 @@ final class CompiledPattern
                 } catch (InvalidArgumentException $e) {
                     $result->addError($e);
                 }
+            } else {
+                // Handle missing optional groups with default constraints
+                $type = $this->groupTypes[$groupName];
+                $constraints = $this->groupConstraints[$groupName];
+                
+                if (isset($constraints['default'])) {
+                    // Get the type handler
+                    $typeHandler = $this->typeRegistry->getType($type);
+                    if (!$typeHandler) {
+                        throw new ShortNrPatternTypeException("Unknown type during matching", $type);
+                    }
+
+                    try {
+                        // Process null value to trigger default
+                        $processedValue = $typeHandler->parseValue(null, $constraints);
+                        $result->addGroup($groupName, $processedValue, $type, $constraints);
+                    } catch (InvalidArgumentException $e) {
+                        $result->addError($e);
+                    }
+                }
             }
         }
 
+        // Return null if there are any constraint validation errors
+        if ($result->isFailed()) {
+            return null;
+        }
+        
         return $result;
     }
 

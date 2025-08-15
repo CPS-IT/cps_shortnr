@@ -27,7 +27,7 @@ final class MatchResult
      */
     public function isFailed(): bool
     {
-        return !empty($this->erros);
+        return !empty($this->errors);
     }
 
     /**

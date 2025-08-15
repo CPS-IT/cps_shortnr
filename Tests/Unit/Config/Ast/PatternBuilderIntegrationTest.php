@@ -219,8 +219,8 @@ class PatternBuilderIntegrationTest extends TestCase
         yield 'int-range-below' => ['PAGE{uid:int(min=10, max=99)}', 'PAGE9', false];
         yield 'int-range-above' => ['PAGE{uid:int(min=10, max=99)}', 'PAGE100', false];
 
-        yield 'int-default-used' => ['PAGE{uid:int(default=42)}', 'PAGE', true, ['uid' => 42]];
-        yield 'int-default-overridden' => ['PAGE{uid:int(default=42)}', 'PAGE123', true, ['uid' => 123]];
+        yield 'int-default-used' => ['PAGE{uid:int(default=42)}?', 'PAGE', true, ['uid' => 42]];
+        yield 'int-default-overridden' => ['PAGE{uid:int(default=42)}?', 'PAGE123', true, ['uid' => 123]];
     }
 
     public static function optionalSectionsProvider(): Generator

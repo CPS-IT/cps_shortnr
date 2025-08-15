@@ -12,6 +12,10 @@ abstract class NestedAstNode extends NamedAstNode
 
     public function addChild(AstNode $node): void
     {
+        // Only set parent if not already set to prevent double assignment
+        if ($node->getParent() === null) {
+            $node->setParent($this);
+        }
         $this->children[] = $node;
     }
 
@@ -60,7 +64,7 @@ abstract class NestedAstNode extends NamedAstNode
         foreach ($data['children'] as $childData) {
             $childNode = self::createNodeFromArray($childData, $typeRegistry);
             $childNode->setRegex($childData['regex'] ?? null);
-            $node->addChild($childNode);
+            $node->addChild($childNode); // This will set parent relationship
         }
         $node->setRegex($data['regex'] ?? null);
         return $node;

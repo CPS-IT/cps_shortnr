@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes;
 
+use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
+
 final class SubSequenceNode extends SequenceNode
 {
     /**
@@ -46,6 +48,25 @@ final class SubSequenceNode extends SequenceNode
     public function hasOptional(): bool
     {
         return true;
+    }
+
+    protected function isLocallyOptional(): bool
+    {
+        return true; // SubSequence nodes are always optional
+    }
+
+    public function validateTreeContext(): void
+    {
+        // Check for empty subsequence
+        if (empty($this->children)) {
+            throw new ShortNrPatternParseException(
+                "Empty optional subsequence '()' is not allowed. Optional sections must contain at least one element (group or literal).",
+                'unknown' // Pattern context would need to be passed from parser
+            );
+        }
+        
+        // Call parent validation
+        parent::validateTreeContext();
     }
 
     public function getNodeType(): string

@@ -36,6 +36,12 @@ A pattern consists of three main elements:
 
 ### Optional Groups
 
+| Source text               | Optional? | Syntax hint                                      |
+|---------------------------|-----------|--------------------------------------------------|
+| `{id:int}`                | NO        | required group                                   |
+| `{id:int}?`               | YES       | add `?` outside braces                           |
+| `(-{lang:alpha})`         | YES       | parentheses imply optional on ALL inner elements |
+
 ```
 {groupName:type}?
 ```
@@ -68,8 +74,12 @@ Constraints provide additional validation rules for the captured value.
 (literal and/or groups)
 ```
 
-Entire sections containing literals and/or groups can be made optional using parentheses with `?`.
-SubSequence `(` ... `)` don't need a `?` since they by design indicate optional
+Entire sections containing literals and/or groups can be made optional using parentheses.
+SubSequence `(` ... `)` don't need a `?` since they by design indicate optional.
+
+**Requirements:**
+- Optional sections **must contain at least one element** (group or literal)
+- Empty subsequences `()` are not allowed and will throw a parsing error
 
 **Examples:**
 ```
@@ -77,17 +87,34 @@ PAGE{id:int}(-{lang:alpha})       → "PAGE123" or "PAGE123-en"
 /article/{id:int}(/comments)      → "/article/5" or "/article/5/comments"
 ```
 
-### Literals and Special Characters
+**Invalid patterns:**
+```
+PAGE()                           → ERROR: Empty optional subsequence
+PAGE{id:int}()                   → ERROR: Empty optional subsequence  
+```
 
-Literals are any characters outside of groups. Special regex characters are automatically escaped.
+### Literals and Reserved Characters
+
+Literals are any characters outside of groups and optional sections.
+
+**Reserved characters (cannot be used in literals):**
+- `{` `}` - Reserved for groups: `{name:type}`
+- `(` `)` - Reserved for optional subsequences: `(-{name:type})`
 
 **Auto-escaped characters:**
-`. ^ $ * + ? [ ] \ / | ( )`
+`. ^ $ * + ? [ ] \ / |`
 
 **Examples:**
 ```
 user.{id:int}           → Matches "user.123" (dot is escaped)
 price: ${amount:int}    → Matches "price: $50" ($ is escaped)
+func_{id:int}           → Use underscore instead of parentheses
+```
+
+**Invalid patterns:**
+```
+func(){id:int}          → ERROR: Reserved characters '(' ')' in literals
+test(value){id:int}     → ERROR: Reserved characters '(' ')' in literals
 ```
 
 ## Built-in Types
@@ -96,20 +123,20 @@ price: ${amount:int}    → Matches "price: $50" ($ is escaped)
 
 | Type | Pattern | Description | Constraints              |
 |------|---------|-------------|--------------------------|
-| `int` | `\d+` | Positive integers | `min`, `max` , `default` |
+| `int` | `\d+` | Positive integers | `min`, `max` , `default`* |
 
 **Examples:**
 ```
 {id:int}                    → "123", "45678"
 {age:int(min=0, max=120)}   → "25", "100"
-{age:int(default=0)}   → "25", "100", "0" (if age is not set)
+{age:int(default=0)}?  → "25", "100", "0" (if age is optional and not provided)
 ```
 
 ### String Types
 
 | Type | Pattern | Description | Constraints                                              |
 |------|---------|-------------|----------------------------------------------------------|
-| `string` | `[^/]+` | Any non-slash characters | `minLen`, `maxLen`, `contains`, `startWith`, `endWith`,  `default` |
+| `string` | `[^/]+` | Any non-slash characters | `minLen`, `maxLen`, `contains`, `startWith`, `endWith`,  `default`* |
 
 **Examples:**
 ```
@@ -213,19 +240,35 @@ $result2 = $compiled->match("product-500");   // ✗ Below min
 $result3 = $compiled->match("product-10000"); // ✗ Above max
 ```
 
-### Handling Optional Values
+### Handling Optional Values and Defaults
 
 ```php
-$pattern = "PAGE{id:int}(-{lang:alpha})?";
+$pattern = "PAGE{id:int}(-{lang:alpha(default=en)})?";
 $compiled = $compiler->compile($pattern);
 
 $result1 = $compiled->match("PAGE123");
 echo $result1->get('id');    // 123
-echo $result1->get('lang');  // null
+echo $result1->get('lang');  // "en" (default applied)
 
-$result2 = $compiled->match("PAGE123-en");
+$result2 = $compiled->match("PAGE123-fr");
 echo $result2->get('id');    // 123
-echo $result2->get('lang');  // "en"
+echo $result2->get('lang');  // "fr"
+```
+
+### Default Constraint Behavior
+
+**Important**: The `default` constraint only applies to **optional groups**. 
+If used on required groups, a compilation error will be thrown.
+
+```php
+// ✗ ERROR: Will throw ShortNrPatternConstraintException
+{uid:int(default=42)}     
+
+// ✓ CORRECT: Default applied when group is missing
+{uid:int(default=42)}?    
+
+// ✓ CORRECT: Default applied when subsequence is missing  
+(-{uid:int(default=42)})  
 ```
 
 ## Limitations and Boundaries
@@ -244,7 +287,17 @@ echo $result2->get('lang');  // "en"
     - `{name?:type}` ✗ Not supported
     - `(...) ` ✓ Correct, Sub Sequence sections don't need `?`
 
-3. **Nesting**
+3. **Reserved Characters**
+    - `{` `}` are reserved for groups and cannot appear in literals
+    - `(` `)` are reserved for optional subsequences and cannot appear in literals
+    - Use alternatives: `_`, `-`, `.`, or other characters for literal text
+
+4. **Optional Sections**
+    - Must contain at least one element (group or literal)
+    - Empty subsequences `()` are not allowed
+    - Use meaningful content: `(-{lang:str})` not `()`
+
+5. **Nesting**
     - Groups cannot be nested inside other groups
     - Optional sections can contain multiple groups
     - Keep nesting simple for maintainability
@@ -255,11 +308,19 @@ echo $result2->get('lang');  // "en"
     - `min` and `max` are validated after regex matching
     - Large numbers work but are validated as PHP integers
     - Negative numbers require custom type or pattern
+    - `default` only works on optional groups (`{name:int}?` or subsequences)
 
 2. **String Constraints**
     - Default pattern excludes forward slashes `/`
     - Use custom `pattern` constraint for specific formats
     - Length constraints are applied at regex level
+    - `default` only works on optional groups (`{name:str}?` or subsequences)
+
+3. **Default Constraint Rules**
+    - Only valid on optional groups: `{name:type(default=value)}?`
+    - Compilation error if used on required groups: `{name:type(default=value)}`
+    - Applied when optional group/subsequence is missing from input
+    - *\* See "Default Constraint Behavior" section for details*
 
 ### Performance Considerations
 
@@ -387,8 +448,20 @@ try {
 
 1. Check for typos in pattern syntax
 2. Verify group types match input format
-3. Check if literals need escaping
+3. Check for reserved characters `()` `{}` in literals
 4. Test with simpler pattern first
+
+### Reserved Character Errors
+
+1. Replace `()` with `_`, `-`, or other characters in literals
+2. Use `(-{group})` for optional sections, not literal parentheses
+3. Ensure `{}` only used for groups, not in literal text
+
+### Empty Subsequence Errors
+
+1. Empty `()` sections are not allowed - add content: `(-{group})`
+2. Use specific optional groups instead: `{group}?`
+3. Remove unnecessary empty subsequences from patterns
 
 ### Unexpected Values
 

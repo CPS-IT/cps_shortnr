@@ -5,6 +5,7 @@ namespace CPSIT\ShortNr\Tests\Unit\Config\Ast;
 use CPSIT\ShortNr\Config\Ast\PatternBuilder;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
+use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
 use Generator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -189,6 +190,9 @@ class PatternErrorScenariosTest extends TestCase
         yield 'nested-groups' => ['{outer{inner:int}:str}', ShortNrPatternException::class];
         yield 'malformed-constraints' => ['{name:int(min=)}', ShortNrPatternException::class];
         yield 'duplicate-group-names' => ['{id:int}{id:str}', ShortNrPatternException::class];
+        yield 'empty-subsequence-single' => ['PAGE()', ShortNrPatternParseException::class];
+        yield 'empty-subsequence-with-group' => ['PAGE{id:int}()', ShortNrPatternParseException::class];
+        yield 'empty-subsequence-multiple' => ['PAGE(){id:int}()', ShortNrPatternParseException::class];
     }
 
     public static function emptyAndNullInputProvider(): Generator

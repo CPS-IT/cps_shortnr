@@ -31,7 +31,7 @@ final class CompiledPatternFactory
 
         $this->extractGroupInfo($ast, $namedGroups, $groupTypes, $groupConstraints);
 
-        $regex = '/^' . $ast->toRegex() . '$/';
+        $regex = '/^' . str_replace('/', '\\/', $ast->toRegex()) . '$/';
 
         return new CompiledPattern(
             $pattern,

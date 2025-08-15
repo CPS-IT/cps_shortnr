@@ -190,9 +190,6 @@ class PatternSyntaxExtensiveTest extends TestCase
         
         yield 'pipe-literal' => ['a|b{id:int}', 'a|b123', true, ['id' => 123]];
         yield 'pipe-literal-fail' => ['a|b{id:int}', 'a&b123', false];
-        
-        yield 'parentheses-literal' => ['func(){id:int}', 'func()123', true, ['id' => 123]];
-        yield 'parentheses-literal-fail' => ['func(){id:int}', 'func[]123', false];
     }
 
     public static function adjacentGroupsProvider(): Generator
@@ -266,7 +263,7 @@ class PatternSyntaxExtensiveTest extends TestCase
         
         // Mixed constraints on multiple groups
         yield 'complex-multi-constraint' => [
-            'ITEM{id:int(min=100, max=999)}-{code:str(minLen=3, maxLen=5)}-{version:int(min=1, default=1)}',
+            'ITEM{id:int(min=100, max=999)}-{code:str(minLen=3, maxLen=5)}-{version:int(min=1, default=1)}?',
             'ITEM500-ABC-2',
             true,
             ['id' => 500, 'code' => 'ABC', 'version' => 2]
@@ -323,27 +320,27 @@ class PatternSyntaxExtensiveTest extends TestCase
     {
         // Multiple constraints on single field
         yield 'int-min-max-default' => [
-            'PAGE{uid:int(min=10, max=99, default=50)}',
+            'PAGE{uid:int(min=10, max=99, default=50)}?',
             'PAGE',
             true,
             ['uid' => 50]
         ];
         
         yield 'int-all-constraints-valid' => [
-            'PAGE{uid:int(min=10, max=99, default=50)}',
+            'PAGE{uid:int(min=10, max=99, default=50)}?',
             'PAGE25',
             true,
             ['uid' => 25]
         ];
         
         yield 'int-violates-min' => [
-            'PAGE{uid:int(min=10, max=99, default=50)}',
+            'PAGE{uid:int(min=10, max=99, default=50)}?',
             'PAGE5',
             false
         ];
         
         yield 'int-violates-max' => [
-            'PAGE{uid:int(min=10, max=99, default=50)}',
+            'PAGE{uid:int(min=10, max=99, default=50)}?',
             'PAGE150',
             false
         ];
@@ -376,20 +373,20 @@ class PatternSyntaxExtensiveTest extends TestCase
         
         // Mixed type constraints in same pattern
         yield 'mixed-types-all-valid' => [
-            'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}',
+            'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}?',
             'ITEM123-ABC',
             true,
             ['id' => 123, 'code' => 'ABC', 'version' => 1]
         ];
         
         yield 'mixed-types-int-invalid' => [
-            'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}',
+            'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}?',
             'ITEM1000-ABC',
             false
         ];
         
         yield 'mixed-types-string-invalid' => [
-            'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}',
+            'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}?',
             'ITEM123-A',
             false
         ];

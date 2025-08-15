@@ -5,6 +5,7 @@ namespace CPSIT\ShortNr\Config\Ast\Nodes;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 use CPSIT\ShortNr\Exception\ShortNrPatternGenerationException;
+use CPSIT\ShortNr\Exception\ShortNrPatternConstraintException;
 use RuntimeException;
 
 final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
@@ -17,7 +18,27 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
         private readonly string $type,
         private readonly array $constraints = [],
         private readonly bool $optional = false
-    ) {}
+    ) {
+        // Note: Validation moved to validateTreeContext() which is called after tree construction
+    }
+
+    /**
+     * Validate default constraint usage after tree structure is complete.
+     * This must be called after all parent-child relationships are established.
+     */
+    public function validateTreeContext(): void
+    {
+        if (!$this->isEffectivelyOptional() && isset($this->constraints['default'])) {
+            $defaultValue = $this->constraints['default'];
+            throw new ShortNrPatternConstraintException(
+                "Default constraint cannot be used on required group '{$this->name}'. " .
+                "Make the group optional: {{$this->name}:{$this->type}(default={$defaultValue})}? or place it in an optional section: (-{{$this->name}:{$this->type}(default={$defaultValue})})",
+                $this->name,
+                $defaultValue,
+                'invalid_default_usage'
+            );
+        }
+    }
 
     public function setTypeRegistry(TypeRegistry $registry): void
     {
@@ -55,6 +76,11 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
     }
 
     public function isOptional(): bool
+    {
+        return $this->optional;
+    }
+
+    protected function isLocallyOptional(): bool
     {
         return $this->optional;
     }

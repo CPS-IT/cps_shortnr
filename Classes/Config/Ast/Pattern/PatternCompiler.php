@@ -22,6 +22,10 @@ final class PatternCompiler
     {
         // Parse and compile
         $astRootNode = (new PatternParser($this->typeRegistry, $pattern))->parse();
+        
+        // Validate tree context after all parent-child relationships are established
+        $astRootNode->validateEntireTree();
+        
         // Create compiled pattern
         return $this->factory->create($pattern, $astRootNode);
     }
