@@ -6,13 +6,15 @@ The Pattern Compiler is a PHP 8.1+ library that provides a human-readable DSL (D
 
 ## Core Concepts
 
+The Type Checks and Constraints should happen at Runtime on the match and generate call and not reflect into the generated Regex
+
 ### Pattern Structure
 
 A pattern consists of three main elements:
 
 1. **Literals** - Static text that must match exactly
 2. **Groups** - Dynamic segments that capture values: `{name:type}`
-3. **Optional Sections** - Parts that may or may not be present: `(...)?` or `{...}?`
+3. **Optional Sections** - Parts that may or may not be present: `(...)` or `{...}?`
 
 ## Syntax Reference
 
@@ -29,8 +31,7 @@ A pattern consists of three main elements:
 **Examples:**
 ```
 {id:int}           → Captures an integer as 'id'
-{username:alnum}   → Captures alphanumeric string as 'username'
-{email:email}      → Captures email address as 'email'
+{username:string}   → Captures string as 'username'
 ```
 
 ### Optional Groups
@@ -58,21 +59,22 @@ Constraints provide additional validation rules for the captured value.
 **Examples:**
 ```
 {id:int(min=1, max=9999)}          → Integer between 1 and 9999
-{code:string(minLen=3, maxLen=10)} → String with length 3-10
+{code:str(minLen=3, maxLen=10)} → String with length 3-10
 ```
 
-### Optional Sections
+### Optional Sections (SubSequence)
 
 ```
-(literal and/or groups)?
+(literal and/or groups)
 ```
 
 Entire sections containing literals and/or groups can be made optional using parentheses with `?`.
+SubSequence `(` ... `)` don't need a `?` since they by design indicate optional
 
 **Examples:**
 ```
-PAGE{id:int}(-{lang:alpha})?       → "PAGE123" or "PAGE123-en"
-/article/{id:int}(/comments)?      → "/article/5" or "/article/5/comments"
+PAGE{id:int}(-{lang:alpha})       → "PAGE123" or "PAGE123-en"
+/article/{id:int}(/comments)      → "/article/5" or "/article/5/comments"
 ```
 
 ### Literals and Special Characters
@@ -92,45 +94,27 @@ price: ${amount:int}    → Matches "price: $50" ($ is escaped)
 
 ### Numeric Types
 
-| Type | Pattern | Description | Constraints |
-|------|---------|-------------|-------------|
-| `int` | `\d+` | Positive integers | `min`, `max` |
+| Type | Pattern | Description | Constraints              |
+|------|---------|-------------|--------------------------|
+| `int` | `\d+` | Positive integers | `min`, `max` , `default` |
 
 **Examples:**
 ```
 {id:int}                    → "123", "45678"
 {age:int(min=0, max=120)}   → "25", "100"
+{age:int(default=0)}   → "25", "100", "0" (if age is not set)
 ```
 
 ### String Types
 
-| Type | Pattern | Description | Constraints |
-|------|---------|-------------|-------------|
-| `string` | `[^/]+` | Any non-slash characters | `minLen`, `maxLen`, `pattern` |
-| `alpha` | `[a-zA-Z]+` | Alphabetic only | - |
-| `alnum` | `[a-zA-Z0-9]+` | Alphanumeric | - |
-| `slug` | `[a-z0-9]+(?:-[a-z0-9]+)*` | URL slug format | - |
+| Type | Pattern | Description | Constraints                                              |
+|------|---------|-------------|----------------------------------------------------------|
+| `string` | `[^/]+` | Any non-slash characters | `minLen`, `maxLen`, `contains`, `startWith`, `endWith`,  `default` |
 
 **Examples:**
 ```
-{name:string}                       → "John Doe", "Test-123"
-{name:string(minLen=2, maxLen=50)} → "Jo" to 50 chars
-{code:alpha}                        → "ABC", "xyz"
-{username:alnum}                    → "user123", "JohnDoe"
-{slug:slug}                         → "hello-world", "my-post-123"
-```
-
-### Special Format Types
-
-| Type | Pattern | Description | Example Match |
-|------|---------|-------------|---------------|
-| `uuid` | UUID v4 format | UUID identifier | "550e8400-e29b-41d4-a716-446655440000" |
-| `email` | Email format | Email address | "user@example.com" |
-
-**Examples:**
-```
-{userId:uuid}     → "123e4567-e89b-12d3-a456-426614174000"
-{contact:email}   → "john.doe@company.org"
+{name:str}                       → "John Doe", "Test-123"
+{name:str(minLen=2, maxLen=50)} → "Jo" to 50 chars
 ```
 
 ## Pattern Examples
@@ -155,7 +139,7 @@ price: ${amount:int}    → Matches "price: $50" ($ is escaped)
 
 ```php
 // Optional suffix
-"PAGE{id:int}(-{lang:alpha})?"
+"PAGE{id:int}(-{lang:alpha})"
 → Matches: "PAGE123", "PAGE123-en", "PAGE123-fr"
 
 // Multiple optional groups
@@ -163,7 +147,7 @@ price: ${amount:int}    → Matches "price: $50" ($ is escaped)
 → Matches: "doc_100_", "doc_100_1_", "doc_100_1_draft"
 
 // Optional with literals
-"article/{id:int}(/edit)?"
+"article/{id:int}(/edit)"
 → Matches: "article/5", "article/5/edit"
 ```
 
@@ -175,15 +159,15 @@ price: ${amount:int}    → Matches "price: $50" ($ is escaped)
 → Matches: "/blog/2024/03/my-first-post"
 
 // REST API endpoint
-"/api/v{version:int}/{resource:alpha}/{id:int}?(/edit)?"
+"/api/v{version:int}/{resource:alpha}/{id:int}?(/edit)"
 → Matches: "/api/v1/users", "/api/v2/posts/123", "/api/v1/users/5/edit"
 
 // File path with optional extension
-"uploads/{year:int}/{month:int}/{filename:slug}(.{ext:alpha})?"
+"uploads/{year:int}/{month:int}/{filename:slug}(.{ext:alpha})"
 → Matches: "uploads/2024/12/document", "uploads/2024/12/image.jpg"
 
 // Multilingual route
-"/{lang:alpha}?/page/{pageId:int}(-{slug:slug})?"
+"/{lang:alpha}?/page/{pageId:int}(-{slug:slug})"
 → Matches: "/page/1", "/en/page/1", "/fr/page/1-about-us"
 ```
 
@@ -255,10 +239,10 @@ echo $result2->get('lang');  // "en"
     - Must be unique within pattern
 
 2. **Optional Markers**
-    - `?` must always be placed **outside** groups/sections
+    - `?` must always be placed **outside** groups
     - `{name:type}?` ✓ Correct
     - `{name?:type}` ✗ Not supported
-    - `(...)? ` ✓ Correct
+    - `(...) ` ✓ Correct, Sub Sequence sections don't need `?`
 
 3. **Nesting**
     - Groups cannot be nested inside other groups
@@ -368,7 +352,7 @@ try {
 "/{category:slug}/{year:int}/{month:int}/{post:slug}"
 
 // User profiles
-"/@{username:alnum}(/followers|/following)?"
+"/@{username:alnum}(/followers|/following)"
 ```
 
 ### File Paths
@@ -378,10 +362,10 @@ try {
 "uploads/{year:int}/{month:int}/{day:int}/{hash:alnum}.{ext:alpha}"
 
 // Document storage
-"docs/{category:slug}/{docId:uuid}(-v{version:int})?.pdf"
+"docs/{category:slug}/{docId:uuid}(-v{version:int}).pdf"
 
 // Image variants
-"images/{id:int}(-{size:alnum})?.{ext:alpha}"
+"images/{id:int}(-{size:alnum}).{ext:alpha}"
 ```
 
 ### Identifiers

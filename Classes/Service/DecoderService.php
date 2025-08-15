@@ -5,15 +5,15 @@ namespace CPSIT\ShortNr\Service;
 use CPSIT\ShortNr\Event\ShortNrBeforeProcessorDecodingEvent;
 use CPSIT\ShortNr\Event\ShortNrConfigItemProcessedEvent;
 use CPSIT\ShortNr\Event\ShortNrUriFinishDecodingEvent;
-use CPSIT\ShortNr\Event\ShortNrVerifyRequestEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Language\LanguageOverlayService;
 use CPSIT\ShortNr\Service\Url\ConfigResolver\ConfigItemResolveProcessor;
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\RequestDecoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 class DecoderService extends AbstractUrlService
 {
@@ -31,12 +31,26 @@ class DecoderService extends AbstractUrlService
      */
     public function getDecoderDemandFromRequest(ServerRequestInterface $request): ?DecoderDemandInterface
     {
-        $event = $this->getEventDispatcher()->dispatch(new ShortNrVerifyRequestEvent($request, DecoderDemand::makeFromRequest($request)));
-        if ($event instanceof ShortNrVerifyRequestEvent && $event->isShortNrRequest()) {
-            return $event->getDecoderDemand();
+        $demand = RequestDecoderDemand::makeFromRequest($request);
+        if ($this->isValid($demand)) {
+            return $demand;
         }
 
         return null;
+    }
+
+    /**
+     * validate the demand if that is for us to parse or not.
+     * @param DecoderDemandInterface $demand
+     * @return bool
+     */
+    private function isValid(DecoderDemandInterface $demand): bool
+    {
+        try {
+            return $this->getConfigLoader()->getHeuristicPattern()->support($demand->getShortNr());
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
     /**

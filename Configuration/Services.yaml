@@ -8,14 +8,15 @@ services:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Config/DTO'
+      - '../Classes/Config/Ast'
       - '../Classes/Domain/DTO'
       - '../Classes/Service/Url/Condition/Operators/DTO'
       - '../Classes/Service/Url/Processor/DTO'
       - '../Classes/Service/PlatformAdapter/DTO'
       - '../Classes/Service/Url/Demand'
       - '../Classes/Service/Url/EncodingDemandNormalizer/Normalizer/DTO'
-      - '../Classes/Service/Url/Regex/MatchResult.php'
       - '../Classes/Event'
+      - '../Classes/Exception'
 
   _instanceof:
     CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:

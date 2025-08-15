@@ -14,7 +14,8 @@ enum ConfigEnum: string
     case NotFound = 'notFound';
     case NotFoundType = 'notFoundType';
 
-    // regex
+    // Pattern
+    case Pattern = 'pattern';
     case Regex = 'regex';
     case Prefix = 'prefix';
     case PrefixMatch = 'prefixMatch';

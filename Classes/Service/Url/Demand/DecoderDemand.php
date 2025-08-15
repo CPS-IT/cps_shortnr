@@ -3,7 +3,6 @@
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
 use CPSIT\ShortNr\Config\DTO\FieldCondition;
-use Psr\Http\Message\ServerRequestInterface;
 
 class DecoderDemand extends Demand implements DecoderDemandInterface
 {
@@ -14,11 +13,6 @@ class DecoderDemand extends Demand implements DecoderDemandInterface
         protected readonly string $shortNr
     )
     {}
-
-    public static function makeFromRequest(ServerRequestInterface $request): DecoderDemandInterface
-    {
-        return (new static(static::normalizeShortNrUri($request->getUri()->getPath())))->setRequest($request);
-    }
 
     /**
      * clean and sanitized ShortNr

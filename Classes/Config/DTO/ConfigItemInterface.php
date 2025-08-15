@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
+use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
 
@@ -14,13 +15,6 @@ interface ConfigItemInterface
      * @return string|null
      */
     public function getValue(string|BackedEnum $configField): ?string;
-
-    /**
-     * Get the config Item PrefixMatch Value like: "{match-1}" so we know what match value is the prefix
-     *
-     * @return string
-     */
-    public function getPrefixMatch(): string;
 
     /**
      * return the Priority of the Item; default 0
@@ -45,27 +39,6 @@ interface ConfigItemInterface
      */
     public function getConfig(): ConfigInterface;
 
-    // Route Pattern Properties
-
-    /**
-     * Get the regex pattern for URL matching
-     *
-     * Falls back to _default if not set for this config item.
-     * Used by the decoder to match short URLs to this config.
-     *
-     * @return string|null Regex pattern like '/^PAGE(\d+)$/' or null if not configured
-     */
-    public function getRegex(): ?string;
-
-    /**
-     * Get the URL prefix for this config type
-     *
-     * @return FieldConditionInterface
-     */
-    public function getPrefix(): FieldConditionInterface;
-
-    // Processor Configuration
-
     /**
      * Get the processor type that should handle this config
      *
@@ -85,12 +58,17 @@ interface ConfigItemInterface
     /**
      * Get the database conditions for record filtering
      *
-     * Contains field mappings and values for building SQL WHERE clauses.
-     * Supports placeholder replacement like '{match-1}' from regex captures.
+     * Contains field mappings and values for building.
      *
      * @return array<string, FieldConditionInterface> [FieldName => ConditionObject]
      */
     public function getConditions(): array;
+
+    /**
+     * WIP
+     * @return array
+     */
+    public function getJoins(): array;
 
     /**
      * Get plugin-specific configuration (not yet implemented)
@@ -146,4 +124,9 @@ interface ConfigItemInterface
      * @return bool True if language overlay is supported
      */
     public function canLanguageOverlay(): bool;
+
+    /**
+     * @return CompiledPattern
+     */
+    public function getPattern(): CompiledPattern;
 }

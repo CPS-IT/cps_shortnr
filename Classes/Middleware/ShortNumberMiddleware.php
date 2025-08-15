@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Middleware;
 
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\DecoderService;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
@@ -27,6 +28,7 @@ class ShortNumberMiddleware implements MiddlewareInterface
      * @return ResponseInterface
      * @throws ShortNrCacheException
      * @throws ShortNrNotFoundException
+     * @throws ShortNrConfigException
      */
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {

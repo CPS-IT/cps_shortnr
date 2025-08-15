@@ -1,23 +1,13 @@
 shortNr:
   _default:
-    # support page id or hard-coded URI (detects it via is_numeric)
-    notFound: "37"
-    # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
-    regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
-    prefixMatch: "{match-1}"
-    condition: # conditions
-      uid: "{match-2}"
-      sys_language_uid: "{match-3}"
+    # support page id or hard-coded URI (starts with a / ) (detects it via is_numeric)
+    notFound: "404"
     languageParentField: "l10n_parent"  # default TYPO3 field name
     languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
     identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
 
   pages: # default page
     type: page
-    prefix: PAGE
     table: pages
     slug: slug
-    condition:
-      uid: "{match-2}"
-      sys_language_uid:
-        in: ["{match-3}", "{match-4}"]
+    pattern: "PAGE{uid:int(min=1)}(-{sys_language_uid:int(min=0, max=5, default=0)})"

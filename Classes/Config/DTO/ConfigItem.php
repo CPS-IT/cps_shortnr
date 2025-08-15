@@ -2,7 +2,9 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
+use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
 
@@ -32,14 +34,6 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getPrefixMatch(): string
-    {
-        return $this->config->getValue($this->name, ConfigEnum::PrefixMatch);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public function getPriority(): int
     {
         return (int)$this->config->getValue($this->name, ConfigEnum::Priority);
@@ -62,19 +56,23 @@ class ConfigItem implements ConfigItemInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @return string|null
+     * @throws ShortNrCacheException
      */
     public function getRegex(): ?string
     {
-        return $this->config->getValue($this->name, ConfigEnum::Regex);
+        return $this->getPattern()->getRegex();
     }
 
     /**
-     * {@inheritDoc}
+     * AST DSL Pattern
+     *
+     * @return CompiledPattern
+     * @throws ShortNrCacheException
      */
-    public function getPrefix(): FieldConditionInterface
+    public function getPattern(): CompiledPattern
     {
-        return $this->config->getPrefixFieldConditions()[$this->name];
+        return $this->config->getPattern($this->name);
     }
 
     /**
@@ -113,6 +111,16 @@ class ConfigItem implements ConfigItemInterface
         }
 
         return $list;
+    }
+
+    /**
+     * WIP
+     *
+     * @return array
+     */
+    public function getJoins(): array
+    {
+        return [];
     }
 
     /**
