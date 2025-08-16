@@ -192,8 +192,8 @@ class GreedyPatternValidationTest extends TestCase
         
         yield 'maxlen-makes-string-non-greedy' => [
             '{name:str(maxLen=5)}{id:int}', 
-            'verylongname123', 
-            ['name' => 'veryl', 'id' => 'ongname123']
+            'hello123', 
+            ['name' => 'hello', 'id' => 123]
         ];
         
         yield 'minlen-maxlen-makes-non-greedy' => [
