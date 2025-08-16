@@ -50,11 +50,11 @@ Rule: ABC AND a AND c required, SubSequence(b) is optional
 
 | First Group | Second Group | Adjacent? | Forbidden? | Reason |
 |-------------|--------------|-----------|------------|---------|
-| `{a:int}` | `{b:int}` | ✓ | ✗ | Both greedy |
-| `{a:int(max=999)}` | `{b:int}` | ✓ | ✓ | First capped (non-greedy) |
-| `{a:int}` | `{b:int(max=999)}` | ✓ | ✓ | Second capped (non-greedy) |
-| `{a:int}` | `Literal("-")` | ✗ | ✓ | Literal breaks adjacency |
-| `{a:int}` | `SubSequence` | ✗ | ✓ | SubSequence breaks adjacency |
+| `{a:int}` | `{b:int}` | ✓ | ✓ | Both greedy - first starves second |
+| `{a:int(max=999)}` | `{b:int}` | ✓ | ✗ | First capped (non-greedy) |
+| `{a:int}` | `{b:int(max=999)}` | ✓ | ✓ | First greedy starves second |
+| `{a:int}` | `Literal("-")` | ✗ | ✗ | Literal breaks adjacency |
+| `{a:int}` | `SubSequence` | ✗ | ✗ | SubSequence breaks adjacency |
 
 **Key Insight**: After normalization (`{a:int}?` → `({a:int})`), the greediness validation only needs to check **direct siblings within sequences**.
 

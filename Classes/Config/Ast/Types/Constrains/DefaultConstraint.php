@@ -27,4 +27,12 @@ class DefaultConstraint implements TypeConstraint
         // Default constraint doesn't modify pattern
         return $basePattern;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function capsGreediness(): bool
+    {
+        return false; // Default constraint doesn't cap greediness
+    }
 }

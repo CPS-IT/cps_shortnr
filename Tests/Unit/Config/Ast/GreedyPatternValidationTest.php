@@ -86,9 +86,8 @@ class GreedyPatternValidationTest extends TestCase
         yield 'int-then-string-forbidden' => ['{id:int}{name:str}'];
         yield 'string-then-int-forbidden' => ['{name:str}{id:int}'];
         
-        // After normalization: {a:int}?{b:int} becomes ({a:int})({b:int}) - should be ALLOWED
-        // These tests should now pass (be allowed) due to SubSequence boundaries
-        // yield 'normalized-optional-groups-now-allowed' => ['{a:int}?{b:int}'];
+        // After normalization: {a:int}?{b:int} becomes ({a:int})({b:int}) - SubSequences break adjacency, so ALLOWED
+        // This is moved to allowedGreedyPatternsProvider since it should be allowed
         
         // Inside same SubSequence - still forbidden
         yield 'forbidden-within-subsequence' => ['PAGE({a:int}{b:int})'];
@@ -128,8 +127,8 @@ class GreedyPatternValidationTest extends TestCase
         // Non-adjacent groups (literal separators)
         yield 'non-adjacent-with-literal' => ['A{a:int}B{b:int}C', 'A123B456C', ['a' => 123, 'b' => 456]];
         
-        // SubSequences break adjacency - these should be allowed after normalization
-        yield 'normalized-optional-groups-allowed' => ['({a:int})({b:int})', '123456', ['a' => 123, 'b' => 456]];
+        // After normalization: {a:int}?{b:int} becomes ({a:int}){b:int} - SubSequence breaks adjacency
+        yield 'normalized-optional-groups-allowed' => ['{a:int}?{b:int}', '123456', ['a' => 123, 'b' => 456]];
         yield 'explicit-subsequences' => ['({a:int})({b:str})', '123abc', ['a' => 123, 'b' => 'abc']];
         yield 'mixed-subsequence-and-required' => ['{a:int}({b:str}){c:int}', '123abc456', ['a' => 123, 'b' => 'abc', 'c' => 456]];
     }
@@ -215,9 +214,9 @@ class GreedyPatternValidationTest extends TestCase
             ['id' => 123, 'name' => 'test']
         ];
         
-        // Complex constraint combinations
+        // Complex constraint combinations - first group capped to prevent starvation
         yield 'mixed-constraint-types' => [
-            '{id:int(min=1, max=999, default=42)}{code:str(minLen=2, maxLen=5)}{flag:int}', 
+            '{id:int(min=1, max=999)}{code:str(minLen=2, maxLen=5)}{flag:int(max=999)}', 
             '123ABC456', 
             ['id' => 123, 'code' => 'ABC', 'flag' => 456]
         ];

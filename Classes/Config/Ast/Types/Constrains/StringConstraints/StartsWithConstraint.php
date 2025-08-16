@@ -44,6 +44,14 @@ class StartsWithConstraint implements TypeConstraint
         return $basePattern;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function capsGreediness(): bool
+    {
+        return false; // StartsWith constraint doesn't cap greediness
+    }
+
     private function unescapeString(string $value): string
     {
         // Remove surrounding quotes if present

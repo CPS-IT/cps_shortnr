@@ -133,6 +133,13 @@ class SubSequenceCascadingTest extends TestCase
             false  // age present but name missing -> entire SubSequence fails
         ];
         
+        // Critical test case: partial SubSequence with trailing content should fail
+        yield 'basic-subsequence-partial-with-trailing' => [
+            'USER({name:str}-{age:int})', 
+            'USERjohn-', 
+            false  // name present but age missing -> entire SubSequence fails
+        ];
+        
         // Multiple elements in SubSequence
         yield 'multi-element-subsequence-complete' => [
             'API(/v{version:int}/users/{id:int})', 

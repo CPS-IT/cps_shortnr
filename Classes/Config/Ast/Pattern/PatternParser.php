@@ -114,7 +114,7 @@ final class PatternParser
         }
 
         // Create group node (always required - optionality handled by SubSequence wrapper)
-        $node = new GroupNode($name, $type, $constraints, false);
+        $node = new GroupNode($name, $type, $constraints);
         $node->setTypeRegistry($this->typeRegistry);
         // Assign group ID
         $node->setGroupId('g' . $this->groupCounter->increaseCounter());

@@ -44,6 +44,14 @@ class ContainsConstraint implements TypeConstraint
         return $basePattern;
     }
 
+    /**
+     * @inheritDoc
+     */
+    public function capsGreediness(): bool
+    {
+        return false; // Contains constraint doesn't cap greediness
+    }
+
     private function unescapeString(string $value): string
     {
         // Remove surrounding quotes if present

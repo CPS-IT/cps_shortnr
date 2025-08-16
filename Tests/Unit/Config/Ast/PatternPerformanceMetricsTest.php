@@ -373,7 +373,7 @@ class PatternPerformanceMetricsTest extends TestCase
 
         yield 'single-vs-multiple-groups' => [
             ['pattern' => '{id:int}', 'input' => '123'],
-            ['pattern' => '{a:int}{b:int}{c:int}{d:int}{e:int}', 'input' => '12345']
+            ['pattern' => '{a:int(max=9)}{b:int(max=9)}{c:int(max=9)}{d:int(max=9)}{e:int}', 'input' => '12345']
         ];
     }
 }

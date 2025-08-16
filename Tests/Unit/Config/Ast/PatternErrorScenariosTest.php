@@ -196,8 +196,7 @@ class PatternErrorScenariosTest extends TestCase
         yield 'forbidden-adjacent-greedy-mixed' => ['{id:int}{name:str}', ShortNrPatternException::class];
         
         // After normalization: {a:int}?{b:int} becomes ({a:int})({b:int}) - should be ALLOWED
-        // This test should be removed or changed to expect success
-        // yield 'forbidden-adjacent-optional-still-greedy' => ['{a:int}?{b:int}', ShortNrPatternException::class];
+        // Removed this test since normalization makes it valid
         
         // Within same SubSequence - still forbidden
         yield 'forbidden-adjacent-within-subsequence' => ['PAGE({a:int}{b:int})', ShortNrPatternException::class];
@@ -208,6 +207,12 @@ class PatternErrorScenariosTest extends TestCase
         yield 'empty-subsequence-single' => ['PAGE()', ShortNrPatternParseException::class];
         yield 'empty-subsequence-with-group' => ['PAGE{id:int}()', ShortNrPatternParseException::class];
         yield 'empty-subsequence-multiple' => ['PAGE(){id:int}()', ShortNrPatternParseException::class];
+        
+        // Default constraint validation - only allowed on optional groups
+        yield 'default-on-required-group' => ['{id:int(default=42)}', ShortNrPatternException::class];
+        
+        // Group name validation - must start with letter
+        yield 'group-name-starts-with-number' => ['{1name:int}', ShortNrPatternException::class];
     }
 
     public static function emptyAndNullInputProvider(): Generator

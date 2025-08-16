@@ -57,11 +57,13 @@ final class IntType extends Type
      */
     public function isGreedy(array $constraints = []): bool
     {
-        // Int is inherently greedy, but constraints can make it non-greedy
-        $basePattern = $this->getPattern();
-        $constrainedPattern = $this->getConstrainedPattern($constraints);
-        
-        // If pattern changed by constraints, it's non-greedy
-        return $basePattern === $constrainedPattern;
+        // Int is inherently greedy (\d+), but delegate to constraints to check if they cap it
+        foreach ($constraints as $constraintName => $constraintValue) {
+            $constraint = $this->getConstraint($constraintName);
+            if ($constraint?->capsGreediness()) {
+                return false; // Any capping constraint makes it non-greedy
+            }
+        }
+        return true; // No capping constraints, remains greedy
     }
 }

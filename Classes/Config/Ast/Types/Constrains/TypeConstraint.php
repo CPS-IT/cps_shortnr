@@ -39,4 +39,12 @@ interface TypeConstraint
      * @return string The modified pattern
      */
     public function modifyPattern(string $basePattern, mixed $constraintValue): string;
+
+    /**
+     * Whether this constraint caps greediness (makes patterns non-greedy).
+     * Used to determine if a type with this constraint should be considered greedy.
+     * 
+     * @return bool True if this constraint caps/limits greediness
+     */
+    public function capsGreediness(): bool;
 }

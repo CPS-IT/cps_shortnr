@@ -47,4 +47,12 @@ class MinConstraint implements TypeConstraint
         // Min constraint doesn't cap/limit pattern width
         return $basePattern;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function capsGreediness(): bool
+    {
+        return false; // Min constraint doesn't cap greediness
+    }
 }

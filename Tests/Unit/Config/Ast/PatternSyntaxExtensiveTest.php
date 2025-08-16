@@ -41,7 +41,7 @@ class PatternSyntaxExtensiveTest extends TestCase
     }
 
     #[DataProvider('adjacentGroupsProvider')]
-    public function testAdjacentGroupsWithoutSeparators(string $pattern, string $input, bool $shouldMatch, array $expectedValues = []): void
+    public function testValidAdjacentGroupPatterns(string $pattern, string $input, bool $shouldMatch, array $expectedValues = []): void
     {
         $compiler = $this->patternBuilder->getPatternCompiler();
         $compiled = $compiler->compile($pattern);
@@ -194,18 +194,22 @@ class PatternSyntaxExtensiveTest extends TestCase
 
     public static function adjacentGroupsProvider(): Generator
     {
-        // Valid adjacent groups - previous group constrained (non-greedy)
-        yield 'two-ints-adjacent-constrained' => ['{a:int(max=999)}{b:int}', '123456', true, ['a' => 123, 'b' => 456]];
-        yield 'int-str-adjacent-constrained' => ['{id:int(max=999)}{name:str}', '123abc', true, ['id' => 123, 'name' => 'abc']];
-        yield 'str-int-adjacent-constrained' => ['{name:str(maxLen=5)}{id:int}', 'abc123', true, ['name' => 'abc', 'id' => 123]];
+        // Valid adjacent groups - first group capped (non-greedy) prevents starvation
+        yield 'two-ints-first-capped' => ['{a:int(max=999)}{b:int}', '123456', true, ['a' => 123, 'b' => 456]];
+        yield 'int-str-first-capped' => ['{id:int(max=999)}{name:str}', '123abc', true, ['id' => 123, 'name' => 'abc']];
+        yield 'str-int-first-capped' => ['{name:str(maxLen=5)}{id:int}', 'abc123', true, ['name' => 'abc', 'id' => 123]];
         
-        // Adjacent with optional - still need constraints to be valid
-        yield 'optional-adjacent-constrained' => ['{a:int(max=999)}{b:int}?', '123456', true, ['a' => 123, 'b' => 456]];
-        yield 'optional-adjacent-minimal' => ['{a:int(max=9)}?{b:int}?', '1', true, ['a' => 1, 'b' => null]];
+        // After normalization: {a:int}?{b:int} becomes ({a:int})({b:int}) - SubSequences break adjacency
+        yield 'normalized-optional-breaks-adjacency' => ['{a:int}?{b:int}', '123456', true, ['a' => 123, 'b' => 456]];
+        yield 'both-normalized-optional' => ['{a:int}?{b:int}?', '123456', true, ['a' => 123, 'b' => 456]];
         
-        // Multiple adjacent groups with proper constraints
-        yield 'three-groups-adjacent-constrained' => ['{a:int(max=9)}{b:int(max=99)}{c:int}', '1234567', true, ['a' => 1, 'b' => 23, 'c' => 4567]];
-        yield 'mixed-types-adjacent-constrained' => ['{id:int(max=999)}{code:str(maxLen=3)}{flag:int}', '123ABC456', true, ['id' => 123, 'code' => 'ABC', 'flag' => 456]];
+        // Chain where each group must be non-greedy to prevent starvation
+        yield 'chain-all-capped' => ['{a:int(max=9)}{b:int(max=99)}{c:int(max=999)}', '1234567', true, ['a' => 1, 'b' => 23, 'c' => 456]];
+        yield 'mixed-types-properly-capped' => ['{id:int(max=999)}{code:str(maxLen=3)}{flag:int(max=99)}', '123ABC45', true, ['id' => 123, 'code' => 'ABC', 'flag' => 45]];
+        
+        // Literal separators break adjacency - any groups allowed
+        yield 'literal-separator-breaks-adjacency' => ['{a:int}-{b:int}', '123-456', true, ['a' => 123, 'b' => 456]];
+        yield 'multiple-literal-separators' => ['{a:int}.{b:str}+{c:int}', '123.abc+456', true, ['a' => 123, 'b' => 'abc', 'c' => 456]];
     }
 
     public static function typeCoercionGenerationProvider(): Generator

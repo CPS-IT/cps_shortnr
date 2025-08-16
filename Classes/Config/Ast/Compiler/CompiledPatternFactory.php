@@ -31,7 +31,7 @@ final class CompiledPatternFactory
 
         $this->extractGroupInfo($ast, $namedGroups, $groupTypes, $groupConstraints);
 
-        $regex = '/^' . str_replace('/', '\\/', $ast->toRegex()) . '$/';
+        $regex = '/^' . $ast->toRegex() . '$/';
 
         return new CompiledPattern(
             $pattern,
@@ -124,6 +124,27 @@ final class CompiledPatternFactory
             foreach ($node->getChildren() as $child) {
                 $this->extractGroupInfo($child, $namedGroups, $groupTypes, $groupConstraints);
             }
+        }
+    }
+
+    private function dumpAstStructure(AstNode $node, int $depth): void {
+        $indent = str_repeat('  ', $depth);
+        if ($node instanceof GroupNode) {
+            echo "{$indent}GroupNode: {$node->getName()} ({$node->getType()}) [greedy=" . ($node->isGreedy() ? 'true' : 'false') . "]\n";
+        } elseif ($node instanceof LiteralNode) {
+            echo "{$indent}LiteralNode: '{$node->getText()}'\n";
+        } elseif ($node instanceof SubSequenceNode) {
+            echo "{$indent}SubSequenceNode:\n";
+            foreach ($node->getChildren() as $child) {
+                $this->dumpAstStructure($child, $depth + 1);
+            }
+        } elseif ($node instanceof SequenceNode) {
+            echo "{$indent}SequenceNode:\n";
+            foreach ($node->getChildren() as $child) {
+                $this->dumpAstStructure($child, $depth + 1);
+            }
+        } else {
+            echo "{$indent}" . get_class($node) . "\n";
         }
     }
 }
