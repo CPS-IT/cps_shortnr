@@ -194,18 +194,18 @@ class PatternSyntaxExtensiveTest extends TestCase
 
     public static function adjacentGroupsProvider(): Generator
     {
-        // Groups immediately next to each other with no separators
-        yield 'two-ints-adjacent' => ['{a:int}{b:int}', '123456', true, ['a' => 123456, 'b' => null]]; // Greedy first match
-        yield 'int-str-adjacent' => ['{id:int}{name:str}', '123abc', true, ['id' => 123, 'name' => 'abc']];
-        yield 'str-int-adjacent' => ['{name:str}{id:int}', 'abc123', true, ['name' => 'abc123', 'id' => null]]; // String is greedy
+        // Valid adjacent groups - previous group constrained (non-greedy)
+        yield 'two-ints-adjacent-constrained' => ['{a:int(max=999)}{b:int}', '123456', true, ['a' => 123, 'b' => 456]];
+        yield 'int-str-adjacent-constrained' => ['{id:int(max=999)}{name:str}', '123abc', true, ['id' => 123, 'name' => 'abc']];
+        yield 'str-int-adjacent-constrained' => ['{name:str(maxLen=5)}{id:int}', 'abc123', true, ['name' => 'abc', 'id' => 123]];
         
-        // Adjacent with some being optional
-        yield 'optional-adjacent-both-present' => ['{a:int}{b:int}?', '123', true, ['a' => 123, 'b' => null]];
-        yield 'optional-adjacent-minimal' => ['{a:int}?{b:int}?', '1', true, ['a' => 1, 'b' => null]];
+        // Adjacent with optional - still need constraints to be valid
+        yield 'optional-adjacent-constrained' => ['{a:int(max=999)}{b:int}?', '123456', true, ['a' => 123, 'b' => 456]];
+        yield 'optional-adjacent-minimal' => ['{a:int(max=9)}?{b:int}?', '1', true, ['a' => 1, 'b' => null]];
         
-        // Multiple adjacent groups
-        yield 'three-groups-adjacent' => ['{a:int}{b:int}{c:int}', '123', true, ['a' => 123, 'b' => null, 'c' => null]];
-        yield 'mixed-types-adjacent' => ['{id:int}{code:str}{flag:int}', '123ABC456', true, ['id' => 123, 'code' => 'ABC456', 'flag' => null]];
+        // Multiple adjacent groups with proper constraints
+        yield 'three-groups-adjacent-constrained' => ['{a:int(max=9)}{b:int(max=99)}{c:int}', '1234567', true, ['a' => 1, 'b' => 23, 'c' => 4567]];
+        yield 'mixed-types-adjacent-constrained' => ['{id:int(max=999)}{code:str(maxLen=3)}{flag:int}', '123ABC456', true, ['id' => 123, 'code' => 'ABC', 'flag' => 456]];
     }
 
     public static function typeCoercionGenerationProvider(): Generator
@@ -253,9 +253,9 @@ class PatternSyntaxExtensiveTest extends TestCase
             ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5]
         ];
         
-        // Many optional groups in sequence
-        yield 'many-optionals' => [
-            '{a:int}?{b:int}?{c:int}?{d:int}?{e:int}?{f:int}?',
+        // Many optional groups in sequence - properly constrained
+        yield 'many-optionals-constrained' => [
+            '{a:int(max=9)}?{b:int(max=9)}?{c:int(max=9)}?{d:int(max=9)}?{e:int(max=9)}?{f:int}?',
             '123456',
             true,
             ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5, 'f' => 6]
@@ -377,6 +377,14 @@ class PatternSyntaxExtensiveTest extends TestCase
             'ITEM123-ABC',
             true,
             ['id' => 123, 'code' => 'ABC', 'version' => 1]
+        ];
+        
+        // Test adjacent groups with mixed constraints - valid under new rules
+        yield 'adjacent-mixed-constraints-valid' => [
+            'ITEM{id:int(max=999)}{code:str(minLen=2, maxLen=5)}',
+            'ITEM123ABC',
+            true,
+            ['id' => 123, 'code' => 'ABC']
         ];
         
         yield 'mixed-types-int-invalid' => [

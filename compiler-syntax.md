@@ -20,6 +20,61 @@ A pattern consists of three main elements:
 
 ### Basic Group Syntax
 
+#### 🔒 Greediness & Adjacency Rules (Sequence-Level Validation)
+
+**Core Rules:**
+1. **Groups are greedy** when their type is greedy by nature (`int`, `str`) **and not capped** by constraints
+2. **No greedy group may follow another greedy group** within the same sequence
+3. **Constraints cap greediness**: `max`, `maxLen` make groups non-greedy  
+4. **SubSequences break adjacency**: Optional sections create sequence boundaries
+
+#### **Sequence Satisfaction Rules**
+
+**Universal Rule**: Every sequence (root or sub) requires **ALL child elements** to be satisfied.
+
+**Exception Mechanism**: **SubSequences are optional** and cascade optionality to all contained elements.
+
+```
+Pattern: ABC{a:int}{b:str}{c:int}
+Sequence: [LiteralNode("ABC"), GroupNode(a), GroupNode(b), GroupNode(c)]  
+Rule: ALL elements must be satisfied → a AND b AND c required
+
+Pattern: ABC{a:int}({b:str}){c:int}  
+Sequence: [LiteralNode("ABC"), GroupNode(a), SubSequence([GroupNode(b)]), GroupNode(c)]
+Rule: ABC AND a AND c required, SubSequence(b) is optional
+```
+
+#### **Greediness Validation Matrix**
+
+**Adjacent Groups in Same Sequence:**
+
+| First Group | Second Group | Adjacent? | Forbidden? | Reason |
+|-------------|--------------|-----------|------------|---------|
+| `{a:int}` | `{b:int}` | ✓ | ✗ | Both greedy |
+| `{a:int(max=999)}` | `{b:int}` | ✓ | ✓ | First capped (non-greedy) |
+| `{a:int}` | `{b:int(max=999)}` | ✓ | ✓ | Second capped (non-greedy) |
+| `{a:int}` | `Literal("-")` | ✗ | ✓ | Literal breaks adjacency |
+| `{a:int}` | `SubSequence` | ✗ | ✓ | SubSequence breaks adjacency |
+
+**Key Insight**: After normalization (`{a:int}?` → `({a:int})`), the greediness validation only needs to check **direct siblings within sequences**.
+
+#### **Constraint-Based Greediness**
+
+**Greedy Types**: `int`, `str` 
+**Capping Constraints**:
+- `int`: `max` (with or without `min`)  
+- `str`: `maxLen` (with or without `minLen`)
+- **Non-capping**: `min`, `minLen`, `default` (keep greediness)
+
+```
+{a:int}              → Greedy
+{a:int(max=999)}     → Non-greedy (capped)
+{a:int(min=1)}       → Greedy (not capped)  
+{a:str}              → Greedy
+{a:str(maxLen=10)}   → Non-greedy (capped)
+{a:str(minLen=3)}    → Greedy (not capped)
+```
+
 ```
 {groupName:type}
 ```
@@ -34,24 +89,34 @@ A pattern consists of three main elements:
 {username:string}   → Captures string as 'username'
 ```
 
-### Optional Groups
+### Optionality Architecture
 
-| Source text               | Optional? | Syntax hint                                      |
-|---------------------------|-----------|--------------------------------------------------|
-| `{id:int}`                | NO        | required group                                   |
-| `{id:int}?`               | YES       | add `?` outside braces                           |
-| `(-{lang:alpha})`         | YES       | parentheses imply optional on ALL inner elements |
+**Core Principle**: Only **SubSequences** handle optionality. Groups are always required within their parent sequence.
+
+| Source text               | AST Representation | Behavior                                      |
+|---------------------------|--------------------|-----------------------------------------------|
+| `{id:int}`                | `GroupNode`        | Required group                                |
+| `{id:int}?`               | `SubSequence(GroupNode)` | Optional single-group subsequence    |
+| `(-{lang:alpha})`         | `SubSequence(LiteralNode, GroupNode)` | Optional multi-element subsequence |
+
+#### **Syntax Normalization**
 
 ```
-{groupName:type}?
+{groupName:type}?  →  ({groupName:type})
 ```
 
-The `?` marker **must be placed after the closing brace** to make a group optional.
+**During parsing**, `{id:int}?` is **automatically normalized** to `({id:int})` - a SubSequence containing a single GroupNode.
+
+**Benefits:**
+- **Single Responsibility**: Only SubSequence handles optional logic
+- **Consistent Processing**: All groups are always required within their sequence
+- **Simplified Validation**: One optionality mechanism to validate
 
 **Examples:**
 ```
-{lang:alpha}?      → Optional language code
-{version:int}?     → Optional version number
+{lang:alpha}?      → ({lang:alpha})     // Normalized to SubSequence
+{version:int}?     → ({version:int})    // Normalized to SubSequence
+(-{lang:alpha})    → (-{lang:alpha})    // Already a SubSequence
 ```
 
 ### Groups with Constraints
@@ -68,24 +133,68 @@ Constraints provide additional validation rules for the captured value.
 {code:str(minLen=3, maxLen=10)} → String with length 3-10
 ```
 
-### Optional Sections (SubSequence)
+### SubSequences (Optional Sections)
 
 ```
 (literal and/or groups)
 ```
 
-Entire sections containing literals and/or groups can be made optional using parentheses.
-SubSequence `(` ... `)` don't need a `?` since they by design indicate optional.
+**SubSequences are the only mechanism for optionality** in the pattern system. They create sequence boundaries and handle all optional logic.
 
-**Requirements:**
-- Optional sections **must contain at least one element** (group or literal)
-- Empty subsequences `()` are not allowed and will throw a parsing error
+#### **SubSequence Rules**
 
-**Examples:**
+1. **All-or-Nothing Satisfaction**: ALL children in a SubSequence must be satisfied for the SubSequence to match
+2. **Optional by Nature**: SubSequences don't need `?` markers - they're optional by design  
+3. **Sequence Boundaries**: SubSequences break greediness adjacency between sequences
+4. **Nested Optionality**: SubSequences can contain other SubSequences for complex logic
+
+#### **Syntax Examples**
+
 ```
 PAGE{id:int}(-{lang:alpha})       → "PAGE123" or "PAGE123-en"
 /article/{id:int}(/comments)      → "/article/5" or "/article/5/comments"
+
+// Complex nesting
+{a:int}(-{b:str}(-{c:int}))       → a required, b optional, c optional-if-b
+
+// All-or-nothing within SubSequence  
+USER({name:str}-{age:int})        → Both name AND age required if SubSequence matches
 ```
+
+#### **SubSequence Satisfaction Logic**
+
+```
+Pattern: ABC({x:int}-{y:str}){z:int}
+
+Evaluation:
+1. ABC must match (literal)
+2. SubSequence is optional:
+   - If present: BOTH x AND y must be satisfied  
+   - If absent: SubSequence is skipped
+3. z must match (required group)
+
+Valid inputs: "ABC123", "ABC123-test456" 
+Invalid: "ABC123-456" (y missing within SubSequence)
+```
+
+#### **Parsing Normalization Impact**
+
+Since `{group}?` → `({group})`, all optionality flows through SubSequences:
+
+```
+// Before normalization (user syntax)
+PAGE{id:int}{lang:str}?{version:int}?
+
+// After normalization (AST representation)  
+PAGE{id:int}({lang:str})({version:int})
+
+// Sequence structure
+[LiteralNode("PAGE"), GroupNode(id), SubSequence([GroupNode(lang)]), SubSequence([GroupNode(version)])]
+```
+
+**Requirements:**
+- SubSequences **must contain at least one element** (group or literal)
+- Empty subsequences `()` are not allowed and will throw a parsing error
 
 **Invalid patterns:**
 ```

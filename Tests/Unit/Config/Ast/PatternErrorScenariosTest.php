@@ -189,7 +189,22 @@ class PatternErrorScenariosTest extends TestCase
         yield 'invalid-type' => ['{name:invalidtype}', ShortNrPatternException::class];
         yield 'nested-groups' => ['{outer{inner:int}:str}', ShortNrPatternException::class];
         yield 'malformed-constraints' => ['{name:int(min=)}', ShortNrPatternException::class];
-        yield 'duplicate-group-names' => ['{id:int}{id:str}', ShortNrPatternException::class];
+        yield 'duplicate-group-names' => ['{id:int}-{id:str}', ShortNrPatternException::class];
+        
+        // Greediness rule violations - should throw parse exceptions
+        yield 'forbidden-adjacent-greedy-groups' => ['{a:int}{b:int}', ShortNrPatternException::class];
+        yield 'forbidden-adjacent-greedy-mixed' => ['{id:int}{name:str}', ShortNrPatternException::class];
+        
+        // After normalization: {a:int}?{b:int} becomes ({a:int})({b:int}) - should be ALLOWED
+        // This test should be removed or changed to expect success
+        // yield 'forbidden-adjacent-optional-still-greedy' => ['{a:int}?{b:int}', ShortNrPatternException::class];
+        
+        // Within same SubSequence - still forbidden
+        yield 'forbidden-adjacent-within-subsequence' => ['PAGE({a:int}{b:int})', ShortNrPatternException::class];
+        
+        // Additional architectural validation errors
+        yield 'empty-subsequence-forbidden' => ['PAGE()', ShortNrPatternParseException::class];
+        yield 'nested-empty-subsequence-forbidden' => ['PAGE{id:int}()', ShortNrPatternParseException::class];
         yield 'empty-subsequence-single' => ['PAGE()', ShortNrPatternParseException::class];
         yield 'empty-subsequence-with-group' => ['PAGE{id:int}()', ShortNrPatternParseException::class];
         yield 'empty-subsequence-multiple' => ['PAGE(){id:int}()', ShortNrPatternParseException::class];

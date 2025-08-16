@@ -84,6 +84,8 @@ This Extension is a component that will be used on *MANY!* websites which have d
 ./docker.sh exec /var/www/html/.Build/bin/phpunit --filter="methodName"
 ```
 
+THERE IS NO VERBOSE IN PHPUNIT dont try to use -v or --verbose flag!
+
 ### Docker Environment
 ```bash
 ./docker.sh up -d          # Start (smart building, auto-start on exec)
