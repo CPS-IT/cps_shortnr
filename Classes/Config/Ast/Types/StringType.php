@@ -51,15 +51,7 @@ final class StringType extends Type
      */
     public function isGreedy(array $constraints = []): bool
     {
-        // String is inherently greedy ([^/]+), but delegate to constraints to check if they cap it
-        foreach ($constraints as $constraintName => $constraintValue) {
-            $constraint = $this->getConstraint($constraintName);
-            if ($constraint?->capsGreediness()) {
-                // DEBUG: Show when non-greedy due to constraint
-                // var_dump("StringType made non-greedy by constraint: $constraintName");
-                return false; // Any capping constraint makes it non-greedy
-            }
-        }
-        return true; // No capping constraints, remains greedy
+        // v1.0: String type is always greedy, constraints don't affect greediness
+        return true;
     }
 }

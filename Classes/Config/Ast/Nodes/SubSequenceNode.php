@@ -23,9 +23,15 @@ final class SubSequenceNode extends SequenceNode
         // Check if any group in this optional section has a value
         $hasAnyValue = false;
         foreach ($this->children as $child) {
-            if ($child instanceof GroupNode && isset($values[$child->getName()])) {
-                $hasAnyValue = true;
-                break;
+            // Check if child has group names (indicates it's a GroupNode)
+            $groupNames = $child->getGroupNames();
+            if (!empty($groupNames)) {
+                foreach ($groupNames as $groupName) {
+                    if (isset($values[$groupName])) {
+                        $hasAnyValue = true;
+                        break 2;
+                    }
+                }
             }
         }
 

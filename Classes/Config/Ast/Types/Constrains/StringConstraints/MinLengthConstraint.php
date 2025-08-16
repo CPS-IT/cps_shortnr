@@ -41,20 +41,7 @@ class MinLengthConstraint implements TypeConstraint
 
     public function modifyPattern(string $basePattern, mixed $constraintValue): string
     {
-        var_dump("MinLengthConstraint::modifyPattern - basePattern: $basePattern, constraintValue: $constraintValue");
-        
-        // Modify pattern to enforce minimum length if pattern has bounds
-        if (preg_match('/\{(\d+),(\d+)\}([?]?)$/', $basePattern, $matches)) {
-            var_dump("MinLength regex matches:", $matches);
-            $currentMin = $matches[1]; 
-            $maxLen = $matches[2];
-            $nonGreedy = $matches[3] ?? '';
-            $minLen = max((int)$constraintValue, (int)$currentMin);
-            $result = preg_replace('/\{\d+,\d+\}[?]?$/', '{' . $minLen . ',' . $maxLen . '}' . $nonGreedy, $basePattern);
-            var_dump("MinLength result: $result");
-            return $result;
-        }
-        var_dump("MinLength no match, returning: $basePattern");
+        // v1.0: Constraints don't modify patterns, validation-only
         return $basePattern;
     }
 

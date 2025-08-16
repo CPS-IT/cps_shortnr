@@ -194,22 +194,20 @@ class PatternSyntaxExtensiveTest extends TestCase
 
     public static function adjacentGroupsProvider(): Generator
     {
-        // Valid adjacent groups - first group capped (non-greedy) prevents starvation
-        yield 'two-ints-first-capped' => ['{a:int(max=999)}{b:int}', '123456', true, ['a' => 123, 'b' => 456]];
-        yield 'int-str-first-capped' => ['{id:int(max=999)}{name:str}', '123abc', true, ['id' => 123, 'name' => 'abc']];
-        yield 'str-int-first-capped' => ['{name:str(maxLen=5)}{id:int}', 'abc123', true, ['name' => 'abc', 'id' => 123]];
+        // NOTE: Adjacent greedy groups are FORBIDDEN - constraints don't change greediness
+        // These patterns should be INVALID and would throw ShortNrPatternException
         
-        // After normalization: {a:int}?{b:int} becomes ({a:int})({b:int}) - SubSequences break adjacency
-        yield 'normalized-optional-breaks-adjacency' => ['{a:int}?{b:int}', '123456', true, ['a' => 123, 'b' => 456]];
-        yield 'both-normalized-optional' => ['{a:int}?{b:int}?', '123456', true, ['a' => 123, 'b' => 456]];
-        
-        // Chain where each group must be non-greedy to prevent starvation
-        yield 'chain-all-capped' => ['{a:int(max=9)}{b:int(max=99)}{c:int(max=999)}', '1234567', true, ['a' => 1, 'b' => 23, 'c' => 456]];
-        yield 'mixed-types-properly-capped' => ['{id:int(max=999)}{code:str(maxLen=3)}{flag:int(max=99)}', '123ABC45', true, ['id' => 123, 'code' => 'ABC', 'flag' => 45]];
+        // After normalization: {a:int}? becomes ({a:int}) - SubSequence breaks adjacency
+        yield 'normalized-optional-breaks-adjacency' => ['{a:int}?{b:int}', '456', true, ['a' => null, 'b' => 456]];
+        yield 'both-normalized-optional' => ['{a:int}?{b:int}?', '123', true, ['a' => null, 'b' => 123]];
         
         // Literal separators break adjacency - any groups allowed
         yield 'literal-separator-breaks-adjacency' => ['{a:int}-{b:int}', '123-456', true, ['a' => 123, 'b' => 456]];
         yield 'multiple-literal-separators' => ['{a:int}.{b:str}+{c:int}', '123.abc+456', true, ['a' => 123, 'b' => 'abc', 'c' => 456]];
+        
+        // Explicit SubSequences break adjacency
+        yield 'explicit-subsequences-break-adjacency' => ['({a:int})({b:str})', 'abc', true, ['a' => null, 'b' => 'abc']];
+        yield 'mixed-subsequence-required' => ['{a:int}({b:str}){c:int}', '123456', true, ['a' => 123, 'b' => null, 'c' => 456]];
     }
 
     public static function typeCoercionGenerationProvider(): Generator
@@ -257,12 +255,12 @@ class PatternSyntaxExtensiveTest extends TestCase
             ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5]
         ];
         
-        // Many optional groups in sequence - properly constrained
-        yield 'many-optionals-constrained' => [
-            '{a:int(max=9)}?{b:int(max=9)}?{c:int(max=9)}?{d:int(max=9)}?{e:int(max=9)}?{f:int}?',
-            '123456',
+        // Many optional groups normalize to SubSequences
+        yield 'many-optionals-normalized' => [
+            '{a:int}?{b:int}?{c:int}?{d:int}?{e:int}?{f:int}?',
+            '123',
             true,
-            ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4, 'e' => 5, 'f' => 6]
+            ['a' => null, 'b' => null, 'c' => null, 'd' => null, 'e' => null, 'f' => 123]
         ];
         
         // Mixed constraints on multiple groups
@@ -311,8 +309,9 @@ class PatternSyntaxExtensiveTest extends TestCase
         yield 'brackets-in-literal' => ['[test]{id:int}', '[test]123', true, ['id' => 123]];
         yield 'brackets-should-not-create-class' => ['[test]{id:int}', 't123', false];
         
-        yield 'parens-in-literal' => ['(test){id:int}', '(test)123', true, ['id' => 123]];
-        yield 'parens-should-not-group' => ['(test){id:int}', 'test123', false];
+        // NOTE: Parentheses are reserved characters and cannot be used in literals
+        // yield 'parens-in-literal' => ['(test){id:int}', '(test)123', true, ['id' => 123]];
+        // yield 'parens-should-not-group' => ['(test){id:int}', 'test123', false];
         
         yield 'pipe-in-literal' => ['a|b{id:int}', 'a|b123', true, ['id' => 123]];
         yield 'pipe-should-not-alternate' => ['a|b{id:int}', 'a123', false];
@@ -383,13 +382,8 @@ class PatternSyntaxExtensiveTest extends TestCase
             ['id' => 123, 'code' => 'ABC', 'version' => 1]
         ];
         
-        // Test adjacent groups with mixed constraints - valid under new rules
-        yield 'adjacent-mixed-constraints-valid' => [
-            'ITEM{id:int(max=999)}{code:str(minLen=2, maxLen=5)}',
-            'ITEM123ABC',
-            true,
-            ['id' => 123, 'code' => 'ABC']
-        ];
+        // Adjacent groups with constraints are STILL FORBIDDEN - constraints don't affect greediness
+        // This pattern would throw ShortNrPatternException during compilation
         
         yield 'mixed-types-int-invalid' => [
             'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}?',

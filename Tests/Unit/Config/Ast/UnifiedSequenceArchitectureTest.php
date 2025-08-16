@@ -150,21 +150,21 @@ class UnifiedSequenceArchitectureTest extends TestCase
         ];
         
         yield 'multiple-optional-groups-normalized' => [
-            'USER{name:str}?{age:int}?', 
-            'USERjohn25', 
-            ['name' => 'john', 'age' => 25]
+            'USER-{name:str}?-{age:int}?', 
+            'USER--25', 
+            ['name' => null, 'age' => 25]
         ];
         
         yield 'mixed-required-optional-normalized' => [
-            'PAGE{id:int}{lang:str}?{version:int}', 
-            'PAGE123en456', 
-            ['id' => 123, 'lang' => 'en', 'version' => 456]
+            'PAGE{id:int}-{lang:str}?-{version:int}', 
+            'PAGE123--456', 
+            ['id' => 123, 'lang' => null, 'version' => 456]
         ];
         
         yield 'mixed-required-optional-some-missing-normalized' => [
-            'PAGE{id:int}{lang:str}?{version:int}', 
-            'PAGE123456', 
-            ['id' => 123, 'lang' => null, 'version' => 456]
+            'PAGE{id:int}-{lang:str}?-{version:int}', 
+            'PAGE123-en-456', 
+            ['id' => 123, 'lang' => 'en', 'version' => 456]
         ];
     }
 
@@ -337,10 +337,12 @@ class UnifiedSequenceArchitectureTest extends TestCase
         yield 'allowed-normalized-optional-groups' => ['{a:int}?{b:int}?', true]; // Becomes ({a:int})({b:int})
         yield 'allowed-explicit-subsequences' => ['({a:int})({b:int})', true];
         yield 'allowed-literal-separator' => ['{a:int}-{b:int}', true];
-        yield 'allowed-constrained-first' => ['{a:int(max=999)}{b:int}', true];
         
-        // Mixed scenarios
-        yield 'allowed-complex-mixed' => ['{a:int}?-{b:int(max=999)}{c:str}', true]; // ({a:int})-{b:int(max=999)}{c:str}
+        // CONSTRAINTS DON'T AFFECT GREEDINESS - these are still forbidden
+        yield 'forbidden-constrained-still-adjacent' => ['{a:int(max=999)}{b:int}', false];
+        
+        // Mixed scenarios - this one is forbidden because {b:int}{c:str} are adjacent
+        yield 'forbidden-subsequence-then-adjacent' => ['{a:int}?-{b:int}{c:str}', false];
     }
 
     public static function complexSequenceHierarchyProvider(): Generator

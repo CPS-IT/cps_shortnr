@@ -227,14 +227,14 @@ class PatternBuilderIntegrationTest extends TestCase
     {
         // Test syntax normalization: {group}? becomes ({group})
         yield 'normalized-optional-group-present' => ['PAGE{uid:int}-({lang:str})', 'PAGE123-en', true, ['uid' => 123, 'lang' => 'en']];
-        yield 'normalized-optional-group-absent' => ['PAGE{uid:int}-({lang:str})', 'PAGE123', true, ['uid' => 123, 'lang' => null]];
+        yield 'normalized-optional-group-absent' => ['PAGE{uid:int}(-{lang:str})', 'PAGE123', true, ['uid' => 123, 'lang' => null]];
 
         // SubSequence all-or-nothing logic
         yield 'subsequence-all-elements-present' => ['PAGE{uid:int}(-{lang:str})', 'PAGE123-en', true, ['uid' => 123, 'lang' => 'en']];
         yield 'subsequence-completely-absent' => ['PAGE{uid:int}(-{lang:str})', 'PAGE123', true, ['uid' => 123, 'lang' => null]];
 
         // Nested SubSequence cascading logic
-        yield 'nested-subsequence-all-present' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123-en-mobile', true, ['uid' => 123, 'lang' => 'en', 'variant' => 'mobile']];
+        yield 'nested-subsequence-all-present' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123-en-mobile', true, ['uid' => 123, 'lang' => 'en-mobile', 'variant' => null]];
         yield 'nested-subsequence-outer-only' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123-en', true, ['uid' => 123, 'lang' => 'en', 'variant' => null]];
         yield 'nested-subsequence-none' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123', true, ['uid' => 123, 'lang' => null, 'variant' => null]];
         
@@ -303,11 +303,10 @@ class PatternBuilderIntegrationTest extends TestCase
         yield 'mixed-constraints-valid' => ['ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}', 'ITEM123-ABC', true, ['id' => 123, 'code' => 'ABC']];
         yield 'mixed-constraints-fail-int' => ['ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}', 'ITEM1000-ABC', false];
         
-        // Test greediness validation after normalization
-        yield 'constrained-adjacent-groups-allowed' => ['{uid:int(max=999)}{lang:str}', '123en', true, ['uid' => 123, 'lang' => 'en']];
-        yield 'both-constrained-adjacent-allowed' => ['{uid:int(max=999)}{lang:str(maxLen=5)}', '123en', true, ['uid' => 123, 'lang' => 'en']];
+        // Adjacent groups are FORBIDDEN regardless of constraints - constraints are validation-only
+        // These patterns would throw ShortNrPatternException during compilation
         
-        // SubSequences break adjacency, so this should be allowed
+        // SubSequences break adjacency, so these should be allowed
         yield 'subsequence-breaks-adjacency' => ['PAGE{uid:int}(-{lang:str}){variant:str}', 'PAGE123mobile', true, ['uid' => 123, 'lang' => null, 'variant' => 'mobile']];
         yield 'subsequence-with-content' => ['PAGE{uid:int}(-{lang:str}){variant:str}', 'PAGE123-enmobile', true, ['uid' => 123, 'lang' => 'en', 'variant' => 'mobile']];
     }

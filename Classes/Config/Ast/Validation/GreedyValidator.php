@@ -2,10 +2,10 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Validation;
 
-use CPSIT\ShortNr\Config\Ast\Nodes\AstNode;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Nodes\GroupNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\LiteralNode;
-use CPSIT\ShortNr\Config\Ast\Nodes\NestedAstNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 
@@ -18,17 +18,17 @@ use CPSIT\ShortNr\Exception\ShortNrPatternException;
  * 3. SubSequences break adjacency
  * 4. Constrained (non-greedy) groups can be adjacent to greedy groups
  */
-final class GreedyValidator
+final class GreedyValidator implements ValidatorInterface
 {
-    public function validate(AstNode $rootNode): void
+    public function validate(AstNodeInterface $rootNode): void
     {
         $this->validateNode($rootNode);
     }
 
-    private function validateNode(AstNode $node): void
+    private function validateNode(AstNodeInterface $node): void
     {
         // Recursively validate children first
-        if ($node instanceof NestedAstNode) {
+        if ($node instanceof NestedNodeInterface) {
             foreach ($node->getChildren() as $child) {
                 $this->validateNode($child);
             }
@@ -39,7 +39,7 @@ final class GreedyValidator
     }
 
     /**
-     * @param AstNode[] $children
+     * @param AstNodeInterface[] $children
      */
     private function validateSequence(array $children): void
     {

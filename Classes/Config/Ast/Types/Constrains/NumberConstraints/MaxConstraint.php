@@ -44,14 +44,8 @@ class MaxConstraint implements TypeConstraint
      */
     public function modifyPattern(string $basePattern, mixed $constraintValue): string
     {
-        // Convert greedy \d+ to bounded greedy \d{1,n} based on max value
-        if ($basePattern === '\d+') {
-            $maxValue = (int)$constraintValue;
-            $maxDigits = strlen((string)$maxValue);
-            return '\d{1,' . $maxDigits . '}'; // Bounded but still greedy within bounds
-        }
-        
-        return $basePattern; // No modification for other patterns
+        // v1.0: Constraints don't modify patterns, validation-only
+        return $basePattern;
     }
 
     /**

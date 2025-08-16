@@ -2,17 +2,18 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes;
 
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternCompilationException;
 
-abstract class NestedAstNode extends NamedAstNode
+abstract class NestedAstNode extends NamedAstNode implements NestedNodeInterface
 {
-    /** @var AstNode[] */
+    /** @var AstNodeInterface[] */
     protected array $children = [];
 
-    public function addChild(AstNode $node): void
+    public function addChild(AstNodeInterface $node): void
     {
-        // Only set parent if not already set to prevent double assignment
         if ($node->getParent() === null) {
             $node->setParent($this);
         }
@@ -70,7 +71,7 @@ abstract class NestedAstNode extends NamedAstNode
         return $node;
     }
 
-    private static function createNodeFromArray(array $data, ?TypeRegistry $typeRegistry = null): AstNode
+    private static function createNodeFromArray(array $data, ?TypeRegistry $typeRegistry = null): AstNodeInterface
     {
         return match ($data['type']) {
             'literal' => LiteralNode::fromArray($data),

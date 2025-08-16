@@ -5,30 +5,23 @@ namespace CPSIT\ShortNr\Config\Ast\Pattern;
 use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPatternFactory;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
-use CPSIT\ShortNr\Config\Ast\Validation\GreedyValidator;
+use CPSIT\ShortNr\Config\Ast\Validation\ValidatorInterface;
 
 final class PatternCompiler
-{private CompiledPatternFactory $factory;
-
+{
     public function __construct(
-        private readonly TypeRegistry $typeRegistry
-    ) {
-        $this->factory = new CompiledPatternFactory($typeRegistry);
-    }
+        private readonly TypeRegistry $typeRegistry,
+        private readonly CompiledPatternFactory $factory,
+        private readonly ValidatorInterface $validator
+    ) {}
 
-    /**
-     * Compile a pattern with caching support
-     */
     public function compile(string $pattern): CompiledPattern
     {
-        // Parse and compile
+        // Parse
         $astRootNode = (new PatternParser($this->typeRegistry, $pattern))->parse();
         
-        // Validate tree context after all parent-child relationships are established
-        $astRootNode->validateEntireTree();
-        
-        // Validate greediness rules
-        (new GreedyValidator())->validate($astRootNode);
+        // Validate using injected validator pipeline
+        $this->validator->validate($astRootNode);
         
         // Create compiled pattern
         return $this->factory->create($pattern, $astRootNode);

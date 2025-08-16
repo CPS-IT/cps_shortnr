@@ -44,13 +44,8 @@ class MaxLengthConstraint implements TypeConstraint
      */
     public function modifyPattern(string $basePattern, mixed $constraintValue): string
     {
-        // Convert greedy [^\/]+ to bounded non-greedy [^\/]{1,n}? for better adjacent group handling
-        if ($basePattern === '[^\/]+') {
-            $maxLen = (int)$constraintValue;
-            return '[^\/]{1,' . $maxLen . '}?'; // Non-greedy to prevent overconsumption
-        }
-        
-        return $basePattern; // No modification for other patterns
+        // v1.0: Constraints don't modify patterns, validation-only
+        return $basePattern;
     }
 
     /**

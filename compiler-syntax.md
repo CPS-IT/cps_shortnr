@@ -23,9 +23,9 @@ A pattern consists of three main elements:
 #### 🔒 Greediness & Adjacency Rules (Sequence-Level Validation)
 
 **Core Rules:**
-1. **Groups are greedy** when their type is greedy by nature (`int`, `str`) **and not capped** by constraints
+1. **Groups are greedy** when their type is greedy by nature (`int`, `str`)
 2. **No greedy group may follow another greedy group** within the same sequence
-3. **Constraints cap greediness**: `max`, `maxLen` make groups non-greedy  
+3. **Constraints do NOT affect greediness**: Constraints are for validation only, not regex pattern generation
 4. **SubSequences break adjacency**: Optional sections create sequence boundaries
 
 #### **Sequence Satisfaction Rules**
@@ -51,28 +51,36 @@ Rule: ABC AND a AND c required, SubSequence(b) is optional
 | First Group | Second Group | Adjacent? | Forbidden? | Reason |
 |-------------|--------------|-----------|------------|---------|
 | `{a:int}` | `{b:int}` | ✓ | ✓ | Both greedy - first starves second |
-| `{a:int(max=999)}` | `{b:int}` | ✓ | ✗ | First capped (non-greedy) |
-| `{a:int}` | `{b:int(max=999)}` | ✓ | ✓ | First greedy starves second |
+| `{a:int(max=999)}` | `{b:int}` | ✓ | ✓ | Both still greedy - constraints don't affect greediness |
+| `{a:str}` | `{b:str}` | ✓ | ✓ | Both greedy - first starves second |
+| `{a:str(maxLen=5)}` | `{b:str}` | ✓ | ✓ | Both still greedy - constraints don't affect greediness |
 | `{a:int}` | `Literal("-")` | ✗ | ✗ | Literal breaks adjacency |
 | `{a:int}` | `SubSequence` | ✗ | ✗ | SubSequence breaks adjacency |
 
 **Key Insight**: After normalization (`{a:int}?` → `({a:int})`), the greediness validation only needs to check **direct siblings within sequences**.
 
-#### **Constraint-Based Greediness**
+#### **Greediness Rules (v1.0)**
 
 **Greedy Types**: `int`, `str` 
-**Capping Constraints**:
-- `int`: `max` (with or without `min`)  
-- `str`: `maxLen` (with or without `minLen`)
-- **Non-capping**: `min`, `minLen`, `default` (keep greediness)
+**Constraint Impact**: None - constraints are validation-only
 
 ```
 {a:int}              → Greedy
-{a:int(max=999)}     → Non-greedy (capped)
-{a:int(min=1)}       → Greedy (not capped)  
+{a:int(max=999)}     → Greedy (constraints don't affect greediness)
+{a:int(min=1)}       → Greedy  
 {a:str}              → Greedy
-{a:str(maxLen=10)}   → Non-greedy (capped)
-{a:str(minLen=3)}    → Greedy (not capped)
+{a:str(maxLen=10)}   → Greedy (constraints don't affect greediness)
+{a:str(minLen=3)}    → Greedy
+```
+
+**V1.0 Limitation**: Adjacent greedy groups must be separated by literals or placed in SubSequences.
+
+**Examples of Required Separators**:
+```
+{a:int}-{b:int}           → ✓ Valid (literal separator)
+{a:int}({b:str}){c:int}   → ✓ Valid (SubSequence breaks adjacency)
+{a:int}{b:int}            → ✗ Forbidden (adjacent greedy groups)
+{a:str(maxLen=5)}{b:str}  → ✗ Forbidden (both still greedy)
 ```
 
 ```
@@ -125,7 +133,7 @@ Rule: ABC AND a AND c required, SubSequence(b) is optional
 {groupName:type(constraint1=value1, constraint2=value2)}
 ```
 
-Constraints provide additional validation rules for the captured value.
+Constraints provide additional validation rules for the captured value. **Constraints are validation-only and do not affect regex pattern generation or greediness behavior.**
 
 **Examples:**
 ```
@@ -414,7 +422,7 @@ If used on required groups, a compilation error will be thrown.
 ### Type Constraints
 
 1. **Integer Constraints**
-    - `min` and `max` are validated after regex matching
+    - `min` and `max` are validated after regex matching (not during pattern generation)
     - Large numbers work but are validated as PHP integers
     - Negative numbers require custom type or pattern
     - `default` only works on optional groups (`{name:int}?` or subsequences)
@@ -422,7 +430,7 @@ If used on required groups, a compilation error will be thrown.
 2. **String Constraints**
     - Default pattern excludes forward slashes `/`
     - Use custom `pattern` constraint for specific formats
-    - Length constraints are applied at regex level
+    - **v1.0**: Length constraints are validation-only (not applied at regex level)
     - `default` only works on optional groups (`{name:str}?` or subsequences)
 
 3. **Default Constraint Rules**

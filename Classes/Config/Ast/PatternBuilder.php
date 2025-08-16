@@ -2,9 +2,11 @@
 
 namespace CPSIT\ShortNr\Config\Ast;
 
+use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPatternFactory;
 use CPSIT\ShortNr\Config\Ast\Heuristic\HeuristicCompiler;
 use CPSIT\ShortNr\Config\Ast\Pattern\PatternCompiler;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
+use CPSIT\ShortNr\Config\Ast\Validation\ValidationPipelineFactory;
 
 final class PatternBuilder
 {
@@ -17,7 +19,11 @@ final class PatternBuilder
 
     public function getPatternCompiler(): PatternCompiler
     {
-        return $this->patternCompiler ??= new PatternCompiler($this->typeRegistry);
+        return $this->patternCompiler ??= new PatternCompiler(
+            $this->typeRegistry,
+            new CompiledPatternFactory($this->typeRegistry),
+            (new ValidationPipelineFactory())->create()
+        );
     }
 
     public function getHeuristicCompiler(): HeuristicCompiler

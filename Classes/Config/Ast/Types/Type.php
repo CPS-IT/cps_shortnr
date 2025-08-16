@@ -113,9 +113,28 @@ abstract class Type implements TypeInterface
     {
         $pattern = $this->getPattern();
         
-        // Let each constraint modify the pattern
+        // Apply constraints in a specific order to handle dependencies
+        // First apply constraints that establish bounds (maxLen, max)
+        $boundingConstraints = ['max', 'maxLen'];
+        $refinementConstraints = ['min', 'minLen'];
+        
+        foreach ($boundingConstraints as $name) {
+            if (isset($constraints[$name])) {
+                $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $constraints[$name]) ?? $pattern;
+            }
+        }
+        
+        foreach ($refinementConstraints as $name) {
+            if (isset($constraints[$name])) {
+                $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $constraints[$name]) ?? $pattern;
+            }
+        }
+        
+        // Apply any remaining constraints
         foreach ($constraints as $name => $cValue) {
-            $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $cValue) ?? $pattern;
+            if (!in_array($name, array_merge($boundingConstraints, $refinementConstraints))) {
+                $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $cValue) ?? $pattern;
+            }
         }
         
         return $pattern;
