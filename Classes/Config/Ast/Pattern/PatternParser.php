@@ -67,7 +67,7 @@ final class PatternParser
         return $this->parseLiteral();
     }
 
-    private function parseGroup(): GroupNode
+    private function parseGroup(): AstNode
     {
         $start = $this->pos;
         $this->pos++; // Skip {
@@ -95,13 +95,6 @@ final class PatternParser
             throw new ShortNrPatternParseException("Unclosed group", $this->pattern, $start);
         }
 
-        // Check for optional marker (for groups, we still support the ? marker)
-        $optional = false;
-        if ($this->pos < strlen($this->pattern) && $this->pattern[$this->pos] === '?') {
-            $optional = true;
-            $this->pos++;
-        }
-
         // Parse group content
         if (!preg_match('/^([a-zA-Z_][a-zA-Z0-9_]*):([a-zA-Z]+)(?:\(([^)]+)\))?$/', $content, $matches)) {
             throw new ShortNrPatternParseException("Invalid group syntax: $content", $this->pattern, $start);
@@ -120,10 +113,19 @@ final class PatternParser
             );
         }
 
-        $node = new GroupNode($name, $type, $constraints, $optional);
+        // Create group node (always required - optionality handled by SubSequence wrapper)
+        $node = new GroupNode($name, $type, $constraints, false);
         $node->setTypeRegistry($this->typeRegistry);
         // Assign group ID
         $node->setGroupId('g' . $this->groupCounter->increaseCounter());
+
+        // Syntax normalization: {group}? → ({group})
+        if ($this->pos < strlen($this->pattern) && $this->pattern[$this->pos] === '?') {
+            $this->pos++;
+            $subSequence = new SubSequenceNode();
+            $subSequence->addChild($node);
+            return $subSequence;
+        }
 
         return $node;
     }

@@ -5,6 +5,7 @@ namespace CPSIT\ShortNr\Config\Ast\Pattern;
 use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPatternFactory;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
+use CPSIT\ShortNr\Config\Ast\Validation\GreedyValidator;
 
 final class PatternCompiler
 {private CompiledPatternFactory $factory;
@@ -25,6 +26,9 @@ final class PatternCompiler
         
         // Validate tree context after all parent-child relationships are established
         $astRootNode->validateEntireTree();
+        
+        // Validate greediness rules
+        (new GreedyValidator())->validate($astRootNode);
         
         // Create compiled pattern
         return $this->factory->create($pattern, $astRootNode);

@@ -38,4 +38,19 @@ class MaxConstraint implements TypeConstraint
         // Validation happens during parsing, just return the value for serialization
         return $value;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    {
+        // Convert greedy \d+ to limited width \d{1,n} based on max value
+        if ($basePattern === '\d+') {
+            $maxValue = (int)$constraintValue;
+            $maxDigits = strlen((string)$maxValue);
+            return '\d{1,' . $maxDigits . '}';
+        }
+        
+        return $basePattern; // No modification for other patterns
+    }
 }

@@ -48,35 +48,12 @@ abstract class AstNode
     }
 
     /**
-     * Check if this node is effectively optional by examining the tree context.
-     * A node is effectively optional if:
-     * 1. It's locally optional (e.g., {name:type}? or SubSequence)
-     * 2. Any ancestor node is optional
+     * Check if this node is optional by delegating to parent.
+     * SubSequenceNode overrides this to return true.
      */
-    public function isEffectivelyOptional(): bool
+    public function isOptional(): bool
     {
-        $current = $this;
-        $depth = 0;
-        $maxDepth = 20; // Safety limit for tree walking
-        
-        while ($current && $depth < $maxDepth) {
-            if ($current->isLocallyOptional()) {
-                return true;
-            }
-            $current = $current->parent;
-            $depth++;
-        }
-        
-        return false;
-    }
-
-    /**
-     * Check if this specific node is locally optional (not considering parents).
-     * Subclasses should override this to define their optionality rules.
-     */
-    protected function isLocallyOptional(): bool
-    {
-        return false; // Most nodes are not optional by default
+        return $this->parent?->isOptional() ?? false;
     }
 
     /**
@@ -126,8 +103,13 @@ abstract class AstNode
 
     /**
      * Check if this node contains optional elements.
+     * Default implementation for leaf nodes - they don't contain other elements.
+     * Container nodes override this to check their children.
      */
-    abstract public function hasOptional(): bool;
+    public function hasOptional(): bool
+    {
+        return false;
+    }
 
     /**
      * Convert this node to array for serialization.

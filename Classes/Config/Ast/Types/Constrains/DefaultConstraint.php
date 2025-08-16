@@ -21,4 +21,10 @@ class DefaultConstraint implements TypeConstraint
         // For serialization, use the actual value (defaults handled during parsing)
         return $value;
     }
+
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    {
+        // Default constraint doesn't modify pattern
+        return $basePattern;
+    }
 }

@@ -105,4 +105,33 @@ abstract class Type implements TypeInterface
     {
         return $this->characterClasses;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function getConstrainedPattern(array $constraints = []): string
+    {
+        $pattern = $this->getPattern();
+        
+        // Let each constraint modify the pattern
+        foreach ($constraints as $name => $cValue) {
+            $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $cValue) ?? $pattern;
+        }
+        
+        return $pattern;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function isGreedy(array $constraints = []): bool
+    {
+        // Check if any constraint is capping (modifies the pattern from base)
+        $basePattern = $this->getPattern();
+        $constrainedPattern = $this->getConstrainedPattern($constraints);
+        
+        // If pattern changed, it's been capped and is non-greedy
+        // If pattern unchanged, return false by default (most types are not greedy)
+        return false;
+    }
 }

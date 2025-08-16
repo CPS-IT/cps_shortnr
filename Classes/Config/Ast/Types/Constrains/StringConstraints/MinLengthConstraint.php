@@ -38,4 +38,10 @@ class MinLengthConstraint implements TypeConstraint
         // Validation happens during parsing, just return the value for serialization
         return $value;
     }
+
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    {
+        // MinLen doesn't cap pattern width, just validates minimum
+        return $basePattern;
+    }
 }

@@ -50,9 +50,12 @@ final class SubSequenceNode extends SequenceNode
         return true;
     }
 
-    protected function isLocallyOptional(): bool
+    /**
+     * SubSequence nodes are always optional - this breaks the parent delegation chain
+     */
+    public function isOptional(): bool
     {
-        return true; // SubSequence nodes are always optional
+        return true;
     }
 
     public function validateTreeContext(): void

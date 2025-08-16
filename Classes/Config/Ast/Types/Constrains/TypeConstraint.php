@@ -29,4 +29,14 @@ interface TypeConstraint
      * @return mixed
      */
     public function serialize(mixed $value, string $constraintValue): mixed;
+
+    /**
+     * Modify the regex pattern based on this constraint.
+     * Return the original pattern if no modification needed.
+     * 
+     * @param string $basePattern The base regex pattern from the type
+     * @param mixed $constraintValue The constraint parameter value
+     * @return string The modified pattern
+     */
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string;
 }

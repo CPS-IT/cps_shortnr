@@ -38,6 +38,12 @@ class EndsWithConstraint implements TypeConstraint
         return $value;
     }
 
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    {
+        // This constraint doesn't modify pattern width
+        return $basePattern;
+    }
+
     private function unescapeString(string $value): string
     {
         // Remove surrounding quotes if present

@@ -38,4 +38,18 @@ class MaxLengthConstraint implements TypeConstraint
         // Validation happens during parsing, just return the value for serialization
         return $value;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    {
+        // Convert greedy [^/]+ to limited width [^/]{1,n} based on maxLen value
+        if ($basePattern === '[^/]+') {
+            $maxLen = (int)$constraintValue;
+            return '[^/]{1,' . $maxLen . '}';
+        }
+        
+        return $basePattern; // No modification for other patterns
+    }
 }

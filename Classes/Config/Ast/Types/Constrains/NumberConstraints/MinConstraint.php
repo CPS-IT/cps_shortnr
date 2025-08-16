@@ -38,4 +38,13 @@ class MinConstraint implements TypeConstraint
         // Validation happens during parsing, just return the value for serialization
         return $value;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    {
+        // Min constraint doesn't cap/limit pattern width
+        return $basePattern;
+    }
 }

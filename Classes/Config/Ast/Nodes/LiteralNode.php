@@ -28,11 +28,6 @@ final class LiteralNode extends NamedAstNode
         return [];
     }
 
-    public function hasOptional(): bool
-    {
-        return false;
-    }
-
     public function getText(): string
     {
         return $this->text;

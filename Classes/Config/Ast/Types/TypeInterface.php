@@ -42,4 +42,16 @@ interface TypeInterface
      * Get character classes used by this type (for heuristic building).
      */
     public function getCharacterClasses(): array;
+
+    /**
+     * Get regex pattern with constraints applied.
+     * Returns non-greedy patterns when capping constraints are present.
+     */
+    public function getConstrainedPattern(array $constraints = []): string;
+
+    /**
+     * Check if this type with given constraints is greedy.
+     * Greedy types consume as much as possible unless capped by constraints.
+     */
+    public function isGreedy(array $constraints = []): bool;
 }

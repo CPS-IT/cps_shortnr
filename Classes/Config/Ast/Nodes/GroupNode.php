@@ -16,8 +16,7 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
     public function __construct(
         private readonly string $name,
         private readonly string $type,
-        private readonly array $constraints = [],
-        private readonly bool $optional = false
+        private readonly array $constraints = []
     ) {
         // Note: Validation moved to validateTreeContext() which is called after tree construction
     }
@@ -28,7 +27,7 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
      */
     public function validateTreeContext(): void
     {
-        if (!$this->isEffectivelyOptional() && isset($this->constraints['default'])) {
+        if (!$this->isOptional() && isset($this->constraints['default'])) {
             $defaultValue = $this->constraints['default'];
             throw new ShortNrPatternConstraintException(
                 "Default constraint cannot be used on required group '{$this->name}'. " .
@@ -75,15 +74,6 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
         return $this->constraints;
     }
 
-    public function isOptional(): bool
-    {
-        return $this->optional;
-    }
-
-    protected function isLocallyOptional(): bool
-    {
-        return $this->optional;
-    }
 
     protected function generateRegex(): string
     {
@@ -96,16 +86,16 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
             throw new \InvalidArgumentException("Could not resolve type: $this->type");
         }
 
-        $pattern = $typeObj->getPattern();
-        $regex = '(?P<' . $this->groupId . '>' . $pattern . ')';
-        return $this->optional ? $regex . '?' : $regex;
+        // Use constraint-aware pattern generation
+        $pattern = $typeObj->getConstrainedPattern($this->constraints);
+        return '(?P<' . $this->groupId . '>' . $pattern . ')';
     }
 
 
     public function generate(array $values): string
     {
         if (!isset($values[$this->name])) {
-            if ($this->optional) {
+            if ($this->isOptional()) {
                 return '';
             }
             throw new ShortNrPatternGenerationException(
@@ -122,14 +112,27 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
         return [$this->name];
     }
 
-    public function hasOptional(): bool
-    {
-        return $this->optional;
-    }
 
     public function getNodeType(): string
     {
         return 'group';
+    }
+
+    /**
+     * Check if this group is greedy (consumes as much as possible).
+     */
+    public function isGreedy(): bool
+    {
+        if ($this->typeRegistry === null) {
+            return false; // Safe default
+        }
+
+        $typeObj = $this->typeRegistry->getType($this->type);
+        if (!$typeObj) {
+            return false; // Safe default
+        }
+
+        return $typeObj->isGreedy($this->constraints);
     }
 
     public function toArray(): array
@@ -140,7 +143,6 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
             'name' => $this->name,
             'dataType' => $this->type,
             'constraints' => $this->constraints,
-            'optional' => $this->optional,
             'groupId' => $this->groupId
         ];
     }
@@ -155,8 +157,7 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
         $node = new self(
             $data['name'],
             $data['dataType'],
-            $data['constraints'],
-            $data['optional']
+            $data['constraints']
         );
         $node->setRegex($data['regex'] ?? null);
         $node->setGroupId($data['groupId']);

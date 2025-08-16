@@ -51,4 +51,17 @@ final class IntType extends Type
         }
         return parent::serialize($value, $constraints);
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function isGreedy(array $constraints = []): bool
+    {
+        // Int is inherently greedy, but constraints can make it non-greedy
+        $basePattern = $this->getPattern();
+        $constrainedPattern = $this->getConstrainedPattern($constraints);
+        
+        // If pattern changed by constraints, it's non-greedy
+        return $basePattern === $constrainedPattern;
+    }
 }
