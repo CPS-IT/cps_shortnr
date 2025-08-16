@@ -122,4 +122,4 @@ shortNr:
 * we use currently [compiler-syntax.md](compiler-syntax.md) v1
 * think about before start throw code in the codebase.
 * every line of code comes at technical debt cost, choose wisely.
-* you can add var_dump in the code to see what accual happen at key stages. (temporarily, MARK these spots always with ```  // DEBUG OUTPUT  ```)
+* you can add var_dump in the code to orientate. (temporarily, MARK these spots always with ```  // DEBUG OUTPUT  ```)

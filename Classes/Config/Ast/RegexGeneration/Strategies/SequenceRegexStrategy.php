@@ -27,38 +27,19 @@ class SequenceRegexStrategy implements RegexGenerationStrategyInterface
     protected function generateChildrenRegex(array $children): string
     {
         $regex = '';
-        $count = count($children);
-
-        var_dump("=== generateChildrenRegex ===");
-        var_dump("Children count: " . $count);
 
         foreach ($children as $i => $child) {
             $nextLiteral = $this->nextLiteralAmong($children, $i + 1);
             $chunk = $child->toRegex();
 
-            var_dump("Child $i: " . get_class($child));
-            if ($child instanceof GroupNode) {
-                var_dump("  - GroupNode name: " . $child->getName());
-                var_dump("  - GroupNode type: " . $child->getType());
-                var_dump("  - Is greedy: " . ($child->isGreedy() ? 'YES' : 'NO'));
-            }
-            if ($child instanceof LiteralNode) {
-                var_dump("  - LiteralNode text: '" . $child->getText() . "'");
-            }
-            var_dump("  - Next literal: " . ($nextLiteral ?? 'NULL'));
-            var_dump("  - Original chunk: " . $chunk);
-
             // Only post-process greedy groups followed by a literal
             if ($child instanceof GroupNode && $child->isGreedy() && $nextLiteral !== null) {
-                $original = $chunk;
                 $chunk = $this->injectBoundary($chunk, $nextLiteral);
-                var_dump("  - BOUNDARY INJECTED: $original -> $chunk");
             }
 
             $regex .= $chunk;
         }
 
-        var_dump("Final regex: " . $regex);
         return $regex;
     }
 
@@ -69,39 +50,27 @@ class SequenceRegexStrategy implements RegexGenerationStrategyInterface
 
     private function nextLiteralAmong(array $children, int $start): ?string
     {
-        var_dump("=== nextLiteralAmong ===");
-        var_dump("Start index: $start, Total children: " . count($children));
-        
         for ($j = $start; $j < count($children); $j++) {
-            var_dump("Checking child $j: " . get_class($children[$j]));
-            
             if ($children[$j] instanceof LiteralNode) {
-                $literal = $children[$j]->getText();
-                var_dump("Found literal: '$literal'");
-                return $literal;
+                return $children[$j]->getText();
             }
             
             // Check if it's a SubSequence - might contain a literal at start
             if ($children[$j] instanceof SubSequenceNode) {
-                var_dump("Found SubSequence - checking its children");
                 $subChildren = $children[$j]->getChildren();
                 if (!empty($subChildren) && $subChildren[0] instanceof LiteralNode) {
-                    $literal = $subChildren[0]->getText();
-                    var_dump("Found literal in SubSequence: '$literal'");
-                    return $literal;
+                    return $subChildren[0]->getText();
                 }
-                var_dump("SubSequence doesn't start with literal, stopping");
+                // SubSequence doesn't start with literal, stop searching
                 break;
             }
             
             // stop at the first group
             if ($children[$j] instanceof GroupNode) {
-                var_dump("Found GroupNode, stopping");
                 break;
             }
         }
         
-        var_dump("No literal found, returning null");
         return null;
     }
 

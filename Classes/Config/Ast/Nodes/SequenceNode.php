@@ -14,7 +14,10 @@ class SequenceNode extends NestedAstNode
             $chunk = $child->toRegex();
 
             // Only post-process greedy groups followed by a literal
-            if ($child instanceof GroupNode && $child->isGreedy() && $nextLiteral !== null) {
+            // BUT: Skip boundary injection entirely in SubSequences (all-or-nothing logic)
+            $isInSubSequence = ($this instanceof SubSequenceNode);
+            
+            if ($child instanceof GroupNode && $child->isGreedy() && $nextLiteral !== null && !$isInSubSequence) {
                 $chunk = $this->injectBoundary($chunk, $nextLiteral);
             }
 

@@ -11,7 +11,9 @@ final class SubSequenceNode extends SequenceNode
      */
     protected function generateRegex(): string
     {
-        return '(?:' . parent::generateRegex() . ')?';
+        $innerRegex = parent::generateRegex();
+        // Make the entire subsequence optional - it can match completely or not at all
+        return '(?:' . $innerRegex . ')?';
     }
 
     /**

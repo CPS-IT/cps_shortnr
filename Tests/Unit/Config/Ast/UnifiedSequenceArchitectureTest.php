@@ -220,8 +220,7 @@ class UnifiedSequenceArchitectureTest extends TestCase
         yield 'subsequence-missing-second-element' => [
             'USER({name:str}-{age:int})', 
             'USERjohn', 
-            true,  // SubSequence is optional, so this should match with both null
-            ['name' => null, 'age' => null]
+            false  // Should NOT match - john doesn't fit the SubSequence pattern, no group to capture it
         ];
         
         yield 'subsequence-partial-match-forbidden' => [
