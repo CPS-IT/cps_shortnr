@@ -3,25 +3,17 @@
 namespace CPSIT\ShortNr\Config\Ast\RegexGeneration\Strategies;
 
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
-use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
-use CPSIT\ShortNr\Config\Ast\RegexGeneration\RegexGenerationStrategyInterface;
 
-final class SubSequenceRegexStrategy implements RegexGenerationStrategyInterface
+final class SubSequenceRegexStrategy extends SequenceRegexStrategy
 {
     public function supports(AstNodeInterface $node): bool
     {
         return $node instanceof SubSequenceNode;
     }
 
-    public function generateRegex(AstNodeInterface $node): string
+    protected function wrapSequence(string $regex): string
     {
-        /** @var NestedNodeInterface $node */
-        $regex = '';
-        foreach ($node->getChildren() as $child) {
-            $regex .= $child->toRegex();
-        }
-        
         return '(?:' . $regex . ')?';
     }
 }

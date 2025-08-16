@@ -236,16 +236,61 @@ test(value){id:int}     → ERROR: Reserved characters '(' ')' in literals
 
 ## Built-in Types
 
+### Type Casting Rules
+
+**Core Principle**: Pattern types enforce type casting during value processing.
+
+#### Integer Type Casting (`int`)
+- **Target Type**: Always returns PHP `int`
+- **Input Validation**: Must be numeric (uses `is_numeric()` check)
+- **Casting Rules**:
+  - `string('123')` → `int(123)` ✓ Valid numeric string
+  - `int(123)` → `int(123)` ✓ Already correct type
+  - `float(123.0)` → `int(123)` ✓ Whole number float
+  - `string('123.45')` → ✗ Throws `InvalidArgumentException` (decimal not allowed)
+  - `string('a1b2c')` → ✗ Throws `InvalidArgumentException` (non-numeric)
+  - `string('123abc')` → ✗ Throws `InvalidArgumentException` (mixed alphanumeric)
+  - `bool(true)` → ✗ Throws `InvalidArgumentException` (not numeric)
+  - `null` → ✗ Throws `InvalidArgumentException` (not numeric)
+  - `array([123])` → ✗ Throws `InvalidArgumentException` (not scalar)
+
+#### String Type Casting (`str`)
+- **Target Type**: Always returns PHP `string`
+- **Input Validation**: Must be scalar value
+- **Casting Rules**:
+  - `string('abc')` → `string('abc')` ✓ Already correct type
+  - `int(123)` → `string('123')` ✓ Convert to string
+  - `float(123.45)` → `string('123.45')` ✓ Convert to string
+  - `bool(true)` → `string('1')` ✓ Convert to string
+  - `bool(false)` → `string('')` ✓ Convert to string
+  - `null` → ✗ Throws `InvalidArgumentException` (not scalar)
+  - `array(['abc'])` → ✗ Throws `InvalidArgumentException` (not scalar)
+
+#### Implementation Requirements
+```php
+// For int type casting
+if (!is_numeric($value)) {
+    throw new InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
+}
+return (int)$value;
+
+// For str type casting  
+if (!is_scalar($value) || is_null($value)) {
+    throw new InvalidArgumentException("Value must be scalar for str type, got: " . gettype($value));
+}
+return (string)$value;
+```
+
 ### Numeric Types
 
 | Type | Pattern | Description | Constraints              |
 |------|---------|-------------|--------------------------|
-| `int` | `\d+` | Positive integers | `min`, `max` , `default`* |
+| `int` | `\d+` | Positive integers (always cast to PHP int) | `min`, `max` , `default`* |
 
 **Examples:**
 ```
-{id:int}                    → "123", "45678"
-{age:int(min=0, max=120)}   → "25", "100"
+{id:int}                    → "123", "45678" (returns int values)
+{age:int(min=0, max=120)}   → "25", "100" (returns int values)
 {age:int(default=0)}?  → "25", "100", "0" (if age is optional and not provided)
 ```
 
@@ -253,12 +298,12 @@ test(value){id:int}     → ERROR: Reserved characters '(' ')' in literals
 
 | Type | Pattern | Description | Constraints                                              |
 |------|---------|-------------|----------------------------------------------------------|
-| `string` | `[^/]+` | Any non-slash characters | `minLen`, `maxLen`, `contains`, `startWith`, `endWith`,  `default`* |
+| `string` | `[^/]+` | Any non-slash characters (always cast to PHP string) | `minLen`, `maxLen`, `contains`, `startWith`, `endWith`,  `default`* |
 
 **Examples:**
 ```
-{name:str}                       → "John Doe", "Test-123"
-{name:str(minLen=2, maxLen=50)} → "Jo" to 50 chars
+{name:str}                       → "John Doe", "Test-123" (returns string values)
+{name:str(minLen=2, maxLen=50)} → "Jo" to 50 chars (returns string values)
 ```
 
 ## Pattern Examples

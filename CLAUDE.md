@@ -112,3 +112,14 @@ shortNr:
             eq: 1     # just an example of a nested
       category.uid: [1, 4] # first key "category" matches joins list so the field is "uid"
 ```
+### Context of the Project
+
+* this is an early stage WIP project that follow strict SOLID principles!
+* try to keep things simple
+* don't throw code at problems try to understand the root problems
+* if you feel you stuck, take a step back and try to make it more simple to see the real problem not the symptoms
+* We develop TDD
+* we use currently [compiler-syntax.md](compiler-syntax.md) v1
+* think about before start throw code in the codebase.
+* every line of code comes at technical debt cost, choose wisely.
+* you can add var_dump in the code to see what accual happen at key stages. (temporarily, MARK these spots always with ```  // DEBUG OUTPUT  ```)
