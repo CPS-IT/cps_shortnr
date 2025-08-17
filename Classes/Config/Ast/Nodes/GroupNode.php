@@ -6,6 +6,7 @@ use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 use CPSIT\ShortNr\Exception\ShortNrPatternGenerationException;
 use CPSIT\ShortNr\Exception\ShortNrPatternConstraintException;
+use InvalidArgumentException;
 use RuntimeException;
 
 final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
@@ -24,14 +25,15 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
     /**
      * Validate default constraint usage after tree structure is complete.
      * This must be called after all parent-child relationships are established.
+     * @throws ShortNrPatternConstraintException
      */
     public function validateTreeContext(): void
     {
         if (!$this->isOptional() && isset($this->constraints['default'])) {
             $defaultValue = $this->constraints['default'];
             throw new ShortNrPatternConstraintException(
-                "Default constraint cannot be used on required group '{$this->name}'. " .
-                "Make the group optional: {{$this->name}:{$this->type}(default={$defaultValue})}? or place it in an optional section: (-{{$this->name}:{$this->type}(default={$defaultValue})})",
+                "Default constraint cannot be used on required group '$this->name'. " .
+                "Make the group optional: {".$this->name.":".$this->type."(default=$defaultValue)}? or place it in an optional section: (-{".$this->name.":".$this->type."(default=$defaultValue)})",
                 $this->name,
                 $defaultValue,
                 'invalid_default_usage'
@@ -75,6 +77,9 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
     }
 
 
+    /**
+     * @throws ShortNrPatternException
+     */
     protected function generateRegex(): string
     {
         if ($this->typeRegistry === null) {
@@ -83,7 +88,7 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
 
         $typeObj = $this->typeRegistry->getType($this->type);
         if (!$typeObj) {
-            throw new \InvalidArgumentException("Could not resolve type: $this->type");
+            throw new InvalidArgumentException("Could not resolve type: $this->type");
         }
 
         // Use constraint-aware pattern generation
@@ -92,6 +97,10 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
     }
 
 
+    /**
+     * @throws ShortNrPatternGenerationException
+     * @throws ShortNrPatternException
+     */
     public function generate(array $values): string
     {
         if (!array_key_exists($this->name, $values)) {
@@ -112,7 +121,7 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
         
         $typeObj = $this->typeRegistry->getType($this->type);
         if (!$typeObj) {
-            throw new \InvalidArgumentException("Could not resolve type: $this->type");
+            throw new InvalidArgumentException("Could not resolve type: $this->type");
         }
         
         // This will trigger type validation and proper casting

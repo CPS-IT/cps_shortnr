@@ -66,6 +66,9 @@ final class SubSequenceNode extends SequenceNode
         return true;
     }
 
+    /**
+     * @throws ShortNrPatternParseException
+     */
     public function validateTreeContext(): void
     {
         // Check for empty subsequence

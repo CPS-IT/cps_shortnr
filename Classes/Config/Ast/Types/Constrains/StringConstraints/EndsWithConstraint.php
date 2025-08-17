@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class EndsWithConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class EndsWithConstraint implements TypeConstraint
         $suffix = $this->unescapeString((string)$constraintValue);
 
         if (!str_ends_with($stringValue, $suffix)) {
-            throw new \InvalidArgumentException("String '$stringValue' does not end with '$suffix'");
+            throw new InvalidArgumentException("String '$stringValue' does not end with '$suffix'");
         }
 
         return $stringValue;

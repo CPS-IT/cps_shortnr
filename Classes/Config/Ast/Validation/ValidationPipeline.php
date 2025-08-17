@@ -14,10 +14,10 @@ final class ValidationPipeline implements ValidatorInterface
         $this->validators[] = $validator;
     }
 
-    public function validate(AstNodeInterface $rootNode): void
+    public function validate(AstNodeInterface $astNode): void
     {
         foreach ($this->validators as $validator) {
-            $validator->validate($rootNode);
+            $validator->validate($astNode);
         }
     }
 }

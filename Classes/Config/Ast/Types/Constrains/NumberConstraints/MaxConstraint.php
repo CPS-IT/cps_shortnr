@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\NumberConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class MaxConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class MaxConstraint implements TypeConstraint
         $maxValue = (int)$constraintValue;
 
         if ($intValue > $maxValue) {
-            throw new \InvalidArgumentException("Value $intValue exceeds maximum $maxValue");
+            throw new InvalidArgumentException("Value $intValue exceeds maximum $maxValue");
         }
 
         return $intValue;

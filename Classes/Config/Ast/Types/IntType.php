@@ -6,6 +6,7 @@ use CPSIT\ShortNr\Config\Ast\Types\Constrains\DefaultConstraint;
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\NumberConstraints\MaxConstraint;
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\NumberConstraints\MinConstraint;
 use CPSIT\ShortNr\Exception\ShortNrPatternConstraintException;
+use InvalidArgumentException;
 
 final class IntType extends Type
 {
@@ -34,12 +35,12 @@ final class IntType extends Type
         
         // Then validate the processed value
         if (!is_numeric($value)) {
-            throw new \InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
+            throw new InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
         }
         
         // Reject decimal numbers for int type (per compiler-syntax.md:250)
         if (is_string($value) && str_contains($value, '.')) {
-            throw new \InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
+            throw new InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
         }
         
         return (int)$value;
@@ -49,6 +50,7 @@ final class IntType extends Type
      * @param mixed $value
      * @param array $constraints
      * @return string
+     * @throws ShortNrPatternConstraintException
      */
     public function serialize(mixed $value, array $constraints = []): string
     {

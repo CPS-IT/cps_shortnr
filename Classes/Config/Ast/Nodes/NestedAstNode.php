@@ -59,6 +59,9 @@ abstract class NestedAstNode extends NamedAstNode implements NestedNodeInterface
         ];
     }
 
+    /**
+     * @throws ShortNrPatternCompilationException
+     */
     public static function fromArray(array $data, ?TypeRegistry $typeRegistry = null): static
     {
         $node = new static();
@@ -71,6 +74,9 @@ abstract class NestedAstNode extends NamedAstNode implements NestedNodeInterface
         return $node;
     }
 
+    /**
+     * @throws ShortNrPatternCompilationException
+     */
     private static function createNodeFromArray(array $data, ?TypeRegistry $typeRegistry = null): AstNodeInterface
     {
         return match ($data['type']) {

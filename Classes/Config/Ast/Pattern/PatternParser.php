@@ -31,6 +31,10 @@ final class PatternParser
 
     /**
      * Parse a pattern string into an AST
+     * @param SequenceNode|null $rootNode
+     * @return SequenceNode
+     * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternTypeException
      */
     public function parse(?SequenceNode $rootNode = null): SequenceNode
     {
@@ -45,6 +49,10 @@ final class PatternParser
         return $root;
     }
 
+    /**
+     * @throws ShortNrPatternTypeException
+     * @throws ShortNrPatternParseException
+     */
     private function parseNext(): ?AstNode
     {
         if ($this->pos >= strlen($this->pattern)) {
@@ -67,6 +75,10 @@ final class PatternParser
         return $this->parseLiteral();
     }
 
+    /**
+     * @throws ShortNrPatternTypeException
+     * @throws ShortNrPatternParseException
+     */
     private function parseGroup(): AstNode
     {
         $start = $this->pos;
@@ -130,6 +142,9 @@ final class PatternParser
         return $node;
     }
 
+    /**
+     * @throws ShortNrPatternParseException
+     */
     private function parseSubSequence(): SequenceNode
     {
         $start = $this->pos;
@@ -168,6 +183,9 @@ final class PatternParser
         return $node;
     }
 
+    /**
+     * @throws ShortNrPatternParseException
+     */
     private function parseLiteral(): LiteralNode
     {
         $start = $this->pos;

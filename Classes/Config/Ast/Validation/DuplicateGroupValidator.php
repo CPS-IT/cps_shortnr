@@ -9,6 +9,9 @@ use CPSIT\ShortNr\Exception\ShortNrPatternException;
 
 final class DuplicateGroupValidator implements ValidatorInterface
 {
+    /**
+     * @throws ShortNrPatternException
+     */
     public function validate(AstNodeInterface $astNode): void
     {
         $groupNames = [];

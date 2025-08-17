@@ -19,7 +19,7 @@ final class PatternCompiler
     {
         // Parse
         $astRootNode = (new PatternParser($this->typeRegistry, $pattern))->parse();
-        
+
         // Validate using injected validator pipeline
         $this->validator->validate($astRootNode);
         

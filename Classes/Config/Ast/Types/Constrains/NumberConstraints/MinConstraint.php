@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\NumberConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class MinConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class MinConstraint implements TypeConstraint
         $minValue = (int)$constraintValue;
 
         if ($intValue < $minValue) {
-            throw new \InvalidArgumentException("Value $intValue is below minimum $minValue");
+            throw new InvalidArgumentException("Value $intValue is below minimum $minValue");
         }
 
         return $intValue;

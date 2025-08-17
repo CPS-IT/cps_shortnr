@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class StartsWithConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class StartsWithConstraint implements TypeConstraint
         $prefix = $this->unescapeString((string)$constraintValue);
 
         if (!str_starts_with($stringValue, $prefix)) {
-            throw new \InvalidArgumentException("String '$stringValue' does not start with '$prefix'");
+            throw new InvalidArgumentException("String '$stringValue' does not start with '$prefix'");
         }
 
         return $stringValue;

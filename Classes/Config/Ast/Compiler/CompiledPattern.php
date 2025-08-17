@@ -49,6 +49,9 @@ final class CompiledPattern
         return $this->groupConstraints;
     }
 
+    /**
+     * @throws ShortNrPatternTypeException
+     */
     public function match(string $input): ?MatchResult
     {
         // Empty input should not match patterns that consist entirely of optional groups

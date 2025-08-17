@@ -5,6 +5,7 @@ namespace CPSIT\ShortNr\Config\Ast\Heuristic;
 use CPSIT\ShortNr\Config\Ast\Nodes\GroupNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\LiteralNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\NestedAstNode;
+use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
 
 /**
  * Ultra-fast pattern pre-filter - Memory-optimized version
@@ -173,7 +174,7 @@ final class PatternHeuristic implements HeuristicPatternInterface
             $maxLen = self::GROUP_MAX_LEN;
 
         } elseif ($node instanceof NestedAstNode) {
-            $childOptional = $optional || ($node instanceof \CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode);
+            $childOptional = $optional || ($node instanceof SubSequenceNode);
             foreach ($node->getChildren() as $child) {
                 $childMetrics = self::analyzeAst($child, $childOptional);
                 $literals = array_merge($literals, $childMetrics['literals']);

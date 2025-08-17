@@ -11,6 +11,9 @@ final class TypeRegistry
 {
     private array $types = [];
 
+    /**
+     * @throws ShortNrPatternTypeException
+     */
     public function __construct(bool $registerDefaults = true)
     {
         if ($registerDefaults) {
@@ -23,6 +26,9 @@ final class TypeRegistry
         return $this->types[$name] ?? null;
     }
 
+    /**
+     * @throws ShortNrPatternTypeException
+     */
     public function registerType(TypeInterface $type): void
     {
         foreach ($type->getName() as $name) {
@@ -56,6 +62,9 @@ final class TypeRegistry
         return array_keys($this->types);
     }
 
+    /**
+     * @throws ShortNrPatternTypeException
+     */
     private function registerDefaults(): void
     {
         $this->registerType(new IntType());

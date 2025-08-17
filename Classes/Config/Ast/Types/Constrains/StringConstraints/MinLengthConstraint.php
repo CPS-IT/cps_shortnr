@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class MinLengthConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class MinLengthConstraint implements TypeConstraint
         $minLength = (int)$constraintValue;
 
         if (strlen($stringValue) < $minLength) {
-            throw new \InvalidArgumentException("String length " . strlen($stringValue) . " is below minimum $minLength");
+            throw new InvalidArgumentException("String length " . strlen($stringValue) . " is below minimum $minLength");
         }
 
         return $stringValue;

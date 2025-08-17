@@ -7,8 +7,6 @@ class SequenceNode extends NestedAstNode
     protected function generateRegex(): string
     {
         $regex = '';
-        $count = count($this->children);
-
         foreach ($this->children as $i => $child) {
             $nextLiteral = $this->findNextLiteralBoundary($i + 1);
             $chunk = $child->toRegex();
@@ -47,7 +45,7 @@ class SequenceNode extends NestedAstNode
     private function findNextLiteralInParent(): ?string
     {
         $parent = $this->getParent();
-        if (!$parent || !($parent instanceof NestedAstNode)) {
+        if (!($parent instanceof NestedAstNode)) {
             return null;
         }
         
@@ -117,8 +115,7 @@ class SequenceNode extends NestedAstNode
         $escaped = preg_quote($literal, '/');
         // Make the pattern non-greedy and add lookahead
         $result = preg_replace('/(\[[\^]?[^\]]+\]\+)/', '$1?', $groupRegex);
-        $result = preg_replace('/\)$/', "(?={$escaped}|$))", $result, 1);
-        return $result;
+        return preg_replace('/\)$/', "(?=$escaped|$))", $result, 1);
     }
 
 

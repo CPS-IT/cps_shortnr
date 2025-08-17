@@ -11,9 +11,9 @@ use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
  */
 final class TreeContextValidator implements ValidatorInterface
 {
-    public function validate(AstNodeInterface $rootNode): void
+    public function validate(AstNodeInterface $astNode): void
     {
-        $this->validateNode($rootNode);
+        $this->validateNode($astNode);
     }
 
     private function validateNode(AstNodeInterface $node): void

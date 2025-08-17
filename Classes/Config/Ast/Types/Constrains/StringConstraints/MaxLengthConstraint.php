@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class MaxLengthConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class MaxLengthConstraint implements TypeConstraint
         $maxLength = (int)$constraintValue;
 
         if (strlen($stringValue) > $maxLength) {
-            throw new \InvalidArgumentException("String length " . strlen($stringValue) . " exceeds maximum $maxLength");
+            throw new InvalidArgumentException("String length " . strlen($stringValue) . " exceeds maximum $maxLength");
         }
 
         return $stringValue;

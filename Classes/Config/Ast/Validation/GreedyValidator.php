@@ -20,11 +20,17 @@ use CPSIT\ShortNr\Exception\ShortNrPatternException;
  */
 final class GreedyValidator implements ValidatorInterface
 {
-    public function validate(AstNodeInterface $rootNode): void
+    /**
+     * @throws ShortNrPatternException
+     */
+    public function validate(AstNodeInterface $astNode): void
     {
-        $this->validateNode($rootNode);
+        $this->validateNode($astNode);
     }
 
+    /**
+     * @throws ShortNrPatternException
+     */
     private function validateNode(AstNodeInterface $node): void
     {
         // Recursively validate children first
@@ -40,6 +46,7 @@ final class GreedyValidator implements ValidatorInterface
 
     /**
      * @param AstNodeInterface[] $children
+     * @throws ShortNrPatternException
      */
     private function validateSequence(array $children): void
     {
@@ -50,7 +57,7 @@ final class GreedyValidator implements ValidatorInterface
                 if ($child->isGreedy()) {
                     if ($previousGreedyGroup !== null) {
                         throw new ShortNrPatternException(
-                            "Adjacent greedy groups '{$previousGreedyGroup->getName()}' and '{$child->getName()}' are forbidden. " .
+                            "Adjacent greedy groups '" . $previousGreedyGroup->getName() . "' and '" . $child->getName() . "' are forbidden. " .
                             "Add a literal separator, use constraints to make one non-greedy, or wrap in SubSequences."
                         );
                     }

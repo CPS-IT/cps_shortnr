@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use InvalidArgumentException;
 
 class ContainsConstraint implements TypeConstraint
 {
@@ -24,7 +25,7 @@ class ContainsConstraint implements TypeConstraint
         $needle = $this->unescapeString((string)$constraintValue);
 
         if (!str_contains($stringValue, $needle)) {
-            throw new \InvalidArgumentException("String '$stringValue' does not contain '$needle'");
+            throw new InvalidArgumentException("String '$stringValue' does not contain '$needle'");
         }
 
         return $stringValue;
