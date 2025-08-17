@@ -10,6 +10,8 @@ final class ValidationPipelineFactory
         
         // Add validators in order of execution
         $pipeline->addValidator(new TreeContextValidator());
+        $pipeline->addValidator(new DuplicateGroupValidator());
+        $pipeline->addValidator(new ConstraintValidator());
         $pipeline->addValidator(new GreedyValidator());
         
         return $pipeline;

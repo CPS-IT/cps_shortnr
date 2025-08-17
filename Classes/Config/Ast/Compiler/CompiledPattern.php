@@ -51,6 +51,11 @@ final class CompiledPattern
 
     public function match(string $input): ?MatchResult
     {
+        // Empty input should not match patterns that consist entirely of optional groups
+        if ($input === '') {
+            return null;
+        }
+        
         if (!preg_match($this->regex, $input, $matches)) {
             return null;
         }
@@ -58,7 +63,10 @@ final class CompiledPattern
         $result = new MatchResult($input);
 
         foreach ($this->namedGroups as $groupId => $groupName) {
-            if (isset($matches[$groupId]) && $matches[$groupId] !== '') {
+            // Check if group matched (empty string is valid for string types)
+            $hasValue = isset($matches[$groupId]);
+            
+            if ($hasValue && $matches[$groupId] !== '') {
                 $rawValue = $matches[$groupId];
                 $type = $this->groupTypes[$groupName];
                 $constraints = $this->groupConstraints[$groupName];
@@ -99,12 +107,14 @@ final class CompiledPattern
             }
         }
 
-        // Return null if there are any constraint validation errors
-        if ($result->isFailed()) {
-            return null;
-        }
-        
+        // Return result even if constraints failed - caller can check isFailed()
         return $result;
+    }
+    
+    private function isAllOptional(): bool
+    {
+        // Check if pattern consists entirely of optional groups (no required literals)
+        return $this->ast->isAllOptional();
     }
 
     public function generate(array $values): string

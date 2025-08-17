@@ -194,20 +194,16 @@ class PatternSyntaxExtensiveTest extends TestCase
 
     public static function adjacentGroupsProvider(): Generator
     {
-        // NOTE: Adjacent greedy groups are FORBIDDEN - constraints don't change greediness
-        // These patterns should be INVALID and would throw ShortNrPatternException
+        // V1.0 RULE: Only literal separators prevent greedy groups from starving each other
+        // Optionality does NOT change greediness - these patterns are FORBIDDEN per corrected spec
         
-        // After normalization: {a:int}? becomes ({a:int}) - SubSequence breaks adjacency
-        yield 'normalized-optional-breaks-adjacency' => ['{a:int}?{b:int}', '456', true, ['a' => null, 'b' => 456]];
-        yield 'both-normalized-optional' => ['{a:int}?{b:int}?', '123', true, ['a' => null, 'b' => 123]];
-        
-        // Literal separators break adjacency - any groups allowed
+        // Literal separators provide safe boundaries - VALID patterns
         yield 'literal-separator-breaks-adjacency' => ['{a:int}-{b:int}', '123-456', true, ['a' => 123, 'b' => 456]];
         yield 'multiple-literal-separators' => ['{a:int}.{b:str}+{c:int}', '123.abc+456', true, ['a' => 123, 'b' => 'abc', 'c' => 456]];
         
-        // Explicit SubSequences break adjacency
-        yield 'explicit-subsequences-break-adjacency' => ['({a:int})({b:str})', 'abc', true, ['a' => null, 'b' => 'abc']];
-        yield 'mixed-subsequence-required' => ['{a:int}({b:str}){c:int}', '123456', true, ['a' => 123, 'b' => null, 'c' => 456]];
+        // Optional groups with literal separators - VALID patterns 
+        yield 'optional-with-literal-separator' => ['{a:int}?-{b:int}', '-456', true, ['a' => null, 'b' => 456]];
+        yield 'both-optional-with-separator' => ['{a:int}?-{b:int}?', '123-', true, ['a' => 123, 'b' => null]];
     }
 
     public static function typeCoercionGenerationProvider(): Generator

@@ -173,8 +173,9 @@ final class PatternHeuristic implements HeuristicPatternInterface
             $maxLen = self::GROUP_MAX_LEN;
 
         } elseif ($node instanceof NestedAstNode) {
+            $childOptional = $optional || ($node instanceof \CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode);
             foreach ($node->getChildren() as $child) {
-                $childMetrics = self::analyzeAst($child, true);
+                $childMetrics = self::analyzeAst($child, $childOptional);
                 $literals = array_merge($literals, $childMetrics['literals']);
                 $minLen += $childMetrics['minLen'];
                 $maxLen += $childMetrics['maxLen'];
@@ -194,43 +195,20 @@ final class PatternHeuristic implements HeuristicPatternInterface
      */
     public function support(string $string): bool
     {
-        $len = strlen($string);
-
-        // 1. Length check using pre-computed bitset (fastest possible)
-        if (!isset($this->validLengths[$len])) {
+        // Reject obviously too long strings (performance optimization)
+        if (strlen($string) > $this->maxLen) {
             return false;
         }
-
-        // 2. Quick prefix check (early rejection for many cases)
-        // Note: Only checking prefix since it's more likely to vary than suffix
-        if ($len >= self::PREFIX_LEN && !empty($this->prefixLookup)) {
-            $prefix = substr($string, 0, self::PREFIX_LEN);
-            if (!isset($this->prefixLookup[$prefix])) {
-                return false;
+        
+        // Simple heuristic: check if input starts with any known literal
+        foreach ($this->literalLookup as $literal => $_) {
+            if (str_starts_with($string, $literal)) {
+                return true;
             }
         }
-
-        // 3. Character validation (ultra-fast with lookup table)
-        if ($this->useCharLookup) {
-            for ($i = 0; $i < $len; $i++) {
-                // ord() always returns 0-255, no need to check range
-                if (!$this->charLookup[ord($string[$i])]) {
-                    return false;
-                }
-            }
-        }
-
-        // 4. Literal substring check
-        if (!empty($this->literalLookup)) {
-            foreach ($this->literalLookup as $literal => $_) {
-                if (str_contains($string, $literal)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        return true;
+        
+        // If no literals, accept everything (no heuristic possible)
+        return empty($this->literalLookup);
     }
 
     /**

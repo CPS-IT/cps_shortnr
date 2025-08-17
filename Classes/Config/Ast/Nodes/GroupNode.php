@@ -94,7 +94,7 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
 
     public function generate(array $values): string
     {
-        if (!isset($values[$this->name])) {
+        if (!array_key_exists($this->name, $values)) {
             if ($this->isOptional()) {
                 return '';
             }
@@ -104,7 +104,21 @@ final class GroupNode extends NamedAstNode implements TypeRegistryAwareInterface
                 $this->name
             );
         }
-        return (string)$values[$this->name];
+        
+        // Validate and parse the value using the type system
+        if ($this->typeRegistry === null) {
+            throw new ShortNrPatternException("TypeRegistry not set on GroupNode");
+        }
+        
+        $typeObj = $this->typeRegistry->getType($this->type);
+        if (!$typeObj) {
+            throw new \InvalidArgumentException("Could not resolve type: $this->type");
+        }
+        
+        // This will trigger type validation and proper casting
+        $validatedValue = $typeObj->parseValue($values[$this->name], $this->constraints);
+        
+        return (string)$validatedValue;
     }
 
     public function getGroupNames(): array

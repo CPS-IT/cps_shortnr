@@ -29,8 +29,19 @@ final class IntType extends Type
      */
     public function parseValue(mixed $value, array $constraints = []): mixed
     {
-        // Apply constraints first (including defaults), then convert to int
+        // Apply constraints first (including defaults) 
         $value = parent::parseValue($value, $constraints);
+        
+        // Then validate the processed value
+        if (!is_numeric($value)) {
+            throw new \InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
+        }
+        
+        // Reject decimal numbers for int type (per compiler-syntax.md:250)
+        if (is_string($value) && str_contains($value, '.')) {
+            throw new \InvalidArgumentException("Value must be numeric for int type, got: " . gettype($value));
+        }
+        
         return (int)$value;
     }
 

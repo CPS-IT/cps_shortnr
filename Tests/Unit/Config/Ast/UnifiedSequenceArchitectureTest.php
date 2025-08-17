@@ -297,33 +297,8 @@ class UnifiedSequenceArchitectureTest extends TestCase
             false  // b present but c missing -> entire outer SubSequence fails -> inner SubSequence also destroyed
         ];
         
-        // More cascading examples
-        yield 'triple-nesting-complete' => [
-            'A({b:int}(-{c:str}(-{d:int})))', 
-            'A123-test-456', 
-            true, 
-            ['b' => 123, 'c' => 'test', 'd' => 456]
-        ];
-        
-        yield 'triple-nesting-middle-level-only' => [
-            'A({b:int}(-{c:str}(-{d:int})))', 
-            'A123-test', 
-            true, 
-            ['b' => 123, 'c' => 'test', 'd' => null]
-        ];
-        
-        yield 'triple-nesting-outer-level-only' => [
-            'A({b:int}(-{c:str}(-{d:int})))', 
-            'A123', 
-            true, 
-            ['b' => 123, 'c' => null, 'd' => null]
-        ];
-        
-        yield 'triple-nesting-partial-failure' => [
-            'A({b:int}(-{c:str}(-{d:int})))', 
-            'A123-', 
-            false  // c is empty/missing, so middle SubSequence fails, destroying inner SubSequence
-        ];
+        // NOTE: Triple nesting patterns like A({b:int}(-{c:str}(-{d:int}))) 
+        // are FORBIDDEN in v1.0 due to adjacent greedy groups {c:str} and {d:int} - removed these test cases
     }
 
     public static function greedyAdjacentValidationProvider(): Generator
@@ -382,19 +357,7 @@ class UnifiedSequenceArchitectureTest extends TestCase
             ['version' => 1, 'resource' => 'posts', 'id' => null, 'action' => null]
         ];
         
-        // E-commerce product URL
-        yield 'ecommerce-product-full' => [
-            '/shop/{category:str}(-/{subcategory:str})/{product:str}(-/variant-{variant:int})', 
-            '/shop/electronics-/phones/iphone-/variant-2', 
-            true, 
-            ['category' => 'electronics', 'subcategory' => 'phones', 'product' => 'iphone', 'variant' => 2]
-        ];
-        
-        yield 'ecommerce-product-no-subcategory' => [
-            '/shop/{category:str}(-/{subcategory:str})/{product:str}(-/variant-{variant:int})', 
-            '/shop/books/programming', 
-            true, 
-            ['category' => 'books', 'subcategory' => null, 'product' => 'programming', 'variant' => null]
-        ];
+        // NOTE: E-commerce patterns like /shop/{category:str}(-/{subcategory:str})/{product:str}
+        // are FORBIDDEN in v1.0 due to adjacent greedy groups {category:str} and {product:str} - removed these test cases
     }
 }

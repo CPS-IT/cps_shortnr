@@ -128,10 +128,12 @@ class GreedyPatternValidationTest extends TestCase
         // Non-adjacent groups (literal separators)
         yield 'non-adjacent-with-literal' => ['A{a:int}B{b:int}C', 'A123B456C', ['a' => 123, 'b' => 456]];
         
-        // After normalization: {a:int}? becomes ({a:int}) - SubSequence breaks adjacency
-        yield 'normalized-optional-breaks-adjacency' => ['{a:int}?{b:int}', '123', ['a' => 12, 'b' => 3]];
-        yield 'explicit-subsequences' => ['({a:int})({b:str})', 'test', ['a' => null, 'b' => 'test']];
-        yield 'mixed-subsequence-and-required' => ['{a:int}({b:str}){c:int}', '123456', ['a' => 12345, 'b' => null, 'c' => 6]];
+        // V1.0 Rule: Only literal separators prevent greedy starvation
+        // CORRECTED: These patterns are INVALID without literal separators
+        
+        // VALID patterns with literal separators
+        yield 'literal-separator-with-optional' => ['{a:int}?-{b:int}', '12-3', ['a' => 12, 'b' => 3]];
+        yield 'explicit-subsequences-with-separator' => ['({a:int})-({b:str})', '-test', ['a' => null, 'b' => 'test']];
         yield 'mixed-with-literal-separator' => ['{a:int}-({b:str})-{c:int}', '123--456', ['a' => 123, 'b' => null, 'c' => 456]];
     }
 

@@ -24,9 +24,10 @@ A pattern consists of three main elements:
 
 **Core Rules:**
 1. **Groups are greedy** when their type is greedy by nature (`int`, `str`)
-2. **No greedy group may follow another greedy group** within the same sequence
+2. **No greedy group may follow another greedy group** - regardless of sequence boundaries
 3. **Constraints do NOT affect greediness**: Constraints are for validation only, not regex pattern generation
-4. **SubSequences break adjacency**: Optional sections create sequence boundaries
+4. **Optionality does NOT affect greediness**: Optional groups remain greedy
+5. **Only literals provide safe boundaries** for greedy groups
 
 #### **Sequence Satisfaction Rules**
 
@@ -35,29 +36,29 @@ A pattern consists of three main elements:
 **Exception Mechanism**: **SubSequences are optional** and cascade optionality to all contained elements.
 
 ```
-Pattern: ABC{a:int}{b:str}{c:int}
-Sequence: [LiteralNode("ABC"), GroupNode(a), GroupNode(b), GroupNode(c)]  
-Rule: ALL elements must be satisfied → a AND b AND c required
+Pattern: ABC{a:int}-{b:str}-{c:int}
+Sequence: [LiteralNode("ABC"), GroupNode(a), LiteralNode("-"), GroupNode(b), LiteralNode("-"), GroupNode(c)]  
+Rule: ALL elements must be satisfied → a AND b AND c required, literals provide boundaries
 
-Pattern: ABC{a:int}({b:str}){c:int}  
-Sequence: [LiteralNode("ABC"), GroupNode(a), SubSequence([GroupNode(b)]), GroupNode(c)]
-Rule: ABC AND a AND c required, SubSequence(b) is optional
+Pattern: ABC{a:int}(-{b:str})  
+Sequence: [LiteralNode("ABC"), GroupNode(a), SubSequence([LiteralNode("-"), GroupNode(b)])]
+Rule: ABC AND a required, SubSequence(b) is optional but has literal boundary
 ```
 
 #### **Greediness Validation Matrix**
 
-**Adjacent Groups in Same Sequence:**
+**V1.0 Strict Rules - All Adjacent Greedy Groups Are Forbidden:**
 
-| First Group | Second Group | Adjacent? | Forbidden? | Reason |
-|-------------|--------------|-----------|------------|---------|
-| `{a:int}` | `{b:int}` | ✓ | ✓ | Both greedy - first starves second |
-| `{a:int(max=999)}` | `{b:int}` | ✓ | ✓ | Both still greedy - constraints don't affect greediness |
-| `{a:str}` | `{b:str}` | ✓ | ✓ | Both greedy - first starves second |
-| `{a:str(maxLen=5)}` | `{b:str}` | ✓ | ✓ | Both still greedy - constraints don't affect greediness |
-| `{a:int}` | `Literal("-")` | ✗ | ✗ | Literal breaks adjacency |
-| `{a:int}` | `SubSequence` | ✗ | ✗ | SubSequence breaks adjacency |
+| Pattern | Valid? | Reason |
+|---------|--------|---------|
+| `{a:int}-{b:int}` | ✓ | Literal separator provides boundary |
+| `{a:str}-{b:str}` | ✓ | Literal separator provides boundary |
+| `{a:int}({b:str})` | ✗ | No boundary between a and b - both greedy |
+| `{a:str}({b:int})-{c:int}` | ✗ | No boundary between a and b - both greedy |
+| `{a:int}(-{b:str}){c:int}` | ✗ | No boundary between b and c - both greedy |
+| `{a:int}(-{b:str}-{c:int})` | ✓ | Literal separator within SubSequence |
 
-**Key Insight**: After normalization (`{a:int}?` → `({a:int})`), the greediness validation only needs to check **direct siblings within sequences**.
+**Key Principle**: Greedy groups need **literal delimiters** to know where to stop consuming input. Optionality and SubSequences do not change greediness behavior.
 
 #### **Greediness Rules (v1.0)**
 
@@ -73,14 +74,15 @@ Rule: ABC AND a AND c required, SubSequence(b) is optional
 {a:str(minLen=3)}    → Greedy
 ```
 
-**V1.0 Limitation**: Adjacent greedy groups must be separated by literals or placed in SubSequences.
+**V1.0 Limitation**: Adjacent greedy groups must be separated by literal delimiters.
 
-**Examples of Required Separators**:
+**Examples of V1.0 Rules**:
 ```
-{a:int}-{b:int}           → ✓ Valid (literal separator)
-{a:int}({b:str}){c:int}   → ✓ Valid (SubSequence breaks adjacency)
-{a:int}{b:int}            → ✗ Forbidden (adjacent greedy groups)
-{a:str(maxLen=5)}{b:str}  → ✗ Forbidden (both still greedy)
+{a:int}-{b:int}             → ✓ Valid (literal separator)
+{a:int}(-{b:str}-{c:int})   → ✓ Valid (literal separators within SubSequence)
+{a:int}{b:int}              → ✗ Forbidden (adjacent greedy groups)
+{a:int}({b:str}){c:int}     → ✗ Forbidden (no boundaries between greedy groups)
+{a:str}({b:int})-{c:int}    → ✗ Forbidden (a and b have no boundary)
 ```
 
 ```
@@ -153,36 +155,38 @@ Constraints provide additional validation rules for the captured value. **Constr
 
 1. **All-or-Nothing Satisfaction**: ALL children in a SubSequence must be satisfied for the SubSequence to match
 2. **Optional by Nature**: SubSequences don't need `?` markers - they're optional by design  
-3. **Sequence Boundaries**: SubSequences break greediness adjacency between sequences
+3. **Greediness Inheritance**: Groups within SubSequences remain greedy - optionality does not change greediness
 4. **Nested Optionality**: SubSequences can contain other SubSequences for complex logic
 
-#### **Syntax Examples**
+#### **Valid Pattern Examples**
 
 ```
-PAGE{id:int}(-{lang:alpha})       → "PAGE123" or "PAGE123-en"
-/article/{id:int}(/comments)      → "/article/5" or "/article/5/comments"
+PAGE{id:int}(-{lang:str})         → "PAGE123" or "PAGE123-en" (literal boundary)
+/article/{id:int}(/comments)      → "/article/5" or "/article/5/comments" (literal boundary)
 
-// Complex nesting
-{a:int}(-{b:str}(-{c:int}))       → a required, b optional, c optional-if-b
+// Complex nesting with literal separators
+{a:int}(-{b:str}-{c:int})         → a required, b and c both optional with separator
 
 // All-or-nothing within SubSequence  
-USER({name:str}-{age:int})        → Both name AND age required if SubSequence matches
+USER({name:str}-{age:int})        → Both name AND age required if SubSequence matches (literal separator)
 ```
 
 #### **SubSequence Satisfaction Logic**
 
 ```
-Pattern: ABC({x:int}-{y:str}){z:int}
+Pattern: ABC({x:int}-{y:str})-{z:int}
 
 Evaluation:
 1. ABC must match (literal)
 2. SubSequence is optional:
-   - If present: BOTH x AND y must be satisfied  
+   - If present: BOTH x AND y must be satisfied (literal separator required)
    - If absent: SubSequence is skipped
-3. z must match (required group)
+3. z must match (required group, separated by literal)
 
-Valid inputs: "ABC123", "ABC123-test456" 
+Valid inputs: "ABC-123", "ABC123-test-456" 
 Invalid: "ABC123-456" (y missing within SubSequence)
+
+Note: This pattern is valid because x-y have literal separator, and SubSequence-z have literal separator
 ```
 
 #### **Parsing Normalization Impact**
@@ -190,14 +194,19 @@ Invalid: "ABC123-456" (y missing within SubSequence)
 Since `{group}?` → `({group})`, all optionality flows through SubSequences:
 
 ```
-// Before normalization (user syntax)
+// Before normalization (user syntax) - INVALID PATTERN
 PAGE{id:int}{lang:str}?{version:int}?
 
-// After normalization (AST representation)  
+// After normalization (AST representation) - STILL INVALID
 PAGE{id:int}({lang:str})({version:int})
 
-// Sequence structure
-[LiteralNode("PAGE"), GroupNode(id), SubSequence([GroupNode(lang)]), SubSequence([GroupNode(version)])]
+// This pattern is FORBIDDEN because:
+// 1. id (greedy) adjacent to lang (greedy) - no literal separator
+// 2. lang (greedy) adjacent to version (greedy) - no literal separator
+
+// CORRECT V1.0 pattern with literal separators:
+PAGE{id:int}-{lang:str}?-{version:int}?
+→ PAGE{id:int}(-{lang:str})(-{version:int})
 ```
 
 **Requirements:**

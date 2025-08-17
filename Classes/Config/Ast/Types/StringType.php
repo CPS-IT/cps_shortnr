@@ -30,6 +30,11 @@ final class StringType extends Type
 
     public function parseValue(mixed $value, array $constraints = []): mixed
     {
+        // Validate raw input before applying constraints
+        if (!is_scalar($value) || is_null($value)) {
+            throw new \InvalidArgumentException("Value must be scalar for str type, got: " . gettype($value));
+        }
+        
         return parent::parseValue((string)$value, $constraints);
     }
 

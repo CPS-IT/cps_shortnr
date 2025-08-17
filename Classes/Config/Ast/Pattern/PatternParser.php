@@ -107,7 +107,7 @@ final class PatternParser
         // VALIDATE TYPE EXISTS - fail fast during parsing
         if (!$this->typeRegistry->getType($type)) {
             throw new ShortNrPatternTypeException(
-                "Unknown type '$type' in group '{$name}'",
+                "Unknown type '$type' in group '$name'",
                 $type,
                 $this->typeRegistry->getRegisteredTypes()
             );
