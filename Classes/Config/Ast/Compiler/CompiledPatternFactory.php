@@ -4,12 +4,16 @@ namespace CPSIT\ShortNr\Config\Ast\Compiler;
 
 use CPSIT\ShortNr\Config\Ast\Nodes\AstNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\GroupNode;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NodeTreeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\TypeNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Nodes\LiteralNode;
-use CPSIT\ShortNr\Config\Ast\Nodes\NestedAstNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\SequenceNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternCompilationException;
+use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
+use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 
 /**
  * Factory for creating and hydrating CompiledPattern instances
@@ -22,6 +26,12 @@ final class CompiledPatternFactory
 
     /**
      * Create a new CompiledPattern from an AST
+     *
+     * @param string $pattern
+     * @param AstNode $ast
+     * @return CompiledPattern
+     * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternTypeException
      */
     public function create(string $pattern, AstNode $ast): CompiledPattern
     {
@@ -83,7 +93,7 @@ final class CompiledPatternFactory
     /**
      * Serialize AST to array structure
      */
-    private function serializeAst(AstNode $node): array
+    private function serializeAst(AstNodeInterface $node): array
     {
         return $node->toArray();
     }
@@ -94,7 +104,7 @@ final class CompiledPatternFactory
      * @throws ShortNrPatternCompilationException
      * @throws ShortNrPatternCompilationException
      */
-    private function deserializeAst(array $data): AstNode
+    private function deserializeAst(array $data): AstNodeInterface
     {
         return match ($data['type']) {
             'literal' => LiteralNode::fromArray($data, $this->typeRegistry),
@@ -109,46 +119,31 @@ final class CompiledPatternFactory
         };
     }
 
-
     /**
      * Extract group information from AST
+     * @param AstNodeInterface $node
+     * @param array $namedGroups
+     * @param array $groupTypes
+     * @param array $groupConstraints
+     * @return void
+     * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternTypeException
      */
     private function extractGroupInfo(
-        AstNode $node,
+        AstNodeInterface $node,
         array &$namedGroups,
         array &$groupTypes,
         array &$groupConstraints
     ): void {
-        if ($node instanceof GroupNode) {
+        if ($node instanceof TypeNodeInterface) {
             $groupId = $node->getGroupId();
             $namedGroups[$groupId] = $node->getName();
-            $groupTypes[$node->getName()] = $node->getType();
-            $groupConstraints[$node->getName()] = $node->getConstraints();
-        } elseif ($node instanceof NestedAstNode) {
+            $groupTypes[$node->getName()] = $node->getType()->getDefaultName();
+            $groupConstraints[$node->getName()] = $node->getType()->getConstraintsArgument();
+        } elseif ($node instanceof NodeTreeInterface) {
             foreach ($node->getChildren() as $child) {
                 $this->extractGroupInfo($child, $namedGroups, $groupTypes, $groupConstraints);
             }
-        }
-    }
-
-    private function dumpAstStructure(AstNode $node, int $depth): void {
-        $indent = str_repeat('  ', $depth);
-        if ($node instanceof GroupNode) {
-            echo $indent . 'GroupNode: ' . $node->getName() . ' (' . $node->getType() . ') [greedy=' . ($node->isGreedy() ? 'true' : 'false') . "]\n";
-        } elseif ($node instanceof LiteralNode) {
-            echo $indent . 'LiteralNode: \'' . $node->getText() . '\'\n';
-        } elseif ($node instanceof SubSequenceNode) {
-            echo $indent . 'SubSequenceNode:\n';
-            foreach ($node->getChildren() as $child) {
-                $this->dumpAstStructure($child, $depth + 1);
-            }
-        } elseif ($node instanceof SequenceNode) {
-            echo $indent . 'SequenceNode:\n';
-            foreach ($node->getChildren() as $child) {
-                $this->dumpAstStructure($child, $depth + 1);
-            }
-        } else {
-            echo $indent . get_class($node) . "\n";
         }
     }
 }

@@ -2,9 +2,18 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes\Interfaces;
 
-interface NodeTreeInterface
+interface NodeTreeInterface extends NamedNodeInterface, NodeGroupAwareInterface, BoundaryProviderInterface
 {
-    public function setParent(?NodeTreeInterface $parent): void;
-    public function getParent(): ?NodeTreeInterface;
-    public function isOptional(): bool;
+    /**
+     * add a new children
+     *
+     * @param AstNodeInterface $node
+     * @return void
+     */
+    public function addChild(AstNodeInterface $node): void;
+
+    /**
+     * @return array children nodes
+     */
+    public function getChildren(): array;
 }

@@ -6,6 +6,9 @@ use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPatternFactory;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Config\Ast\Validation\ValidatorInterface;
+use CPSIT\ShortNr\Exception\ShortNrPatternCompilationException;
+use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
+use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 
 final class PatternCompiler
 {
@@ -15,6 +18,12 @@ final class PatternCompiler
         private readonly ValidatorInterface $validator
     ) {}
 
+    /**
+     * @param string $pattern
+     * @return CompiledPattern
+     * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternTypeException
+     */
     public function compile(string $pattern): CompiledPattern
     {
         // Parse
@@ -39,6 +48,7 @@ final class PatternCompiler
     /**
      * @param array $compiledPatternData
      * @return CompiledPattern
+     * @throws ShortNrPatternCompilationException
      */
     public function hydrate(array $compiledPatternData): CompiledPattern
     {

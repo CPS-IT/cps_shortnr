@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Tests\Unit\Config\Ast;
 
+use CPSIT\ShortNr\Config\Ast\Heuristic\HeuristicCompiler;
 use CPSIT\ShortNr\Config\Ast\PatternBuilder;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Config\Ast\Heuristic\PatternHeuristic;
@@ -143,8 +144,7 @@ class PatternBuilderIntegrationTest extends TestCase
             $compiledPatterns[] = $compiler->compile($pattern);
         }
 
-        $heuristic = PatternHeuristic::buildFromPatterns($compiledPatterns);
-
+        $heuristic = (new HeuristicCompiler())->compile($compiledPatterns);
         $this->assertSame($shouldSupport, $heuristic->support($input),
             "Heuristic support check failed for input '$input'");
     }
@@ -258,10 +258,13 @@ class PatternBuilderIntegrationTest extends TestCase
         yield 'subsequence-completely-absent' => ['PAGE{uid:int}(-{lang:str})', 'PAGE123', true, ['uid' => 123, 'lang' => null]];
 
         // Nested SubSequence cascading logic
-        yield 'nested-subsequence-all-present' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123-en-mobile', true, ['uid' => 123, 'lang' => 'en-mobile', 'variant' => null]];
+        yield 'nested-subsequence-all-present' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123-en-mobile', true, ['uid' => 123, 'lang' => 'en', 'variant' => 'mobile']];
         yield 'nested-subsequence-outer-only' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123-en', true, ['uid' => 123, 'lang' => 'en', 'variant' => null]];
         yield 'nested-subsequence-none' => ['PAGE{uid:int}(-{lang:str}(-{variant:str}))', 'PAGE123', true, ['uid' => 123, 'lang' => null, 'variant' => null]];
-        
+        // currently we have a hard strict failure policy. misaligned types result in a total lost
+        yield 'nested-subsequence-type-mismatch' => ['PAGE{uid:int}(-{lang:int}(-{variant:str}))', 'PAGE123-en-mobile', false];
+
+
         // Test cascading failure - incomplete SubSequence should fail entirely
         // Note: This test might need adjustment based on actual parsing behavior
         // yield 'nested-subsequence-partial-failure' => ['PAGE{uid:int}(-{lang:str}-{variant:str})', 'PAGE123-en', false];

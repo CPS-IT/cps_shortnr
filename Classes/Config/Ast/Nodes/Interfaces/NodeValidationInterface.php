@@ -2,8 +2,9 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes\Interfaces;
 
-interface ValidationInterface
+interface NodeValidationInterface
 {
-    public function validateTreeContext(): void;
     public function validateEntireTree(): void;
+
+    public function validateTreeContext(): void;
 }

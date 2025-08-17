@@ -2,7 +2,9 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes;
 
-abstract class NamedAstNode extends AstNode
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NamedNodeInterface;
+
+abstract class NamedAstNode extends AstNode implements NamedNodeInterface
 {
     /**
      * Get the node type name for serialization

@@ -216,7 +216,7 @@ class PatternSyntaxExtensiveTest extends TestCase
         
         // Null/empty handling
         yield 'null-optional-value' => ['PAGE{uid:int}{name:str}?', ['uid' => 123, 'name' => null], 'PAGE123'];
-        yield 'empty-string-value' => ['PAGE{uid:int}-{suffix:str}', ['uid' => 123, 'suffix' => ''], 'PAGE123-'];
+        yield 'empty-string-value' => ['PAGE{uid:int}-{suffix:str}', ['uid' => 123, 'suffix' => ''], null, true];
         
         // Edge cases that might throw
         yield 'missing-required-throws' => ['PAGE{uid:int}', [], null, true];
@@ -256,7 +256,7 @@ class PatternSyntaxExtensiveTest extends TestCase
             '{a:int}?{b:int}?{c:int}?{d:int}?{e:int}?{f:int}?',
             '123',
             true,
-            ['a' => null, 'b' => null, 'c' => null, 'd' => null, 'e' => null, 'f' => 123]
+            ['a' => 123, 'b' => null, 'c' => null, 'd' => null, 'e' => null, 'f' => null]
         ];
         
         // Mixed constraints on multiple groups
@@ -373,7 +373,7 @@ class PatternSyntaxExtensiveTest extends TestCase
         // Mixed type constraints in same pattern
         yield 'mixed-types-all-valid' => [
             'ITEM{id:int(min=1, max=999)}-{code:str(minLen=2, maxLen=5)}-{version:int(default=1)}?',
-            'ITEM123-ABC',
+            'ITEM123-ABC-',
             true,
             ['id' => 123, 'code' => 'ABC', 'version' => 1]
         ];

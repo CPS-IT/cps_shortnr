@@ -21,9 +21,16 @@ final class TypeRegistry
         }
     }
 
+    /**
+     * @param string $name
+     * @return TypeInterface|null
+     * @throws ShortNrPatternTypeException
+     */
     public function getType(string $name): ?TypeInterface
     {
-        return $this->types[$name] ?? null;
+        // Clone to ensure each GroupNode gets its own type instance
+        // with isolated constraint state
+        return clone ($this->types[$name] ?? throw new ShortNrPatternTypeException('Type not found', $name));
     }
 
     /**
@@ -42,16 +49,6 @@ final class TypeRegistry
                 )
             };
         }
-    }
-
-    /**
-     * Get a signature of registered types for cache invalidation
-     */
-    public function getSignature(): string
-    {
-        $typeNames = array_keys($this->types);
-        sort($typeNames);
-        return implode(',', $typeNames);
     }
 
     /**

@@ -2,17 +2,25 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes;
 
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\LiteralNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 
-final class LiteralNode extends NamedAstNode
+final class LiteralNode extends NamedAstNode implements LiteralNodeInterface
 {
     public function __construct(
         private readonly string $text
     ) {}
 
-    /**
-     * @inheritDoc
-     */
+    public function getBoundary(): ?string
+    {
+        return $this->text;
+    }
+
+    public function getFirstBoundary(): ?string
+    {
+        return $this->text;
+    }
+
     protected function generateRegex(): string
     {
         return preg_quote($this->text, '/');
@@ -21,11 +29,6 @@ final class LiteralNode extends NamedAstNode
     public function generate(array $values): string
     {
         return $this->text;
-    }
-
-    public function getGroupNames(): array
-    {
-        return [];
     }
 
     public function getText(): string

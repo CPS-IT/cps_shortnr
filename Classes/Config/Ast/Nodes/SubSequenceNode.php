@@ -11,75 +11,101 @@ final class SubSequenceNode extends SequenceNode
      */
     protected function generateRegex(): string
     {
-        $innerRegex = parent::generateRegex();
-        // Make the entire subsequence optional - it can match completely or not at all
-        return '(?:' . $innerRegex . ')?';
+        // Make the entire subsequence optional by default
+        return '(?:' . parent::generateRegex() . ')?';
     }
 
     /**
-     * @param array $values
-     * @return string
+     * Generate output for this subsequence.
+     * Implements all-or-nothing semantics: ALL required groups within must have values
+     * for the subsequence to be included.
      */
     public function generate(array $values): string
     {
-        // Check if any group in this optional section has a value
-        $hasAnyValue = false;
+        // First, check if ALL required groups in this subsequence have values
+        if (!$this->canSatisfyAllRequirements($values)) {
+            return '';
+        }
+
+        // All requirements can be satisfied, generate the full subsequence
+        return parent::generate($values);
+    }
+
+    /**
+     * Check if all required elements in this subsequence can be satisfied.
+     * This implements the "all-or-nothing" rule for subsequences.
+     */
+    private function canSatisfyAllRequirements(array $values): bool
+    {
         foreach ($this->children as $child) {
-            // Check if child has group names (indicates it's a GroupNode)
-            $groupNames = $child->getGroupNames();
-            if (!empty($groupNames)) {
-                foreach ($groupNames as $groupName) {
-                    if (isset($values[$groupName])) {
-                        $hasAnyValue = true;
-                        break 2;
-                    }
+            if ($child instanceof GroupNode) {
+                // Check if this required group has a value
+                $groupName = $child->getName();
+                if (!isset($values[$groupName])) {
+                    // Required group has no value - subsequence cannot be satisfied
+                    return false;
+                }
+            } elseif ($child instanceof SubSequenceNode) {
+                // Nested subsequences are optional, so they don't block satisfaction
+                // But we still check if they CAN be satisfied for proper generation
+                // (they will handle their own all-or-nothing logic)
+                continue;
+            } elseif ($child instanceof LiteralNode) {
+                // Literals are always satisfiable
+                continue;
+            } elseif ($child instanceof SequenceNode) {
+                // Check if the sequence can be satisfied
+                if (!$this->canSequenceBeSatisfied($child, $values)) {
+                    return false;
                 }
             }
         }
 
-        if (!$hasAnyValue) {
-            return '';
-        }
-
-        $result = '';
-        foreach ($this->children as $child) {
-            $result .= $child->generate($values);
-        }
-        return $result;
-    }
-
-    /**
-     * Sub sequence nodes are always Optional ... ( ... )
-     *
-     * @return bool
-     */
-    public function hasOptional(): bool
-    {
         return true;
     }
 
     /**
-     * SubSequence nodes are always optional - this breaks the parent delegation chain
+     * Check if a sequence node can be satisfied with the given values.
+     */
+    private function canSequenceBeSatisfied(SequenceNode $sequence, array $values): bool
+    {
+        foreach ($sequence->getChildren() as $child) {
+            if ($child instanceof GroupNode) {
+                $groupName = $child->getName();
+                if (!isset($values[$groupName])) {
+                    return false;
+                }
+            } elseif ($child instanceof SequenceNode && !($child instanceof SubSequenceNode)) {
+                // Recursively check nested sequences (but not subsequences which are optional)
+                if (!$this->canSequenceBeSatisfied($child, $values)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * SubSequence nodes are always optional
      */
     public function isOptional(): bool
     {
-        return true;
+        return true; // Breaks the parent delegation chain
     }
 
     /**
+     * @return void
      * @throws ShortNrPatternParseException
      */
     public function validateTreeContext(): void
     {
-        // Check for empty subsequence
         if (empty($this->children)) {
             throw new ShortNrPatternParseException(
                 "Empty optional subsequence '()' is not allowed. Optional sections must contain at least one element (group or literal).",
-                'unknown' // Pattern context would need to be passed from parser
+                'unknown'
             );
         }
-        
-        // Call parent validation
+
         parent::validateTreeContext();
     }
 

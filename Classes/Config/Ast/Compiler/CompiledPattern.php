@@ -2,17 +2,18 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Compiler;
 
-use CPSIT\ShortNr\Config\Ast\Nodes\AstNode;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 use InvalidArgumentException;
+use Throwable;
 
 final class CompiledPattern
 {
     public function __construct(
         private readonly string $pattern,
         private readonly string $regex,
-        private readonly AstNode $ast,
+        private readonly AstNodeInterface $ast,
         private readonly array $namedGroups,
         private readonly array $groupTypes,
         private readonly array $groupConstraints,
@@ -29,7 +30,7 @@ final class CompiledPattern
         return $this->regex;
     }
 
-    public function getAst(): AstNode
+    public function getAst(): AstNodeInterface
     {
         return $this->ast;
     }
@@ -68,23 +69,19 @@ final class CompiledPattern
         foreach ($this->namedGroups as $groupId => $groupName) {
             // Check if group matched (empty string is valid for string types)
             $hasValue = isset($matches[$groupId]);
-            
+
             if ($hasValue && $matches[$groupId] !== '') {
                 $rawValue = $matches[$groupId];
                 $type = $this->groupTypes[$groupName];
                 $constraints = $this->groupConstraints[$groupName];
+                $typeHandler = $this->typeRegistry->getType($type)->setConstraintArguments($constraints);
 
                 // Get the type handler
-                $typeHandler = $this->typeRegistry->getType($type);
-                if (!$typeHandler) {
-                    throw new ShortNrPatternTypeException("Unknown type during matching", $type);
-                }
-
                 try {
                     // Process value with type and constraints
-                    $processedValue = $typeHandler->parseValue($rawValue, $constraints);
+                    $processedValue = $typeHandler->parseValue($rawValue);
                     $result->addGroup($groupName, $processedValue, $type, $constraints);
-                } catch (InvalidArgumentException $e) {
+                } catch (Throwable $e) {
                     $result->addError($e);
                 }
             } else {
@@ -94,14 +91,11 @@ final class CompiledPattern
                 
                 if (isset($constraints['default'])) {
                     // Get the type handler
-                    $typeHandler = $this->typeRegistry->getType($type);
-                    if (!$typeHandler) {
-                        throw new ShortNrPatternTypeException("Unknown type during matching", $type);
-                    }
+                    $typeHandler = $this->typeRegistry->getType($type)->setConstraintArguments($constraints);
 
                     try {
                         // Process null value to trigger default
-                        $processedValue = $typeHandler->parseValue(null, $constraints);
+                        $processedValue = $typeHandler->parseValue(null);
                         $result->addGroup($groupName, $processedValue, $type, $constraints);
                     } catch (InvalidArgumentException $e) {
                         $result->addError($e);

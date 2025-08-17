@@ -13,6 +13,9 @@ use InvalidArgumentException;
 
 final class StringType extends Type
 {
+    private const REGEX_LOOK_AHEAD = '/\[(\^[^\]]*)\]/';
+    private const REGEX_NEGATIVE_LOOK_AHEAD = '/(\[[^\]]+\])(\+)/';
+
     public function __construct()
     {
         $this->name = ['str', 'string'];
@@ -29,20 +32,20 @@ final class StringType extends Type
         );
     }
 
-    public function parseValue(mixed $value, array $constraints = []): mixed
+    public function parseValue(mixed $value): mixed
     {
         // Validate raw input before applying constraints
-        if (!is_scalar($value)) {
-            throw new InvalidArgumentException("Value must be scalar for str type, got: " . gettype($value));
+        if (!is_scalar($value) || empty($value)) {
+            throw new InvalidArgumentException('Value must be scalar for str type, got: \'' . gettype($value).'\'');
         }
         
-        return parent::parseValue((string)$value, $constraints);
+        return parent::parseValue((string)$value);
     }
 
     /**
      * @throws ShortNrPatternConstraintException
      */
-    public function serialize(mixed $value, array $constraints = []): string
+    public function serialize(mixed $value): string
     {
         if (!is_string($value)) {
             throw new ShortNrPatternConstraintException(
@@ -52,13 +55,40 @@ final class StringType extends Type
                 'type_validation'
             );
         }
-        return parent::serialize($value, $constraints);
+        return parent::serialize($value);
+    }
+
+    public function applyBoundary(string $pattern, ?string $boundary): string
+    {
+        if ($boundary === null) {
+            return $pattern;
+        }
+
+        $escapedBoundary = preg_quote($boundary, '/');
+
+        // String type knows its pattern is [^/]+ and how to modify it
+        if (strlen($boundary) === 1) {
+            // For single char: modify character class
+            if (preg_match(self::REGEX_LOOK_AHEAD, $pattern, $matches)) {
+                $charClass = $matches[1];
+                if (!str_contains($charClass, $escapedBoundary)) {
+                    $newCharClass = $charClass . $escapedBoundary;
+                    return str_replace('[' . $charClass . ']', '[' . $newCharClass . ']', $pattern);
+                }
+            }
+        } else {
+            // For multi-char: use negative lookahead
+            $lookahead = '(?!' . $escapedBoundary . ')';
+            return preg_replace(self::REGEX_NEGATIVE_LOOK_AHEAD, '(?:' . $lookahead . '$1)$2', $pattern);
+        }
+
+        return $pattern;
     }
 
     /**
      * @inheritDoc
      */
-    public function isGreedy(array $constraints = []): bool
+    public function isGreedy(): bool
     {
         // v1.0: String type is always greedy, constraints don't affect greediness
         return true;

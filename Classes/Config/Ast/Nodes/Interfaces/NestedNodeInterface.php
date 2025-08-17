@@ -2,12 +2,7 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Nodes\Interfaces;
 
-interface NestedNodeInterface extends AstNodeInterface
+interface NestedNodeInterface extends NodeTreeInterface
 {
-    public function addChild(AstNodeInterface $node): void;
-    
-    /**
-     * @return AstNodeInterface[]
-     */
-    public function getChildren(): array;
+    // Additional nested-specific methods if needed
 }

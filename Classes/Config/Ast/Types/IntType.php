@@ -25,13 +25,12 @@ final class IntType extends Type
 
     /**
      * @param mixed $value
-     * @param array $constraints
      * @return mixed
      */
-    public function parseValue(mixed $value, array $constraints = []): mixed
+    public function parseValue(mixed $value): mixed
     {
         // Apply constraints first (including defaults) 
-        $value = parent::parseValue($value, $constraints);
+        $value = parent::parseValue($value);
         
         // Then validate the processed value
         if (!is_numeric($value)) {
@@ -46,13 +45,23 @@ final class IntType extends Type
         return (int)$value;
     }
 
+    public function applyBoundary(string $pattern, ?string $boundary): string
+    {
+        if ($boundary === null) {
+            return $pattern;
+        }
+
+        // Int type knows its pattern is \d+ and uses positive lookahead
+        $escapedBoundary = preg_quote($boundary, '/');
+        return $pattern . '(?=' . $escapedBoundary . '|$)';
+    }
+
     /**
      * @param mixed $value
-     * @param array $constraints
      * @return string
      * @throws ShortNrPatternConstraintException
      */
-    public function serialize(mixed $value, array $constraints = []): string
+    public function serialize(mixed $value): string
     {
         if (!is_int($value)) {
             throw new ShortNrPatternConstraintException(
@@ -62,13 +71,13 @@ final class IntType extends Type
                 'type_validation'
             );
         }
-        return parent::serialize($value, $constraints);
+        return parent::serialize($value);
     }
 
     /**
      * @inheritDoc
      */
-    public function isGreedy(array $constraints = []): bool
+    public function isGreedy(): bool
     {
         // v1.0: Int type is always greedy, constraints don't affect greediness
         return true;

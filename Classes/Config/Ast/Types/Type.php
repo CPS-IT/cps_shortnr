@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Types;
 
 use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 use Generator;
 use InvalidArgumentException;
 
@@ -13,11 +14,24 @@ abstract class Type implements TypeInterface
      */
     private array $constraints = [];
     /**
+     * @var array<string, string> Type-specific constraints arguments
+     */
+    private array $constraintsArgument = [];
+    /**
      * @var string[]
      */
     protected array $name = [];
     protected string $pattern = '';
     protected array $characterClasses = [];
+
+    /**
+     * prevent stateful problem with typeRegistry that gives always the same object (no clone object back)
+     * @return void
+     */
+    public function __clone()
+    {
+        $this->constraintsArgument = [];
+    }
 
     /**
      * Get the regex pattern for this type.
@@ -30,7 +44,7 @@ abstract class Type implements TypeInterface
     }
 
     /**
-     * Get the name of this type.
+     * Get the name of this type. (include all aliases)
      *
      * @return string[] The type names (e.g., 'int', 'str')
      */
@@ -40,13 +54,21 @@ abstract class Type implements TypeInterface
     }
 
     /**
+     * @return string
+     * @throws ShortNrPatternTypeException
+     */
+    public function getDefaultName(): string
+    {
+        return array_values($this->name)[0] ?? throw new ShortNrPatternTypeException('No Name in type\''. static::class .'\' defined', '');
+    }
+
+    /**
      * @param mixed $value
-     * @param array $constraints
      * @return mixed
      */
-    public function parseValue(mixed $value, array $constraints = []): mixed
+    public function parseValue(mixed $value): mixed
     {
-        foreach ($constraints as $name => $cValue) {
+        foreach ($this->constraintsArgument as $name => $cValue) {
             $value = $this->getConstraint($name)?->parseValue($value, $cValue) ?? $value;
         }
 
@@ -57,17 +79,24 @@ abstract class Type implements TypeInterface
      * Convert a string match to the appropriate PHP type.
      *
      * @param mixed $value The matched string
-     * @param array<string, string> $constraints Type-specific constraints
      * @return mixed The converted value
      * @throws InvalidArgumentException When validation fails
      */
-    public function serialize(mixed $value, array $constraints = []): string
+    public function serialize(mixed $value): string
     {
-        foreach ($constraints as $name => $cValue) {
+        foreach ($this->constraintsArgument as $name => $cValue) {
             $value = $this->getConstraint($name)?->serialize($value, $cValue) ?? $value;
         }
 
         return (string)$value;
+    }
+
+    /**
+     * @return array<string, string> Type-specific constraints arguments
+     */
+    public function getConstraintsArgument(): array
+    {
+        return $this->constraintsArgument;
     }
 
     /**
@@ -109,9 +138,10 @@ abstract class Type implements TypeInterface
     /**
      * @inheritDoc
      */
-    public function getConstrainedPattern(array $constraints = []): string
+    public function getConstrainedPattern(): string
     {
         $pattern = $this->getPattern();
+        $constraints = $this->constraintsArgument;
         
         // Apply constraints in a specific order to handle dependencies
         // First apply constraints that establish bounds (maxLen, max)
@@ -141,16 +171,19 @@ abstract class Type implements TypeInterface
     }
 
     /**
+     * @param array $constraintArguments
+     * @return $this
+     */
+    public function setConstraintArguments(array $constraintArguments): static
+    {
+        $this->constraintsArgument = $constraintArguments;
+        return $this;
+    }
+
+    abstract public function applyBoundary(string $pattern, ?string $boundary): string;
+
+    /**
      * @inheritDoc
      */
-    public function isGreedy(array $constraints = []): bool
-    {
-        // Check if any constraint is capping (modifies the pattern from base)
-        $basePattern = $this->getPattern();
-        $constrainedPattern = $this->getConstrainedPattern($constraints);
-        
-        // If pattern changed, it's been capped and is non-greedy
-        // If pattern unchanged, return false by default (most types are not greedy)
-        return false;
-    }
+    abstract public function isGreedy(): bool;
 }

@@ -204,7 +204,7 @@ class SubSequenceCascadingTest extends TestCase
             'BASE({x:int}-data-{y:str}(-extra-{z:int}))', 
             'BASE123-data-test-extra-456', 
             true, 
-            ['x' => 123, 'y' => 'test-extra-456', 'z' => null]  // y consumes all because SubSequence is optional
+            ['x' => 123, 'y' => 'test', 'z' => 456]  // y consumes all because SubSequence is optional
         ];
         
         yield 'cascading-with-literals-invalid' => [

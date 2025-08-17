@@ -253,7 +253,7 @@ class PatternErrorScenariosTest extends TestCase
         yield 'missing-required-value' => ['PAGE{uid:int}', [], null, true];
         yield 'extra-unused-values' => ['PAGE{uid:int}', ['uid' => 123, 'extra' => 'ignored'], 'PAGE123'];
         yield 'null-optional-value' => ['PAGE{uid:int}{lang:str}?', ['uid' => 123, 'lang' => null], 'PAGE123'];
-        yield 'empty-string-value' => ['PAGE{uid:int}-{suffix:str}', ['uid' => 123, 'suffix' => ''], 'PAGE123-'];
+        yield 'empty-string-value' => ['PAGE{uid:int}-{suffix:str}', ['uid' => 123, 'suffix' => ''], null, true];
         yield 'zero-value' => ['PAGE{uid:int}', ['uid' => 0], 'PAGE0'];
         
         // Nested optional structure

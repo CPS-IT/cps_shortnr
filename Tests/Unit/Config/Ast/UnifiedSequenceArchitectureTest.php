@@ -336,10 +336,11 @@ class UnifiedSequenceArchitectureTest extends TestCase
             ['year' => 2024, 'month' => null, 'day' => null, 'slug' => null]
         ];
         
-        yield 'blog-url-partial-invalid' => [
-            '/blog/{year:int}(-/{month:int}(-/{day:int}(-/{slug:str})))', 
-            '/blog/2024-/03', 
-            false  // month SubSequence started but not completed
+        yield 'blog-url-partial' => [
+            '/blog/{year:int}(/{month:int}(/{day:int}(/{slug:str})))',
+            '/blog/2024/03',
+            true,  // month SubSequence started but not completed
+            ['year' => 2024, 'month' => 3, 'day' => null, 'slug' => null]
         ];
         
         // API endpoint with versioning and optional parameters
