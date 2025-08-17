@@ -13,8 +13,8 @@ use InvalidArgumentException;
 
 final class StringType extends Type
 {
-    private const REGEX_LOOK_AHEAD = '/\[(\^[^\]]*)\]/';
-    private const REGEX_NEGATIVE_LOOK_AHEAD = '/(\[[^\]]+\])(\+)/';
+    private const REGEX_LOOK_AHEAD = '/\[(\^[^]]*)]/';
+    private const REGEX_NEGATIVE_LOOK_AHEAD = '/(\[[^]]+])(\+)/';
 
     public function __construct()
     {
