@@ -3,26 +3,24 @@
 namespace CPSIT\ShortNr\Config\Ast\Heuristic\Analyzer\Type;
 
 use CPSIT\ShortNr\Config\Ast\Types\TypeInterface;
+use InvalidArgumentException;
 
 class TypeAnalyzer
 {
     /**
-     * Analyze a type to determine its characteristics for heuristic matching
-     * Let the type itself provide the information
+     * Analyze a type by probing it with test values
+     * No knowledge about specific types needed!
      */
     public static function analyzeType(TypeInterface $type): TypeAnalyzerResult
     {
-        // Get the base pattern to analyze
-        $pattern = $type->getConstrainedPattern();
+        // Probe for allowed characters
+        $allowedChars = self::probeAllowedCharacters($type);
 
-        // Parse allowed characters from the pattern
-        $allowedChars = self::parseAllowedCharsFromPattern($pattern);
+        // Probe for length constraints
+        [$minLen, $maxLen] = self::probeLengthConstraints($type);
 
-        // Parse length constraints from the pattern
-        [$minLen, $maxLen] = self::parseLengthFromPattern($pattern);
-
-        // Check if type can be empty (based on pattern)
-        $canBeEmpty = self::canPatternMatchEmpty($pattern);
+        // Check if empty string is valid
+        $canBeEmpty = self::probeCanBeEmpty($type);
 
         return new TypeAnalyzerResult(
             minLen: $minLen,
@@ -33,120 +31,170 @@ class TypeAnalyzer
     }
 
     /**
-     * Parse allowed characters from a regex pattern
+     * Probe which characters are allowed by trying them
      */
-    private static function parseAllowedCharsFromPattern(string $pattern): array
+    private static function probeAllowedCharacters(TypeInterface $type): array
     {
         $allowedChars = [];
 
-        // Match character classes like [^/], [a-zA-Z0-9], \d, etc.
-        if (preg_match('/\[([^\]]+)\]/', $pattern, $matches)) {
-            $charClass = $matches[1];
+        // Test all printable ASCII characters
+        for ($i = 32; $i < 127; $i++) {
+            $char = chr($i);
 
-            // Handle negated character classes [^...]
-            if (str_starts_with($charClass, '^')) {
-                // For negated classes, allow all printable ASCII except specified
-                for ($i = 32; $i < 127; $i++) {
-                    $allowedChars[$i] = true;
-                }
+            try {
+                // Try to parse this single character
+                $type->parseValue($char);
+                // If no exception, this character is allowed
+                $allowedChars[$i] = true;
+            } catch (InvalidArgumentException) {
+                // Character not allowed, skip it
+            }
+        }
 
-                // Remove excluded characters
-                $excluded = substr($charClass, 1);
-                for ($i = 0; $i < strlen($excluded); $i++) {
-                    unset($allowedChars[ord($excluded[$i])]);
-                }
-            } else {
-                // Parse positive character class
-                $allowedChars = self::parseCharacterClass($charClass);
-            }
-        } elseif (str_contains($pattern, '\d')) {
-            // Digit pattern
-            for ($i = ord('0'); $i <= ord('9'); $i++) {
-                $allowedChars[$i] = true;
-            }
-        } elseif (str_contains($pattern, '\w')) {
-            // Word characters
-            for ($i = ord('a'); $i <= ord('z'); $i++) {
-                $allowedChars[$i] = true;
-            }
-            for ($i = ord('A'); $i <= ord('Z'); $i++) {
-                $allowedChars[$i] = true;
-            }
-            for ($i = ord('0'); $i <= ord('9'); $i++) {
-                $allowedChars[$i] = true;
-            }
-            $allowedChars[ord('_')] = true;
-        } else {
-            // Default: be permissive
-            for ($i = 32; $i < 127; $i++) {
-                $allowedChars[$i] = true;
-            }
+        // Special case: check if minus is allowed for negative numbers
+        // Try a negative number pattern
+        try {
+            $type->parseValue('-1');
+            $allowedChars[ord('-')] = true;
+        } catch (InvalidArgumentException) {
+            // Negative numbers not allowed
         }
 
         return $allowedChars;
     }
 
     /**
-     * Parse a character class like "a-zA-Z0-9_-"
+     * Probe length constraints by testing various lengths
      */
-    private static function parseCharacterClass(string $charClass): array
+    private static function probeLengthConstraints(TypeInterface $type): array
     {
-        $allowedChars = [];
-        $len = strlen($charClass);
+        $minLen = 0;
+        $maxLen = null;
 
-        for ($i = 0; $i < $len; $i++) {
-            if ($i + 2 < $len && $charClass[$i + 1] === '-') {
-                // Range like a-z
-                $start = ord($charClass[$i]);
-                $end = ord($charClass[$i + 2]);
-                for ($j = $start; $j <= $end; $j++) {
-                    $allowedChars[$j] = true;
-                }
-                $i += 2;
-            } else {
-                // Single character
-                $allowedChars[ord($charClass[$i])] = true;
+        // Find minimum length by testing incrementally
+        $minLen = self::findMinimumLength($type);
+
+        // Find maximum length by binary search or constraint detection
+        $maxLen = self::findMaximumLength($type, $minLen);
+
+        return [$minLen, $maxLen];
+    }
+
+    /**
+     * Find the minimum valid length
+     */
+    private static function findMinimumLength(TypeInterface $type): int
+    {
+        // Try empty string first
+        try {
+            $type->parseValue('');
+            return 0;
+        } catch (InvalidArgumentException) {
+            // Empty not allowed
+        }
+
+        // Try increasingly longer strings of a safe character
+        $testChar = self::findSafeTestCharacter($type);
+
+        for ($len = 1; $len <= 100; $len++) {
+            $testValue = str_repeat($testChar, $len);
+
+            try {
+                $type->parseValue($testValue);
+                // This length works!
+                return $len;
+            } catch (InvalidArgumentException) {
+                // Keep trying longer strings
             }
         }
 
-        return $allowedChars;
+        // Default to 1 if we can't determine
+        return 1;
     }
 
     /**
-     * Parse length constraints from pattern quantifiers
+     * Find the maximum valid length
      */
-    private static function parseLengthFromPattern(string $pattern): array
+    private static function findMaximumLength(TypeInterface $type, int $minLen): ?int
     {
-        // Look for quantifiers like {1,10}, {3}, +, *, ?
-        if (preg_match('/\{(\d+),(\d+)\}/', $pattern, $matches)) {
-            // {min,max}
-            return [(int)$matches[1], (int)$matches[2]];
-        } elseif (preg_match('/\{(\d+)\}/', $pattern, $matches)) {
-            // {exact}
-            $len = (int)$matches[1];
-            return [$len, $len];
-        } elseif (str_contains($pattern, '+')) {
-            // One or more
-            return [1, null];
-        } elseif (str_contains($pattern, '*')) {
-            // Zero or more
-            return [0, null];
-        } elseif (str_contains($pattern, '?')) {
-            // Zero or one
-            return [0, 1];
+        $testChar = self::findSafeTestCharacter($type);
+
+        // First check if there's any upper limit at all
+        // Try a very long string
+        $veryLong = str_repeat($testChar, 1000);
+        try {
+            $type->parseValue($veryLong);
+            // No upper limit detected
+            return null;
+        } catch (InvalidArgumentException) {
+            // There is an upper limit, find it
         }
 
-        // Default: one or more
-        return [1, null];
+        // Binary search for the maximum length
+        $low = $minLen;
+        $high = 1000;
+        $maxFound = $minLen;
+
+        while ($low <= $high) {
+            $mid = (int)(($low + $high) / 2);
+            $testValue = str_repeat($testChar, $mid);
+
+            try {
+                $type->parseValue($testValue);
+                // This length works, try longer
+                $maxFound = $mid;
+                $low = $mid + 1;
+            } catch (InvalidArgumentException) {
+                // Too long, try shorter
+                $high = $mid - 1;
+            }
+        }
+
+        return $maxFound;
     }
 
     /**
-     * Check if pattern can match empty string
+     * Find a character that this type accepts for testing
      */
-    private static function canPatternMatchEmpty(string $pattern): bool
+    private static function findSafeTestCharacter(TypeInterface $type): string
     {
-        return str_contains($pattern, '*') ||
-            str_contains($pattern, '?') ||
-            str_contains($pattern, '{0');
+        // Common test characters in order of likelihood
+        $testChars = ['a', '1', '0', 'A', 'x', '_', '-', '.'];
+
+        foreach ($testChars as $char) {
+            try {
+                $type->parseValue($char);
+                return $char;
+            } catch (InvalidArgumentException) {
+                // Try next character
+            }
+        }
+
+        // Fallback: try all printable ASCII
+        for ($i = 32; $i < 127; $i++) {
+            $char = chr($i);
+            try {
+                $type->parseValue($char);
+                return $char;
+            } catch (InvalidArgumentException) {
+                // Keep trying
+            }
+        }
+
+        // Last resort
+        return 'a';
+    }
+
+    /**
+     * Check if empty string is valid
+     */
+    private static function probeCanBeEmpty(TypeInterface $type): bool
+    {
+        try {
+            $type->parseValue('');
+            return true;
+        } catch (InvalidArgumentException) {
+            return false;
+        }
     }
 }
