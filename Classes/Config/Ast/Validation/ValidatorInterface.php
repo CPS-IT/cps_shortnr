@@ -6,5 +6,5 @@ use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
 
 interface ValidatorInterface
 {
-    public function validate(AstNodeInterface $rootNode): void;
+    public function validate(AstNodeInterface $astNode): void;
 }

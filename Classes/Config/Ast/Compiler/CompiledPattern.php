@@ -110,12 +110,6 @@ final class CompiledPattern
         // Return result even if constraints failed - caller can check isFailed()
         return $result;
     }
-    
-    private function isAllOptional(): bool
-    {
-        // Check if pattern consists entirely of optional groups (no required literals)
-        return $this->ast->isAllOptional();
-    }
 
     public function generate(array $values): string
     {
