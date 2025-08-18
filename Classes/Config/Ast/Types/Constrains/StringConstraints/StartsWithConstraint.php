@@ -2,27 +2,25 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\BaseConstraint;
 use InvalidArgumentException;
 
-class StartsWithConstraint implements TypeConstraint
+class StartsWithConstraint extends BaseConstraint
+
 {
-    public function getName(): string
-    {
-        return 'startsWith';
-    }
+    public const NAME = 'startsWith';
 
     /**
      * @inheritDoc
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         if ($value === null) {
             return null; // Let default constraint handle this
         }
 
         $stringValue = (string)$value;
-        $prefix = $this->unescapeString((string)$constraintValue);
+        $prefix = $this->unescapeString((string)$this->value);
 
         if (!str_starts_with($stringValue, $prefix)) {
             throw new InvalidArgumentException("String '$stringValue' does not start with '$prefix'");
@@ -34,15 +32,9 @@ class StartsWithConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         return $value;
-    }
-
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
-    {
-        // This constraint doesn't modify pattern width
-        return $basePattern;
     }
 
     /**

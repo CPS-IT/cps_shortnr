@@ -2,9 +2,9 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Validation;
 
-use CPSIT\ShortNr\Config\Ast\Nodes\GroupNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\TypeNodeInterface;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 
 final class ConstraintValidator implements ValidatorInterface
@@ -22,8 +22,9 @@ final class ConstraintValidator implements ValidatorInterface
      */
     private function validateConstraints(AstNodeInterface $node): void
     {
-        if ($node instanceof GroupNode) {
-            foreach ($node->getType()->getConstraintsArgument() as $key => $value) {
+        if ($node instanceof TypeNodeInterface) {
+            foreach ($node->getType()->getConstraints() as $key => $constraint) {
+                $value = $constraint->getValue();
                 if ($value === '' || $value === null) {
                     throw new ShortNrPatternException(
                         "Empty constraint value for '$key' in group '".$node->getName()."'"

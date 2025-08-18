@@ -2,27 +2,25 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\NumberConstraints;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\BaseConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\BoundingConstraintInterface;
 use InvalidArgumentException;
 
-class MaxConstraint implements TypeConstraint
+class MaxConstraint extends BaseConstraint implements BoundingConstraintInterface
 {
-    public function getName(): string
-    {
-        return 'max';
-    }
+    public const NAME = 'max';
 
     /**
      * @inheritDoc
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         if ($value === null) {
             return null; // Let default constraint handle this
         }
 
         $intValue = (int)$value;
-        $maxValue = (int)$constraintValue;
+        $maxValue = (int)$this->value;
 
         if ($intValue > $maxValue) {
             throw new InvalidArgumentException("Value $intValue exceeds maximum $maxValue");
@@ -34,7 +32,7 @@ class MaxConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         // Validation happens during parsing, just return the value for serialization
         return $value;
@@ -43,7 +41,7 @@ class MaxConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    public function modifyPattern(string $basePattern): string
     {
         // v1.0: Constraints don't modify patterns, validation-only
         return $basePattern;

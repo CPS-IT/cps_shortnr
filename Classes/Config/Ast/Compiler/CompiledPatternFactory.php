@@ -12,6 +12,7 @@ use CPSIT\ShortNr\Config\Ast\Nodes\SequenceNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternCompilationException;
+use CPSIT\ShortNr\Exception\ShortNrPatternException;
 use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
 use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 
@@ -74,6 +75,7 @@ final class CompiledPatternFactory
      * Recreate CompiledPattern from cached data
      * Uses the current TypeRegistry instance
      * @throws ShortNrPatternCompilationException
+     * @throws ShortNrPatternException
      */
     public function hydrate(array $data): CompiledPattern
     {
@@ -103,6 +105,7 @@ final class CompiledPatternFactory
      * @throws ShortNrPatternCompilationException
      * @throws ShortNrPatternCompilationException
      * @throws ShortNrPatternCompilationException
+     * @throws ShortNrPatternException
      */
     private function deserializeAst(array $data): AstNodeInterface
     {
@@ -139,7 +142,7 @@ final class CompiledPatternFactory
             $groupId = $node->getGroupId();
             $namedGroups[$groupId] = $node->getName();
             $groupTypes[$node->getName()] = $node->getType()->getDefaultName();
-            $groupConstraints[$node->getName()] = $node->getType()->getConstraintsArgument();
+            $groupConstraints[$node->getName()] = $node->getType()->getConstraintArguments();
         } elseif ($node instanceof NodeTreeInterface) {
             foreach ($node->getChildren() as $child) {
                 $this->extractGroupInfo($child, $namedGroups, $groupTypes, $groupConstraints);

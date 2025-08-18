@@ -10,17 +10,23 @@ use InvalidArgumentException;
 
 final class IntType extends Type
 {
-    public function __construct()
-    {
-        $this->name = ['int', 'integer'];
-        $this->pattern = '\d+';
-        $this->characterClasses = ['0-9'];
+    protected const DEFAULT_NAME = 'int';
+    protected const TYPE_NAMES_ALIASES = ['integer'];
 
-        $this->registerConstraint(
-            new DefaultConstraint(),
-            new MinConstraint(),
-            new MaxConstraint()
-        );
+    protected string $pattern = '\d+';
+    protected array $characterClasses = ['0-9','-'];
+
+    /**
+     * @internal
+     * @return string[] return the supported Constraint classes for that Type
+     */
+    public function getSupportedConstraintClasses(): array
+    {
+        return [
+            MinConstraint::class,
+            MaxConstraint::class,
+            DefaultConstraint::class
+        ];
     }
 
     /**

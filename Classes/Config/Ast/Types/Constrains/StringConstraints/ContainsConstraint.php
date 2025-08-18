@@ -2,27 +2,24 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\BaseConstraint;
 use InvalidArgumentException;
 
-class ContainsConstraint implements TypeConstraint
+class ContainsConstraint extends BaseConstraint
 {
-    public function getName(): string
-    {
-        return 'contains';
-    }
+    public const NAME = 'contains';
 
     /**
      * @inheritDoc
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         if ($value === null) {
             return null; // Let default constraint handle this
         }
 
         $stringValue = (string)$value;
-        $needle = $this->unescapeString((string)$constraintValue);
+        $needle = $this->unescapeString((string)$this->value);
 
         if (!str_contains($stringValue, $needle)) {
             throw new InvalidArgumentException("String '$stringValue' does not contain '$needle'");
@@ -34,15 +31,9 @@ class ContainsConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         return $value;
-    }
-
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
-    {
-        // This constraint doesn't modify pattern width
-        return $basePattern;
     }
 
     /**

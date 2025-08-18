@@ -13,23 +13,24 @@ use InvalidArgumentException;
 
 final class StringType extends Type
 {
+    protected const DEFAULT_NAME = 'str';
+    protected const TYPE_NAMES_ALIASES = ['string'];
     private const REGEX_LOOK_AHEAD = '/\[(\^[^]]*)]/';
     private const REGEX_NEGATIVE_LOOK_AHEAD = '/(\[[^]]+])(\+)/';
 
-    public function __construct()
-    {
-        $this->name = ['str', 'string'];
-        $this->pattern = '[^\/]+';
-        $this->characterClasses = ['a-zA-Z0-9', '_', '-', '.'];
+    protected string $pattern = '[^\/]+';
+    protected array $characterClasses = ['a-zA-Z0-9', '_', '-', '.'];
 
-        $this->registerConstraint(
-            new DefaultConstraint(),
-            new MinLengthConstraint(),
-            new MaxLengthConstraint(),
-            new ContainsConstraint(),
-            new StartsWithConstraint(),
-            new EndsWithConstraint()
-        );
+    public function getSupportedConstraintClasses(): array
+    {
+        return [
+            MinLengthConstraint::class,
+            MaxLengthConstraint::class,
+            StartsWithConstraint::class,
+            EndsWithConstraint::class,
+            ContainsConstraint::class,
+            DefaultConstraint::class
+        ];
     }
 
     public function parseValue(mixed $value): mixed

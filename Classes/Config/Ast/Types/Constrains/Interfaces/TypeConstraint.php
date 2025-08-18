@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Config\Ast\Types\Constrains;
+namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces;
 
 use InvalidArgumentException;
 
@@ -8,37 +8,29 @@ interface TypeConstraint
 {
     /**
      * constant name used in pattern
-     * @return string
      */
-    public function getName(): string;
+    public const NAME = '__undefined__';
+
+    /**
+     * @return mixed
+     */
+    public function getValue(): mixed;
 
     /**
      * Process the value - validate, transform, or apply defaults.
      *
      * @param mixed $value The value to process
-     * @param mixed $constraintValue The constraint parameter
      * @return mixed The processed value (maybe same or transformed)
      * @throws InvalidArgumentException When validation fails
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed;
+    public function parseValue(mixed $value): mixed;
 
     /**
      * Modify the builder in-place or return null to skip
      * @param mixed $value
-     * @param string $constraintValue
      * @return mixed
      */
-    public function serialize(mixed $value, string $constraintValue): mixed;
-
-    /**
-     * Modify the regex pattern based on this constraint.
-     * Return the original pattern if no modification needed.
-     * 
-     * @param string $basePattern The base regex pattern from the type
-     * @param mixed $constraintValue The constraint parameter value
-     * @return string The modified pattern
-     */
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string;
+    public function serialize(mixed $value): mixed;
 
     /**
      * Whether this constraint caps greediness (makes patterns non-greedy).

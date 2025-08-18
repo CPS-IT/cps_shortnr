@@ -3,7 +3,7 @@
 namespace CPSIT\ShortNr\Config\Ast\Validation;
 
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
-use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NodeTreeInterface;
 
 /**
  * Validates tree context rules after all parent-child relationships are established.
@@ -22,7 +22,7 @@ final class TreeContextValidator implements ValidatorInterface
         $node->validateTreeContext();
         
         // Recursively validate children
-        if ($node instanceof NestedNodeInterface) {
+        if ($node instanceof NodeTreeInterface) {
             foreach ($node->getChildren() as $child) {
                 $this->validateNode($child);
             }

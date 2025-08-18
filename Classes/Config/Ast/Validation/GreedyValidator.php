@@ -3,10 +3,9 @@
 namespace CPSIT\ShortNr\Config\Ast\Validation;
 
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\LiteralNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
-use CPSIT\ShortNr\Config\Ast\Nodes\GroupNode;
-use CPSIT\ShortNr\Config\Ast\Nodes\LiteralNode;
-use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\TypeNodeInterface;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 
 /**
@@ -53,7 +52,7 @@ final class GreedyValidator implements ValidatorInterface
         $previousGreedyGroup = null;
         
         foreach ($children as $child) {
-            if ($child instanceof GroupNode) {
+            if ($child instanceof TypeNodeInterface) {
                 if ($child->isGreedy()) {
                     if ($previousGreedyGroup !== null) {
                         throw new ShortNrPatternException(
@@ -66,8 +65,8 @@ final class GreedyValidator implements ValidatorInterface
                     // Non-greedy group doesn't violate adjacency
                     $previousGreedyGroup = null;
                 }
-            } elseif ($child instanceof LiteralNode || $child instanceof SubSequenceNode) {
-                // Literals and SubSequences break adjacency
+            } elseif ($child instanceof LiteralNodeInterface) {
+                // Literals break adjacency, for now v1
                 $previousGreedyGroup = null;
             }
         }

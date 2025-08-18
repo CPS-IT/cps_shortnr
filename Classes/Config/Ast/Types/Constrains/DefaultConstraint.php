@@ -2,30 +2,21 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains;
 
-class DefaultConstraint implements TypeConstraint
+class DefaultConstraint extends BaseConstraint
 {
-    public function getName(): string
-    {
-        return 'default';
-    }
+    public const NAME = 'default';
 
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         // Default only applies when value is null/missing
         // If value exists, let other constraints handle validation
-        return $value ?? $constraintValue;
+        return $value ?? $this->value;
     }
 
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         // For serialization, use the actual value (defaults handled during parsing)
         return $value;
-    }
-
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
-    {
-        // Default constraint doesn't modify pattern
-        return $basePattern;
     }
 
     /**

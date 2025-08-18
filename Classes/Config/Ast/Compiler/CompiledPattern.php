@@ -74,7 +74,7 @@ final class CompiledPattern
                 $rawValue = $matches[$groupId];
                 $type = $this->groupTypes[$groupName];
                 $constraints = $this->groupConstraints[$groupName];
-                $typeHandler = $this->typeRegistry->getType($type)->setConstraintArguments($constraints);
+                $typeHandler = $this->typeRegistry->getTypeObject($type, $constraints);
 
                 // Get the type handler
                 try {
@@ -91,7 +91,7 @@ final class CompiledPattern
                 
                 if (isset($constraints['default'])) {
                     // Get the type handler
-                    $typeHandler = $this->typeRegistry->getType($type)->setConstraintArguments($constraints);
+                    $typeHandler = $this->typeRegistry->getTypeObject($type, $constraints);
 
                     try {
                         // Process null value to trigger default

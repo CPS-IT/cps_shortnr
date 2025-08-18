@@ -2,27 +2,25 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\BaseConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\RefinementConstraintInterface;
 use InvalidArgumentException;
 
-class MinLengthConstraint implements TypeConstraint
+class MinLengthConstraint extends BaseConstraint implements RefinementConstraintInterface
 {
-    public function getName(): string
-    {
-        return 'minLen';
-    }
+    public const NAME = 'minLen';
 
     /**
      * @inheritDoc
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         if ($value === null) {
             return null; // Let default constraint handle this
         }
 
         $stringValue = (string)$value;
-        $minLength = (int)$constraintValue;
+        $minLength = (int)$this->value;
 
         if (strlen($stringValue) < $minLength) {
             throw new InvalidArgumentException("String length " . strlen($stringValue) . " is below minimum $minLength");
@@ -34,13 +32,13 @@ class MinLengthConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         // Validation happens during parsing, just return the value for serialization
         return $value;
     }
 
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    public function modifyPattern(string $basePattern): string
     {
         // v1.0: Constraints don't modify patterns, validation-only
         return $basePattern;

@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types;
 
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\ConstraintRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 
 /**
@@ -9,7 +10,11 @@ use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
  */
 final class TypeRegistry
 {
+    /**
+     * @var array<string, string> lookup Map of [TypeNames => TypeClass]
+     */
     private array $types = [];
+    private readonly ConstraintRegistry $constraintRegistry;
 
     /**
      * @throws ShortNrPatternTypeException
@@ -19,44 +24,40 @@ final class TypeRegistry
         if ($registerDefaults) {
             $this->registerDefaults();
         }
+        $this->constraintRegistry = new ConstraintRegistry();
     }
 
     /**
      * @param string $name
-     * @return TypeInterface|null
+     * @param array $arguments [ConstraintName => value]
+     * @return TypeInterface
      * @throws ShortNrPatternTypeException
      */
-    public function getType(string $name): ?TypeInterface
+    public function getTypeObject(string $name, array $arguments): TypeInterface
     {
-        // Clone to ensure each GroupNode gets its own type instance
-        // with isolated constraint state
-        return clone ($this->types[$name] ?? throw new ShortNrPatternTypeException('Type not found', $name));
+        return match(false) {
+            $typeClass = $this->types[$name] ?? false => throw new ShortNrPatternTypeException('Type not found', $name),
+            class_exists($typeClass) => throw new ShortNrPatternTypeException('Type \''. $typeClass .'\' is not a CLASS or not exists', $name),
+            is_a($typeClass, TypeInterface::class, true) => throw new ShortNrPatternTypeException('Type \''. $typeClass .'\' must implement ' . TypeInterface::class, $name),
+            default => new $typeClass($this->constraintRegistry, $arguments)
+        };
     }
 
     /**
+     * @param string $class
+     * @param string[] $names
+     * @return void
      * @throws ShortNrPatternTypeException
      */
-    public function registerType(TypeInterface $type): void
+    public function registerType(string $class, array $names): void
     {
-        foreach ($type->getName() as $name) {
-            $currentType = $this->types[$name] ?? null;
-            $this->types[$name] = match($currentType) {
-                null =>  $type,
-                $type => $currentType,
-                default => throw new ShortNrPatternTypeException(
-                    'Type registration conflict: trying to register type ('. $type::class .') with typeName \''. $name .'\' while a different type ('. $currentType::class .') is already registered under that name.',
-                    $name
-                )
-            };
+        foreach ($names as $name) {
+            if (!is_a($class, TypeInterface::class, true)) {
+                throw new ShortNrPatternTypeException('TypeClass '. $class .' must be implement '. TypeInterface::class, $name);
+            }
+            // overwrite types if needed
+            $this->types[$name] = $class;
         }
-    }
-
-    /**
-     * Get all registered type names
-     */
-    public function getRegisteredTypes(): array
-    {
-        return array_keys($this->types);
     }
 
     /**
@@ -64,8 +65,8 @@ final class TypeRegistry
      */
     private function registerDefaults(): void
     {
-        $this->registerType(new IntType());
-        $this->registerType(new StringType());
+        $this->registerType(IntType::class, IntType::getNames());
+        $this->registerType(StringType::class, StringType::getNames());
         // Add more default types here
     }
 }

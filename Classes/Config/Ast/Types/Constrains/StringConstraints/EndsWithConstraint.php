@@ -2,27 +2,24 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\StringConstraints;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\BaseConstraint;
 use InvalidArgumentException;
 
-class EndsWithConstraint implements TypeConstraint
+class EndsWithConstraint extends BaseConstraint
 {
-    public function getName(): string
-    {
-        return 'endsWith';
-    }
+    public const NAME = 'endsWith';
 
     /**
      * @inheritDoc
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         if ($value === null) {
             return null; // Let default constraint handle this
         }
 
         $stringValue = (string)$value;
-        $suffix = $this->unescapeString((string)$constraintValue);
+        $suffix = $this->unescapeString((string)$this->value);
 
         if (!str_ends_with($stringValue, $suffix)) {
             throw new InvalidArgumentException("String '$stringValue' does not end with '$suffix'");
@@ -34,15 +31,9 @@ class EndsWithConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         return $value;
-    }
-
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
-    {
-        // This constraint doesn't modify pattern width
-        return $basePattern;
     }
 
     /**

@@ -10,6 +10,7 @@ use CPSIT\ShortNr\Config\Ast\Nodes\SubSequenceNode;
 use CPSIT\ShortNr\Config\Ast\Pattern\Helper\PatternGroupCounter;
 use CPSIT\ShortNr\Config\Ast\Pattern\Helper\PatternGroupCounterInterface;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
+use CPSIT\ShortNr\Exception\ShortNrPatternException;
 use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
 use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 
@@ -35,6 +36,7 @@ final class PatternParser
      * @return SequenceNode
      * @throws ShortNrPatternParseException
      * @throws ShortNrPatternTypeException
+     * @throws ShortNrPatternException
      */
     public function parse(?SequenceNode $rootNode = null): SequenceNode
     {
@@ -52,6 +54,7 @@ final class PatternParser
     /**
      * @throws ShortNrPatternTypeException
      * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternException
      */
     private function parseNext(): ?AstNode
     {
@@ -78,6 +81,7 @@ final class PatternParser
     /**
      * @throws ShortNrPatternTypeException
      * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternException
      */
     private function parseGroup(): AstNode
     {
@@ -115,19 +119,8 @@ final class PatternParser
         $name = $matches[1];
         $type = $matches[2];
         $constraints = isset($matches[3]) ? $this->parseConstraints($matches[3]) : [];
-
-        // VALIDATE TYPE EXISTS - fail fast during parsing
-        if (!$this->typeRegistry->getType($type)) {
-            throw new ShortNrPatternTypeException(
-                "Unknown type '$type' in group '$name'",
-                $type,
-                $this->typeRegistry->getRegisteredTypes()
-            );
-        }
-
         // Create group node (always required - optionality handled by SubSequence wrapper)
-        $node = new GroupNode($name, $type, $constraints);
-        $node->setTypeRegistry($this->typeRegistry);
+        $node = new GroupNode($name, $type, $constraints, $this->typeRegistry);
         // Assign group ID
         $node->setGroupId('g' . $this->groupCounter->increaseCounter());
 
@@ -143,7 +136,10 @@ final class PatternParser
     }
 
     /**
+     * @return SequenceNode
+     * @throws ShortNrPatternException
      * @throws ShortNrPatternParseException
+     * @throws ShortNrPatternTypeException
      */
     private function parseSubSequence(): SequenceNode
     {

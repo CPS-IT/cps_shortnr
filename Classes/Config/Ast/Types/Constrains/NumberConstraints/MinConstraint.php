@@ -2,27 +2,25 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types\Constrains\NumberConstraints;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\BaseConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\RefinementConstraintInterface;
 use InvalidArgumentException;
 
-class MinConstraint implements TypeConstraint
+class MinConstraint extends BaseConstraint implements RefinementConstraintInterface
 {
-    public function getName(): string
-    {
-        return 'min';
-    }
+    public const NAME = 'min';
 
     /**
      * @inheritDoc
      */
-    public function parseValue(mixed $value, mixed $constraintValue): mixed
+    public function parseValue(mixed $value): mixed
     {
         if ($value === null) {
             return null; // Let default constraint handle this
         }
 
         $intValue = (int)$value;
-        $minValue = (int)$constraintValue;
+        $minValue = (int)$this->value;
 
         if ($intValue < $minValue) {
             throw new InvalidArgumentException("Value $intValue is below minimum $minValue");
@@ -34,7 +32,7 @@ class MinConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function serialize(mixed $value, mixed $constraintValue): mixed
+    public function serialize(mixed $value): mixed
     {
         // Validation happens during parsing, just return the value for serialization
         return $value;
@@ -43,7 +41,7 @@ class MinConstraint implements TypeConstraint
     /**
      * @inheritDoc
      */
-    public function modifyPattern(string $basePattern, mixed $constraintValue): string
+    public function modifyPattern(string $basePattern): string
     {
         // Min constraint doesn't cap/limit pattern width
         return $basePattern;

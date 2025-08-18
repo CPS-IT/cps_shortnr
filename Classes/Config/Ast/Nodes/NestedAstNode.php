@@ -8,6 +8,7 @@ use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NodeGroupAwareInterface;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternCompilationException;
+use CPSIT\ShortNr\Exception\ShortNrPatternException;
 
 abstract class NestedAstNode extends NamedAstNode implements NestedNodeInterface
 {
@@ -76,6 +77,13 @@ abstract class NestedAstNode extends NamedAstNode implements NestedNodeInterface
         ];
     }
 
+    /**
+     * @param array $data
+     * @param TypeRegistry|null $typeRegistry
+     * @return static
+     * @throws ShortNrPatternCompilationException
+     * @throws ShortNrPatternException
+     */
     public static function fromArray(array $data, ?TypeRegistry $typeRegistry = null): static
     {
         $node = new static();
@@ -88,6 +96,10 @@ abstract class NestedAstNode extends NamedAstNode implements NestedNodeInterface
         return $node;
     }
 
+    /**
+     * @throws ShortNrPatternException
+     * @throws ShortNrPatternCompilationException
+     */
     private static function createNodeFromArray(array $data, ?TypeRegistry $typeRegistry = null): AstNodeInterface
     {
         return match ($data['type']) {

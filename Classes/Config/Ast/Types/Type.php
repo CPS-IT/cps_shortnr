@@ -2,35 +2,35 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Types;
 
-use CPSIT\ShortNr\Config\Ast\Types\Constrains\TypeConstraint;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\ConstraintRegistry;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\BoundingConstraintInterface;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\ModifyPatternAwareInterface;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\RefinementConstraintInterface;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\Interfaces\TypeConstraint;
+use CPSIT\ShortNr\Exception\ShortNrPatternConstraintException;
 use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
-use Generator;
 use InvalidArgumentException;
 
 abstract class Type implements TypeInterface
 {
+    // register default type name used in pattern group
+    protected const DEFAULT_NAME = '';
+    protected const TYPE_NAMES_ALIASES = [];
     /**
      * @var array<string, TypeConstraint>
      */
-    private array $constraints = [];
-    /**
-     * @var array<string, string> Type-specific constraints arguments
-     */
-    private array $constraintsArgument = [];
-    /**
-     * @var string[]
-     */
-    protected array $name = [];
+    private readonly array $constraints;
     protected string $pattern = '';
     protected array $characterClasses = [];
 
     /**
-     * prevent stateful problem with typeRegistry that gives always the same object (no clone object back)
-     * @return void
+     * @param ConstraintRegistry $constraintRegistry
+     * @param array<string, mixed> $arguments constraint arguments
+     * @throws ShortNrPatternConstraintException
      */
-    public function __clone()
+    public function __construct(ConstraintRegistry $constraintRegistry, array $arguments)
     {
-        $this->constraintsArgument = [];
+        $this->constraints = $constraintRegistry->generateConstraintsForType($arguments, $this);
     }
 
     /**
@@ -47,19 +47,43 @@ abstract class Type implements TypeInterface
      * Get the name of this type. (include all aliases)
      *
      * @return string[] The type names (e.g., 'int', 'str')
+     * @throws ShortNrPatternTypeException
      */
-    public function getName(): array
+    public static function getNames(): array
     {
-        return $this->name;
+        return [static::getDefaultName(), ...static::TYPE_NAMES_ALIASES];
     }
 
     /**
      * @return string
      * @throws ShortNrPatternTypeException
      */
-    public function getDefaultName(): string
+    public static function getDefaultName(): string
     {
-        return array_values($this->name)[0] ?? throw new ShortNrPatternTypeException('No Name in type\''. static::class .'\' defined', '');
+        return !empty(static::DEFAULT_NAME) ? static::DEFAULT_NAME : throw new ShortNrPatternTypeException('No Name in type\''. static::class .'\' defined', '');
+    }
+
+    /**
+     * @return string
+     * @throws ShortNrPatternTypeException
+     */
+    public function getName(): string
+    {
+        return static::getDefaultName();
+    }
+
+    /**
+     * convert constraintObjects back to ['constraintName' => 'value']
+     * @return array
+     */
+    public function getConstraintArguments(): array
+    {
+        $list = [];
+        foreach ($this->constraints as $name => $constraint) {
+            $list[$name] = $constraint->getValue();
+        }
+
+        return $list;
     }
 
     /**
@@ -68,8 +92,8 @@ abstract class Type implements TypeInterface
      */
     public function parseValue(mixed $value): mixed
     {
-        foreach ($this->constraintsArgument as $name => $cValue) {
-            $value = $this->getConstraint($name)?->parseValue($value, $cValue) ?? $value;
+        foreach ($this->constraints as $constraint) {
+            $value = $constraint->parseValue($value) ?? $value;
         }
 
         return $value;
@@ -84,45 +108,26 @@ abstract class Type implements TypeInterface
      */
     public function serialize(mixed $value): string
     {
-        foreach ($this->constraintsArgument as $name => $cValue) {
-            $value = $this->getConstraint($name)?->serialize($value, $cValue) ?? $value;
+        foreach ($this->constraints as $constraint) {
+            $value = $constraint->serialize($value) ?? $value;
         }
 
         return (string)$value;
     }
 
     /**
-     * @return array<string, string> Type-specific constraints arguments
+     * @return array<string, TypeConstraint>
      */
-    public function getConstraintsArgument(): array
+    public function getConstraints(): array
     {
-        return $this->constraintsArgument;
-    }
-
-    /**
-     * @param TypeConstraint ...$constraint
-     * @return void
-     */
-    protected function registerConstraint(TypeConstraint ...$constraint): void
-    {
-        foreach ($constraint as $item) {
-            $this->constraints[$item->getName()] = $item;
-        }
-    }
-
-    /**
-     * @return Generator<TypeConstraint>
-     */
-    protected function getConstraints(): Generator
-    {
-        yield from $this->constraints;
+        return $this->constraints;
     }
 
     /**
      * @param string $name
      * @return TypeConstraint|null
      */
-    protected function getConstraint(string $name): ?TypeConstraint
+    public function getConstraint(string $name): ?TypeConstraint
     {
         return $this->constraints[$name] ?? null;
     }
@@ -141,43 +146,31 @@ abstract class Type implements TypeInterface
     public function getConstrainedPattern(): string
     {
         $pattern = $this->getPattern();
-        $constraints = $this->constraintsArgument;
-        
-        // Apply constraints in a specific order to handle dependencies
-        // First apply constraints that establish bounds (maxLen, max)
-        $boundingConstraints = ['max', 'maxLen'];
-        $refinementConstraints = ['min', 'minLen'];
-        
-        foreach ($boundingConstraints as $name) {
-            if (isset($constraints[$name])) {
-                $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $constraints[$name]) ?? $pattern;
+        $constraints = $this->constraints;
+        // correct order first the bounding
+        foreach ($constraints as $name => $constraint) {
+            if ($constraint instanceof BoundingConstraintInterface) {
+                $pattern = $constraint->modifyPattern($pattern);
+                unset($constraints[$name]);
             }
         }
-        
-        foreach ($refinementConstraints as $name) {
-            if (isset($constraints[$name])) {
-                $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $constraints[$name]) ?? $pattern;
+
+        // later the refinement
+        foreach ($constraints as $name => $constraint) {
+            if ($constraint instanceof RefinementConstraintInterface) {
+                $pattern = $constraint->modifyPattern($pattern);
+                unset($constraints[$name]);
             }
         }
-        
-        // Apply any remaining constraints
-        foreach ($constraints as $name => $cValue) {
-            if (!in_array($name, array_merge($boundingConstraints, $refinementConstraints))) {
-                $pattern = $this->getConstraint($name)?->modifyPattern($pattern, $cValue) ?? $pattern;
+
+        // any leftovers
+        foreach ($constraints as $constraint) {
+            if ($constraint instanceof ModifyPatternAwareInterface) {
+                $pattern = $constraint->modifyPattern($pattern);
             }
         }
         
         return $pattern;
-    }
-
-    /**
-     * @param array $constraintArguments
-     * @return $this
-     */
-    public function setConstraintArguments(array $constraintArguments): static
-    {
-        $this->constraintsArgument = $constraintArguments;
-        return $this;
     }
 
     abstract public function applyBoundary(string $pattern, ?string $boundary): string;

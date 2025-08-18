@@ -3,52 +3,51 @@
 namespace CPSIT\ShortNr\Config\Ast\Nodes;
 
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\TypeNodeInterface;
-use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\TypeRegistryAwareInterface;
+use CPSIT\ShortNr\Config\Ast\Types\Constrains\DefaultConstraint;
 use CPSIT\ShortNr\Config\Ast\Types\TypeInterface;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternConstraintException;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 use CPSIT\ShortNr\Exception\ShortNrPatternGenerationException;
-use CPSIT\ShortNr\Exception\ShortNrPatternParseException;
+use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 
-final class GroupNode extends NamedAstNode implements TypeNodeInterface, TypeRegistryAwareInterface
+final class GroupNode extends NamedAstNode implements TypeNodeInterface
 {
     private string $groupId = '';
-    private ?TypeRegistry $typeRegistry = null;
-    private ?TypeInterface $type = null;
+    private readonly TypeRegistry $typeRegistry;
+    private readonly TypeInterface $type;
 
+    /**
+     * @throws ShortNrPatternTypeException
+     * @throws ShortNrPatternException
+     */
     public function __construct(
         private readonly string $name, // variable name
-        private readonly string $typeName, // concrete str / string / int / integer ...
-        private readonly array  $constraints = [] // ['constraintName' => 'value', ...]
-    ) {}
-
-    public function validateTreeContext(): void
-    {
-        if (!$this->isOptional() && isset($this->constraints['default'])) {
-            $defaultValue = $this->constraints['default'];
-            throw new ShortNrPatternConstraintException(
-                "Default constraint cannot be used on required group '$this->name'. " .
-                "Make the group optional: {".$this->name.":".$this->typeName."(default=$defaultValue)}? or place it in an optional section: (-{".$this->name.":".$this->typeName."(default=$defaultValue)})",
-                $this->name,
-                $defaultValue,
-                'invalid_default_usage'
-            );
-        }
-    }
-
-    public function setTypeRegistry(TypeRegistry $registry): void
-    {
-        $this->typeRegistry = $registry;
+        string $typeName, // concrete str / string / int / integer ...
+        array  $constraints = [], // ['constraintName' => 'value', ...]
+        ?TypeRegistry $typeRegistry = null
+    ) {
+        $this->typeRegistry = $typeRegistry ?? throw new ShortNrPatternException("TypeRegistry not provided in GroupNode");
+        $this->type = $this->typeRegistry->getTypeObject($typeName, $constraints);
     }
 
     /**
-     * @return TypeRegistry
-     * @throws ShortNrPatternException
+     * @return void
+     * @throws ShortNrPatternConstraintException|ShortNrPatternTypeException
      */
-    public function getTypeRegistry(): TypeRegistry
+    public function validateTreeContext(): void
     {
-        return $this->typeRegistry ?? throw new ShortNrPatternException("TypeRegistry not set on GroupNode");
+        if (!$this->isOptional() && ($constraint = $this->type->getConstraint(DefaultConstraint::NAME)) !== null) {
+            $defaultValue = $constraint->getValue();
+
+            throw new ShortNrPatternConstraintException(
+                "Default constraint cannot be used on required group '$this->name'. " .
+                "Make the group optional: {".$this->name.":".$this->type->getName()."(". DefaultConstraint::NAME ."=$defaultValue)}? or place it in an optional section: (-{".$this->name.":".$this->type->getName()."(". DefaultConstraint::NAME ."=$defaultValue)})",
+                $this->name,
+                $defaultValue,
+                DefaultConstraint::NAME
+            );
+        }
     }
 
     public function getGroupNames(): array
@@ -63,25 +62,18 @@ final class GroupNode extends NamedAstNode implements TypeNodeInterface, TypeReg
 
     /**
      * @return TypeInterface
-     * @throws ShortNrPatternException
-     * @throws ShortNrPatternParseException
      */
     public function getType(): TypeInterface
     {
-        return $this->type ??= $this->getTypeRegistry()->getType($this->typeName)->setConstraintArguments($this->constraints) ?? throw new ShortNrPatternParseException(
-            'Could not find Type \''.$this->typeName.'\'',
-            ''
-        );
+        return $this->type;
     }
 
     /**
      * @return bool
-     * @throws ShortNrPatternException
-     * @throws ShortNrPatternParseException
      */
     public function isGreedy(): bool
     {
-        return $this->getType()->isGreedy();
+        return $this->type->isGreedy();
     }
 
     /**
@@ -111,8 +103,6 @@ final class GroupNode extends NamedAstNode implements TypeNodeInterface, TypeReg
 
     /**
      * @return string
-     * @throws ShortNrPatternException
-     * @throws ShortNrPatternParseException
      */
     protected function generateRegex(): string
     {
@@ -152,7 +142,6 @@ final class GroupNode extends NamedAstNode implements TypeNodeInterface, TypeReg
      * @return string
      * @throws ShortNrPatternException
      * @throws ShortNrPatternGenerationException
-     * @throws ShortNrPatternParseException
      */
     public function generate(array $values): string
     {
@@ -173,22 +162,22 @@ final class GroupNode extends NamedAstNode implements TypeNodeInterface, TypeReg
             }
         }
 
-        $type = $this->getType();
-        $validatedValue = $type->parseValue($values[$this->name]);
-        return $type->serialize($validatedValue);
+        $validatedValue = $this->type->parseValue($values[$this->name]);
+        return $this->type->serialize($validatedValue);
     }
 
     /**
      * @return array
+     * @throws ShortNrPatternTypeException
      */
     public function toArray(): array
     {
         return [
             'regex' => $this->toRegex(),
-            'type' => $this->getNodeType(),
             'name' => $this->name,
-            'dataType' => $this->typeName,
-            'constraints' => $this->constraints,
+            'type' => $this->getNodeType(),
+            'type_name' => $this->type->getName(),
+            'type_constraints' => $this->type->getConstraintArguments(),
             'groupId' => $this->groupId
         ];
     }
@@ -203,18 +192,12 @@ final class GroupNode extends NamedAstNode implements TypeNodeInterface, TypeReg
     {
         $node = new self(
             $data['name'],
-            $data['dataType'],
-            $data['constraints']
+            $data['type_name'],
+            $data['type_constraints'] ,
+            $typeRegistry ?? throw new ShortNrPatternException("TypeRegistry not provided in GroupNode at Hydration")
         );
         $node->setRegex($data['regex'] ?? null);
         $node->setGroupId($data['groupId']);
-
-        if ($typeRegistry !== null) {
-            $node->setTypeRegistry($typeRegistry);
-        } else {
-            throw new ShortNrPatternException("TypeRegistry not provided in GroupNode at Hydration");
-        }
-
         return $node;
     }
 }

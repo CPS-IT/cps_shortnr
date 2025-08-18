@@ -5,7 +5,7 @@ namespace CPSIT\ShortNr\Config\Ast\Types;
 use CPSIT\ShortNr\Exception\ShortNrPatternTypeException;
 use InvalidArgumentException;
 
-interface TypeInterface
+interface TypeInterface extends ConstraintAwareInterface
 {
     /**
      * Get the name of this type. (include all aliases)
@@ -13,31 +13,31 @@ interface TypeInterface
      * Get the type name (e.g., 'int', 'slug', 'string')
      * @return string[]
      */
-    public function getName(): array;
+    public static function getNames(): array;
 
     /**
      * @return string return the first name in the name list
      * @throws ShortNrPatternTypeException
      */
-    public function getDefaultName(): string;
+    public static function getDefaultName(): string;
+
+    /**
+     * @return string return the first name in the name list
+     * @throws ShortNrPatternTypeException
+     */
+    public function getName(): string;
+
+    /**
+     * convert constraintObjects back to ['constraintName' => 'value']
+     * @return array
+     */
+    public function getConstraintArguments(): array;
 
     /**
      * Get the regex pattern this type matches.
      * This is used by AST nodes to build the final regex.
      */
     public function getPattern(): string;
-
-    /**
-     * @return array<string, string> Type-specific constraints arguments
-     */
-    public function getConstraintsArgument(): array;
-
-    /**
-     * @internal
-     * @param array<string, string> $constraintArguments Type-specific constraints arguments
-     * @return $this
-     */
-    public function setConstraintArguments(array $constraintArguments): static;
 
     /**
      * Parse a string value into the appropriate PHP type.
@@ -61,12 +61,6 @@ interface TypeInterface
      * Get character classes used by this type (for heuristic building).
      */
     public function getCharacterClasses(): array;
-
-    /**
-     * Get regex pattern with constraints applied.
-     * Returns non-greedy patterns when capping constraints are present.
-     */
-    public function getConstrainedPattern(): string;
 
     /**
      * Check if this type with given constraints is greedy.

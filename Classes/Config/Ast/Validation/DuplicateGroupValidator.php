@@ -2,9 +2,9 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Validation;
 
-use CPSIT\ShortNr\Config\Ast\Nodes\GroupNode;
 use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\AstNodeInterface;
-use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NestedNodeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\NodeTreeInterface;
+use CPSIT\ShortNr\Config\Ast\Nodes\Interfaces\TypeNodeInterface;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
 
 final class DuplicateGroupValidator implements ValidatorInterface
@@ -29,11 +29,11 @@ final class DuplicateGroupValidator implements ValidatorInterface
     
     private function collectGroupNames(AstNodeInterface $node, array &$groupNames): void
     {
-        if ($node instanceof GroupNode) {
+        if ($node instanceof TypeNodeInterface) {
             $groupNames[] = $node->getName();
         }
         
-        if ($node instanceof NestedNodeInterface) {
+        if ($node instanceof NodeTreeInterface) {
             foreach ($node->getChildren() as $child) {
                 $this->collectGroupNames($child, $groupNames);
             }
