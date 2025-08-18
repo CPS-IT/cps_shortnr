@@ -2,10 +2,13 @@
 
 namespace CPSIT\ShortNr\Config\Ast\Heuristic;
 
+use CPSIT\ShortNr\Exception\ShortNrPatternException;
+
 final class HeuristicCompiler
 {
     /**
      * Compile heuristic from compiled patterns
+     * @throws ShortNrPatternException
      */
     public function compile(iterable $compiledPatterns): PatternHeuristic
     {

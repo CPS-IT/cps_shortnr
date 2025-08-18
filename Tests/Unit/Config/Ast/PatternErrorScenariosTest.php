@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Tests\Unit\Config\Ast;
 
+use CPSIT\ShortNr\Config\Ast\Heuristic\Analyzer\AnalyzerResult;
 use CPSIT\ShortNr\Config\Ast\PatternBuilder;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Exception\ShortNrPatternException;
@@ -269,8 +270,10 @@ class PatternErrorScenariosTest extends TestCase
         yield 'single-char' => [$patterns, 'P', false];
         yield 'exact-min-length' => [$patterns, 'PAGE1', true];
         yield 'binary-data' => [$patterns, "\x00\x01\x02", false];
-        yield 'very-long-input' => [$patterns, str_repeat('PAGE123', 1000), false];
-        yield 'mixed-case' => [$patterns, 'page123', false]; // Should be case sensitive
+        $str = 'PAGE123';
+        $strLen = strlen('PAGE123');
+        yield 'very-long-input' => [$patterns, str_repeat($str, (int)ceil(AnalyzerResult::MAX_LEN_LIMIT / $strLen) + $strLen), false];
+        yield 'mixed-case' => [$patterns, 'page123', false]; // Should be case-sensitive
         yield 'partial-match' => [$patterns, 'PAG123', false];
         
         // Edge case: input that starts correctly but has invalid characters

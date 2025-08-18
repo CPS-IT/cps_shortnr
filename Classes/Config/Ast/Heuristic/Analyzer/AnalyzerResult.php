@@ -4,7 +4,7 @@ namespace CPSIT\ShortNr\Config\Ast\Heuristic\Analyzer;
 
 class AnalyzerResult
 {
-    private const MAX_LEN_LIMIT = 9999;
+    public const MAX_LEN_LIMIT = 10_000;
     private readonly int $maxLen;
 
     /**

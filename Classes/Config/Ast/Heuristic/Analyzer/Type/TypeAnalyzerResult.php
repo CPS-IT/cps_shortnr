@@ -4,7 +4,6 @@ namespace CPSIT\ShortNr\Config\Ast\Heuristic\Analyzer\Type;
 
 class TypeAnalyzerResult
 {
-
     /**
      * @param int $minLen Minimum length for this type
      * @param int|null $maxLen Maximum length for this type (null = unlimited)

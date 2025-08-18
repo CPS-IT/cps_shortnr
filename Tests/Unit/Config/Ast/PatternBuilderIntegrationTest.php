@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Tests\Unit\Config\Ast;
 
+use CPSIT\ShortNr\Config\Ast\Heuristic\Analyzer\AnalyzerResult;
 use CPSIT\ShortNr\Config\Ast\Heuristic\HeuristicCompiler;
 use CPSIT\ShortNr\Config\Ast\PatternBuilder;
 use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
@@ -319,7 +320,9 @@ class PatternBuilderIntegrationTest extends TestCase
         yield 'heuristic-should-support-another-valid-prefix' => [$patterns, 'ARTICLE456', true];
         yield 'heuristic-should-reject-invalid-prefix' => [$patterns, 'BLOG123', false];
         yield 'heuristic-should-reject-too-short' => [$patterns, 'P', false];
-        yield 'heuristic-should-reject-too-long' => [$patterns, str_repeat('PAGE123', 100), false];
+        $str = 'PAGE123';
+        $strLen = strlen('PAGE123');
+        yield 'heuristic-should-reject-too-long' => [$patterns, str_repeat($str, (int)ceil(AnalyzerResult::MAX_LEN_LIMIT / $strLen) + $strLen), false];
     }
 
     public static function hydrationDehydrationProvider(): Generator
