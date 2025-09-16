@@ -14,11 +14,13 @@
     ],
     "require": {
         "php": "^8.1",
-        "typo3/minimal": "^12.4"
+        "brannow/typed-pattern-engine": "dev-optional-non-greedy-groups",
+        "typo3/minimal": "^13.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "*",
-        "typo3/testing-framework": "*"
+        "phpunit/phpunit": "^10.5",
+        "typo3/testing-framework": "*",
+        "brannow/typo3-dev-springboard": "dev-main"
     },
     "autoload": {
         "psr-4": {

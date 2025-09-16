@@ -2,3 +2,4 @@
 /Tests/.phpunit_result/
 .idea
 .DS_Store
+composer.lock
