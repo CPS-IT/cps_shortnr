@@ -13,8 +13,8 @@
         }
     ],
     "require": {
-        "php": "^8.1",
-        "brannow/typed-pattern-engine": "dev-optional-non-greedy-groups",
+        "php": "^8.2",
+        "brannow/typed-pattern-engine": "dev-main",
         "typo3/minimal": "^13.4"
     },
     "require-dev": {
@@ -25,11 +25,6 @@
     "autoload": {
         "psr-4": {
             "CPSIT\\ShortNr\\": "Classes/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "CPSIT\\ShortNr\\Tests\\": "Tests/"
         }
     },
     "config": {

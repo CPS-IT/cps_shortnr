@@ -3,11 +3,11 @@
 namespace CPSIT\ShortNr\Config\DTO;
 
 use BackedEnum;
-use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use Generator;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 class Config implements ConfigInterface
 {
@@ -140,7 +140,7 @@ class Config implements ConfigInterface
      */
     public function getPattern(string $name): CompiledPattern
     {
-        return $this->data[ConfigInterface::COMPILED_PATTERN_KEY][$name] ?? throw new ShortNrCacheException('No Compiled Pattern Found for name: ' . $name);
+        return $this->data[ConfigEnum::Compiled->value][$name] ?? throw new ShortNrCacheException('No Compiled Pattern Found for name: ' . $name);
     }
 
     /**
@@ -148,6 +148,6 @@ class Config implements ConfigInterface
      */
     public function getPatterns(): Generator
     {
-        yield from $this->data[ConfigInterface::COMPILED_PATTERN_KEY];
+        yield from $this->data[ConfigEnum::Compiled->value];
     }
 }

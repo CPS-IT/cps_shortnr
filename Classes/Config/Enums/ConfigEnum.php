@@ -16,9 +16,8 @@ enum ConfigEnum: string
 
     // Pattern
     case Pattern = 'pattern';
-    case Regex = 'regex';
-    case Prefix = 'prefix';
-    case PrefixMatch = 'prefixMatch';
+    case Compiled = '__compiled';
+    case Decompiled = '__decompiled';
 
     // database fields
     case Table = 'table';

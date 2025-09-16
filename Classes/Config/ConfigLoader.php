@@ -3,9 +3,6 @@
 namespace CPSIT\ShortNr\Config;
 
 use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Config\Ast\Heuristic\HeuristicPatternInterface;
-use CPSIT\ShortNr\Config\Ast\PatternBuilder;
-use CPSIT\ShortNr\Config\Ast\Types\TypeRegistry;
 use CPSIT\ShortNr\Config\ConfigLoader\YamlConfigSanitizer;
 use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
@@ -16,6 +13,8 @@ use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
 use Symfony\Component\Yaml\Yaml;
 use Throwable;
+use TypedPatternEngine\Heuristic\PatternHeuristic;
+use TypedPatternEngine\TypedPatternEngine;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 
 class ConfigLoader
@@ -23,11 +22,11 @@ class ConfigLoader
     private const DEFAULT_CONFIG_PATH = 'EXT:'. ExtensionSetup::EXT_KEY .'/Configuration/config.yaml';
     // Cache keys
     private const CONFIG_KEY = 'config';
+    private const CONFIG_OBJ_KEY = 'configObj';
     private const HEURISTIC_KEY = 'heuristic';
-    private const PATTERNS_KEY = 'patterns';
+    private readonly TypedPatternEngine $patternEngine;
+
     private array $runtimeCache = [];
-    private ?PatternBuilder $patternBuilder = null;
-    private ?TypeRegistry $astTypeRegistry = null;
 
     /**
      * @param CacheManager $cacheManager
@@ -41,17 +40,11 @@ class ConfigLoader
         private readonly ExtensionConfiguration $extensionConfiguration,
         private readonly FileSystemInterface $fileSystem,
         private readonly PathResolverInterface $pathResolver,
-        private readonly YamlConfigSanitizer $yamlConfigSanitizer
-    )
-    {}
+        private readonly YamlConfigSanitizer $yamlConfigSanitizer,
 
-    /**
-     * @param TypeRegistry|null $typeRegistry
-     * @return void
-     */
-    public function setPatternTypeRegistry(?TypeRegistry $typeRegistry): void
+    )
     {
-        $this->astTypeRegistry = $typeRegistry;
+        $this->patternEngine = new TypedPatternEngine();
     }
 
 
@@ -61,21 +54,27 @@ class ConfigLoader
      */
     public function getConfig(): ConfigInterface
     {
-        if (!isset($this->runtimeCache[self::CONFIG_KEY])) {
+        if (!isset($this->runtimeCache[self::CONFIG_OBJ_KEY])) {
             $configData = $this->getConfigArray(
                 self::CONFIG_KEY,
                 $this->buildCompleteConfig(...)
             );
 
-            // create object from cache
-            $builder = $this->getPatternBuilder();
-            foreach ($configData[ConfigInterface::COMPILED_PATTERN_KEY] ?? [] as $configName => $astData) {
-                $configData[ConfigInterface::COMPILED_PATTERN_KEY][$configName] = $builder->getPatternCompiler()->hydrate($astData);
+            $patternCompiledName = ConfigEnum::Compiled->value;
+            $patternDecompiledName = ConfigEnum::Decompiled->value;
+            $compiler = $this->patternEngine->getPatternCompiler();
+            foreach ($configData[$patternDecompiledName] ?? [] as $configName => $decompiledPatternData) {
+                if (empty($decompiledPatternData)) {
+                    continue;
+                }
+                $configData[$patternCompiledName][$configName] = $compiler->hydrate($decompiledPatternData);
+                unset($configData[$patternDecompiledName]);
             }
-            $this->runtimeCache[self::CONFIG_KEY] = new Config($configData);
+            // create config
+            $this->runtimeCache[self::CONFIG_OBJ_KEY] = new Config($configData);
         }
 
-        return $this->runtimeCache[self::CONFIG_KEY];
+        return $this->runtimeCache[self::CONFIG_OBJ_KEY] ?? throw new ShortNrConfigException('Could not create Config Object');
     }
 
     /**
@@ -83,15 +82,21 @@ class ConfigLoader
      * @throws ShortNrCacheException
      * @throws ShortNrConfigException
      */
-    public function getHeuristicPattern(): HeuristicPatternInterface
+    public function getHeuristicPattern(): PatternHeuristic
     {
         if (!isset($this->runtimeCache[self::HEURISTIC_KEY])) {
+            $compiler = $this->patternEngine->getHeuristicCompiler();
             $heuristicData = $this->getConfigArray(
                 self::HEURISTIC_KEY,
-                 $this->buildHeuristicData(...)
+                 fn(): array => $compiler->dehydrate(
+                     $compiler->compile(
+                         $this->getConfig()->getPatterns()
+                     )
+                 )
             );
 
-            $this->runtimeCache[self::HEURISTIC_KEY] = $this->getPatternBuilder()->getHeuristicCompiler()->hydrate($heuristicData);
+            // rehydrate ast pattern heuristic data
+            $this->runtimeCache[self::HEURISTIC_KEY] = $compiler->hydrate($heuristicData);
         }
 
         return $this->runtimeCache[self::HEURISTIC_KEY];
@@ -105,7 +110,6 @@ class ConfigLoader
     {
         $this->cacheManager->getArrayFileCache()->invalidateCacheDirectory();
         $this->runtimeCache = [];
-        $this->patternBuilder = null;
     }
 
     /**
@@ -118,107 +122,25 @@ class ConfigLoader
     {
         // Load and merge YAML configs
         $mergedConfig = $this->parseAndMergeConfigFiles();
-
         if (empty($mergedConfig)) {
             return [];
         }
 
-        // Extract and compile patterns
-        $patterns = $this->extractPatternsFromConfig($mergedConfig);
-        $builder = $this->getPatternBuilder();
-        $compiled = [];
-
-        foreach ($patterns as $configName => $pattern) {
-            try {
-                $compiledPattern = $builder->getPatternCompiler()->compile($pattern);
-                $compiled[$configName] = $builder->getPatternCompiler()->dehydrate($compiledPattern);
-
-            } catch (Throwable $e) {
-                // Log compilation error and skip this pattern
-                // You might want to add proper logging here
-                error_log("Failed to compile pattern for '$configName': " . $e->getMessage());
+        $patternCompiler =  $this->patternEngine->getPatternCompiler();
+        $defConfigName = ConfigEnum::DEFAULT_CONFIG->value;
+        $patternConfigName = ConfigEnum::Pattern->value;
+        $configEntryName = ConfigEnum::ENTRYPOINT->value;
+        $patternDecompiledName = ConfigEnum::Decompiled->value;
+        foreach ($mergedConfig[$configEntryName] ?? [] as $configName => $configItemData) {
+            if ($configName === $defConfigName || empty($configItemData[$patternConfigName])) {
                 continue;
             }
+
+            $compiledPattern = $patternCompiler->compile($configItemData[$patternConfigName]);
+            $mergedConfig[$patternDecompiledName][$configName] = $patternCompiler->dehydrate($compiledPattern);
         }
 
-        // Store compilation info
-        $mergedConfig[ConfigInterface::COMPILED_PATTERN_KEY] = $compiled;
         return $mergedConfig;
-    }
-
-    /**
-     * Build complete configuration with AST compilation
-     *
-     * @return array
-     * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
-     */
-    private function buildHeuristicData(): array
-    {
-        // Build heuristic from AST analysis
-        $builder = $this->getPatternBuilder();
-        $heuristic = $builder->getHeuristicCompiler()->compile(
-            $this->getConfig()->getPatterns()
-        );
-        return $builder->getHeuristicCompiler()->dehydrate($heuristic);
-    }
-
-    /**
-     * Extract pattern definitions from config
-     *
-     * @param array $config
-     * @return array<string, string> [configName => "pattern"]
-     * @throws ShortNrConfigException
-     */
-    private function extractPatternsFromConfig(array $config): array
-    {
-        $patterns = [];
-        $entryPointKey = ConfigEnum::ENTRYPOINT->value;
-        $defaultConfigKey = ConfigEnum::DEFAULT_CONFIG->value;
-
-        foreach ($config[$entryPointKey] ?? [] as $configName => $configData) {
-            if ($configName === $defaultConfigKey) {
-                continue;
-            }
-
-            $pattern = $configData[ConfigEnum::Pattern->value] ?? null;
-            if ($pattern !== null) {
-                // Add validation here, if not valid throw exception
-                if (!$this->isValidAstPattern($pattern)) {
-                    throw new ShortNrConfigException('Pattern without any groups are not allowed: ' . $pattern);
-                }
-
-                $patterns[$configName] = $pattern;
-            }
-        }
-
-        return $patterns;
-    }
-
-    /**
-     * Basic validation that a string looks like an AST pattern
-     *
-     * @param string $pattern
-     * @return bool
-     */
-    private function isValidAstPattern(string $pattern): bool
-    {
-        // Must contain at least one group definition {name:type}
-        // or be a simple literal pattern
-        if (str_contains($pattern, '{')) {
-            return preg_match('/\{[a-zA-Z_][a-zA-Z0-9_]*:[a-zA-Z]+/', $pattern) === 1;
-        }
-
-        return false;
-    }
-
-    /**
-     * Get or create pattern builder instance
-     * @return PatternBuilder
-     */
-    private function getPatternBuilder(): PatternBuilder
-    {
-        return $this->patternBuilder ??= new PatternBuilder($this->astTypeRegistry ??= new TypeRegistry());
     }
 
     /**
@@ -268,7 +190,7 @@ class ConfigLoader
 
         // Cache the result
         $this->runtimeCache[$prefix] = $result;
-        if (!empty($result) || $prefix === self::HEURISTIC_KEY || $prefix === self::PATTERNS_KEY) {
+        if (!empty($result) || $prefix === self::HEURISTIC_KEY || $prefix === ConfigEnum::Pattern->value) {
             $this->cacheManager->getArrayFileCache()->writeArrayFileCache($result, $suffix);
         }
 

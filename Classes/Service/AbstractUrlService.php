@@ -7,7 +7,6 @@ use CPSIT\ShortNr\Config\ConfigLoader;
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
-use CPSIT\ShortNr\Event\ShortNrPatternParserBootEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Processor\NotFoundProcessor;
@@ -66,13 +65,6 @@ abstract class AbstractUrlService
      */
     protected function getConfigLoader(): ConfigLoader
     {
-        if (!isset($this->cache['finishFirstTimeCacheCall'])) {
-            /** @var ShortNrPatternParserBootEvent $event */
-            $event = $this->getEventDispatcher()->dispatch(new ShortNrPatternParserBootEvent());
-            $this->configLoader->setPatternTypeRegistry($event->getTypeRegistry());
-            $this->cache['finishFirstTimeCacheCall'] = true;
-        }
-
         return $this->configLoader;
     }
 

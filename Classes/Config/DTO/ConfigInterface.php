@@ -2,16 +2,14 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
-use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
 use Generator;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 interface ConfigInterface
 {
-    public const COMPILED_PATTERN_KEY = '_compiled';
-
     /**
      * [ConfigName => Pattern]
      *
