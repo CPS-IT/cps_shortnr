@@ -7,19 +7,22 @@ use CPSIT\ShortNr\Config\ConfigLoader\YamlConfigSanitizer;
 use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use CPSIT\ShortNr\Event\ShortNrConfigLoadedEvent;
+use CPSIT\ShortNr\Event\ShortNrConfigPathEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
+use CPSIT\ShortNr\Traits\ArrayPackTrait;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Yaml\Yaml;
-use Throwable;
 use TypedPatternEngine\Heuristic\PatternHeuristic;
 use TypedPatternEngine\TypedPatternEngine;
-use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 
 class ConfigLoader
 {
-    private const DEFAULT_CONFIG_PATH = 'EXT:'. ExtensionSetup::EXT_KEY .'/Configuration/config.yaml';
+    use ArrayPackTrait;
+
     // Cache keys
     private const CONFIG_KEY = 'config';
     private const CONFIG_OBJ_KEY = 'configObj';
@@ -30,17 +33,17 @@ class ConfigLoader
 
     /**
      * @param CacheManager $cacheManager
-     * @param ExtensionConfiguration $extensionConfiguration
      * @param FileSystemInterface $fileSystem
      * @param PathResolverInterface $pathResolver
      * @param YamlConfigSanitizer $yamlConfigSanitizer
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
         private readonly CacheManager $cacheManager,
-        private readonly ExtensionConfiguration $extensionConfiguration,
         private readonly FileSystemInterface $fileSystem,
         private readonly PathResolverInterface $pathResolver,
         private readonly YamlConfigSanitizer $yamlConfigSanitizer,
+        private readonly EventDispatcherInterface $eventDispatcher,
 
     )
     {
@@ -121,16 +124,31 @@ class ConfigLoader
     private function buildCompleteConfig(): array
     {
         // Load and merge YAML configs
-        $mergedConfig = $this->parseAndMergeConfigFiles();
+        // remove all NULL values
+        $mergedConfig = $this->reconstructFlattenArrayKeyPath(
+            array_filter(
+                $this->flattenArrayKeyPath(
+                    $this->parseAndMergeConfigFiles()
+                ),
+                fn(mixed $item): bool => $item !== null)
+        );
+
         if (empty($mergedConfig)) {
             return [];
         }
+
+        // Dispatch event to allow config manipulation
+        $event = new ShortNrConfigLoadedEvent($mergedConfig);
+        $this->eventDispatcher->dispatch($event);
+        $mergedConfig = $event->getConfiguration();
 
         $patternCompiler =  $this->patternEngine->getPatternCompiler();
         $defConfigName = ConfigEnum::DEFAULT_CONFIG->value;
         $patternConfigName = ConfigEnum::Pattern->value;
         $configEntryName = ConfigEnum::ENTRYPOINT->value;
         $patternDecompiledName = ConfigEnum::Decompiled->value;
+
+        // compile the pattern
         foreach ($mergedConfig[$configEntryName] ?? [] as $configName => $configItemData) {
             if ($configName === $defConfigName || empty($configItemData[$patternConfigName])) {
                 continue;
@@ -205,30 +223,19 @@ class ConfigLoader
      */
     private function parseAndMergeConfigFiles(): ?array
     {
-        $config = [];
-        $priority = 0;
+        $configs = [];
         $entryPointKey = ConfigEnum::ENTRYPOINT->value;
-        $priorityKey = ConfigEnum::Priority->value;
-        $defaultKey = ConfigEnum::DEFAULT_CONFIG->value;
         foreach ($this->getAllConfigurationFiles() as $file) {
             $subConfig = $this->parseYamlConfigFile($file);
-            if (is_array($subConfig) && !empty($subConfig)) {
-                // increase the priority of each SubConfig if not already set
-                foreach ($subConfig[$entryPointKey]??[] as $subConfigKey => $subConfigValue) {
-                    // skip default config
-                    if ($subConfigKey === $defaultKey) {
-                        continue;
-                    }
-                    $subConfig[$entryPointKey][$subConfigKey][$priorityKey] ??= $priority;
-                }
-                $config[] = $subConfig;
+            if (!empty($subConfig[$entryPointKey]) && is_array($subConfig[$entryPointKey])) {
+                $configs[] = $subConfig;
             }
-            $priority++;
+        }
+        if (count($configs) > 1) {
+            return array_replace_recursive(...$configs);
         }
 
-        $mergedConfig = $config === [] ? null : array_replace_recursive(...$config);
-        uasort($mergedConfig[$entryPointKey], fn(array $a, array $b) => ($b[$priorityKey] ?? PHP_INT_MIN) <=> ($a[$priorityKey] ?? PHP_INT_MIN));
-        return $mergedConfig;
+        return $configs[0]??[];
     }
 
     /**
@@ -254,7 +261,7 @@ class ConfigLoader
      */
     protected function isConfigCacheValid(string $suffix): bool
     {
-        // is yaml file is more up to date then cache file ... it's considered not valid
+        // is at least one yaml file is more up to date then cache file ... it's considered not valid
         // we only run this check once per execution
         return ($this->runtimeCache['file']['valid'][$suffix] ??= (function(string $suffix): bool {
 
@@ -292,32 +299,28 @@ class ConfigLoader
      */
     private function getAllConfigurationFiles(): array
     {
-        return $this->runtimeCache['file']['list'] = array_filter(array_unique([
-            $this->getDefaultYamlConfigFilePath(),
-            $this->getUserYamlConfigFilePath()
-        ]));
-    }
+        if (isset($this->runtimeCache['file']['list'])) {
+            return $this->runtimeCache['file']['list'];
+        }
 
-    /**
-     * default config
-     * @return string
-     */
-    private function getDefaultYamlConfigFilePath(): string
-    {
-        return $this->runtimeCache['file']['default_path'] ??= $this->processYamlConfigFilePath(
-            self::DEFAULT_CONFIG_PATH
-        );
-    }
+        // Dispatch event to collect additional config paths
+        $event = new ShortNrConfigPathEvent();
+        $this->eventDispatcher->dispatch($event);
 
-    /**
-     * @return string|null
-     * @throws ShortNrConfigException
-     */
-    private function getUserYamlConfigFilePath(): ?string
-    {
-        return $this->runtimeCache['file']['path'] ??= $this->processYamlConfigFilePath(
-            $this->getTypo3Configuration()['configFile'] ?? null
-        );
+        // Add paths from event
+        $configPaths = [];
+        foreach ($event->getConfigPaths() as $path) {
+            $processedPath = $this->processYamlConfigFilePath($path);
+            if ($processedPath !== null) {
+                $configPaths[] = $processedPath;
+            }
+        }
+
+        $configPaths = array_filter(array_unique($configPaths));
+        if (empty($configPaths)) {
+            throw new ShortNrConfigException('No config found, please add a valid config via ' . ShortNrConfigPathEvent::class);
+        }
+        return $this->runtimeCache['file']['list'] = $configPaths;
     }
 
     /**
@@ -346,17 +349,5 @@ class ConfigLoader
         }
 
         return $this->pathResolver->getAbsolutePath($path);
-    }
-
-    /**
-     * @throws ShortNrConfigException
-     */
-    private function getTypo3Configuration(): array
-    {
-        try {
-            return $this->extensionConfiguration->get(ExtensionSetup::EXT_KEY);
-        } catch (Throwable $e) {
-            throw new ShortNrConfigException('Could not load Config for key: '. ExtensionSetup::EXT_KEY, previous: $e);
-        }
     }
 }

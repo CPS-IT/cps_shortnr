@@ -12,12 +12,3 @@ shortNr:
     table: pages
     slug: slug
     pattern: "PAGE{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
-    condition:
-      doktype: 1
-  pages2: # default page
-    type: page
-    table: pages
-    slug: slug
-    pattern: "PAGE2{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
-    condition:
-      doktype: 254

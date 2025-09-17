@@ -20,6 +20,7 @@ class YamlConfigSanitizer
                 is_string($value) => $this->sanitizeStringValue($value),
                 is_array($value) => $this->sanitize($value),
                 is_scalar($value) => $value,
+                is_null($value) => null,
                 default => throw new ShortNrConfigException('type \'' . gettype($value) . '\' in YAML are not supported')
             }
            ;

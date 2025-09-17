@@ -34,14 +34,6 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getPriority(): int
-    {
-        return (int)$this->config->getValue($this->name, ConfigEnum::Priority);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public function getName(): string
     {
         return $this->name;

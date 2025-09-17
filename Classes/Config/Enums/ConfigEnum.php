@@ -8,7 +8,6 @@ enum ConfigEnum: string
     case ENTRYPOINT = 'shortNr';
     case DEFAULT_CONFIG = '_default';
     case Type = 'type';
-    case Priority = 'priority';
 
     // not found handling
     case NotFound = 'notFound';

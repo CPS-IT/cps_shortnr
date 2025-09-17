@@ -74,7 +74,7 @@ class DecoderService extends AbstractUrlService
 
         try {
             return $this->getConfigLoader()->getHeuristicPattern()->support($demand->getShortNr());
-        } catch (Throwable) {
+        } catch (Throwable $e) {
             return false;
         }
     }
