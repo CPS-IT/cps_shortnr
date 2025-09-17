@@ -2,11 +2,11 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
-use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 class ConfigItem implements ConfigItemInterface
 {
@@ -94,38 +94,6 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getConditions(): array
-    {
-        return $this->cache['conditions'] ??= $this->generateFieldConditions($this->config->getValue($this->name, ConfigEnum::Condition) ?? []);
-    }
-
-    /**
-     * @param array $conditions
-     * @return array<string, FieldConditionInterface> [FieldName => Condition]
-     */
-    private function generateFieldConditions(array $conditions): array
-    {
-        $list = [];
-        foreach ($conditions as $fieldName => $condition) {
-            $list[$fieldName] = new FieldCondition($fieldName, $condition);
-        }
-
-        return $list;
-    }
-
-    /**
-     * WIP
-     *
-     * @return array
-     */
-    public function getJoins(): array
-    {
-        return [];
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public function getPluginConfig(): array
     {
         throw new ShortNrConfigException('Plugin configuration not yet implemented');
@@ -169,5 +137,13 @@ class ConfigItem implements ConfigItemInterface
     public function canLanguageOverlay(): bool
     {
         return !empty($this->getRecordIdentifier()) && !empty($this->getLanguageField());
+    }
+
+    /**
+     * @return array
+     */
+    public function getCondition(): array
+    {
+        return $this->config->getValue($this->name, ConfigEnum::Condition) ?? [];
     }
 }

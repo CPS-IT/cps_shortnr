@@ -2,10 +2,13 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-use CPSIT\ShortNr\Config\DTO\FieldCondition;
+use Generator;
+use TypedPatternEngine\Compiler\MatchResult;
 
 class DecoderDemand extends Demand implements DecoderDemandInterface
 {
+    private array $candidates = [];
+
     /**
      * @param string $shortNr provide a clean and sanitized shortNr NO URI
      */
@@ -25,10 +28,18 @@ class DecoderDemand extends Demand implements DecoderDemandInterface
     }
 
     /**
-     * @return FieldCondition[]
+     * @inheritDoc
      */
-    public function getConditions(): array
+    public function addConfigCandidate(ConfigCandidateInterface $candidate): void
     {
-        return $this->configItem->getConditions() ?? [];
+        $this->candidates[$candidate->getConfigItem()->getName()] = $candidate;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getCandidates(): Generator
+    {
+        yield from $this->candidates;
     }
 }

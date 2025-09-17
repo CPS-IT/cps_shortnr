@@ -2,7 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
+use TypedPatternEngine\Compiler\MatchResult;
 
 class PluginProcessor implements ProcessorInterface
 {
@@ -15,10 +16,11 @@ class PluginProcessor implements ProcessorInterface
     }
 
     /**
-     * @param DecoderDemandInterface $demand
+     * @param ConfigItemInterface $configItem
+     * @param MatchResult $matchResult
      * @return string|null
      */
-    public function decode(DecoderDemandInterface $demand): ?string
+    public function decode(ConfigItemInterface $configItem, MatchResult $matchResult): ?string
     {
         return null;
     }

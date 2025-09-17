@@ -10,31 +10,27 @@ services:
       - '../Classes/Config/DTO'
       - '../Classes/Config/Ast'
       - '../Classes/Domain/DTO'
-      - '../Classes/Service/Url/Condition/Operators/DTO'
+      - '../Classes/Service/Condition/Operators/DTO'
       - '../Classes/Service/Url/Processor/DTO'
       - '../Classes/Service/PlatformAdapter/DTO'
       - '../Classes/Service/Url/Demand'
       - '../Classes/Service/Url/EncodingDemandNormalizer/Normalizer/DTO'
-      - '../Classes/Event'
       - '../Classes/Exception'
 
   _instanceof:
-    CPSIT\ShortNr\Service\Url\Condition\Operators\QueryOperatorInterface:
+    CPSIT\ShortNr\Service\Condition\Operators\QueryOperatorInterface:
       tags: ['cps_shortnr.query.operators']
-    CPSIT\ShortNr\Service\Url\Condition\Operators\ResultOperatorInterface:
+    CPSIT\ShortNr\Service\Condition\Operators\ResultOperatorInterface:
       tags: ['cps_shortnr.result.operators']
-    CPSIT\ShortNr\Service\Url\Condition\Operators\EncodingOperatorInterface:
-      tags: [ 'cps_shortnr.encoding.operators' ]
     CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
       tags: [ 'cps_shortnr.processors' ]
     CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\EncodingDemandNormalizerInterface:
       tags: [ 'cps_shortnr.demand.normalizers' ]
 
-  CPSIT\ShortNr\Service\Url\Condition\ConditionService:
+  CPSIT\ShortNr\Service\Condition\ConditionService:
     arguments:
       $queryOperators: !tagged 'cps_shortnr.query.operators'
       $resultOperators: !tagged 'cps_shortnr.result.operators'
-      $encodingOperators: !tagged 'cps_shortnr.encoding.operators'
 
   CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\EncodingDemandNormalizationService:
     arguments:
@@ -45,7 +41,6 @@ services:
       - setProcessors: [!tagged 'cps_shortnr.processors']
       - setConfigLoader: ['@CPSIT\ShortNr\Config\ConfigLoader']
       - setCacheManager: ['@CPSIT\ShortNr\Cache\CacheManager']
-      - setEventDispatcher: ['@Psr\EventDispatcher\EventDispatcherInterface']
 
   # Concrete services inherit
   CPSIT\ShortNr\Service\DecoderService:
@@ -66,27 +61,3 @@ services:
   CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface:
     alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PageTreeResolver
     public: true
-
-# event listener
-  CPSIT\ShortNr\EventListener\CacheEventListener:
-    tags:
-      - name: event.listener
-        method: handleEvents
-        identifier: 'iki-sitepackage/news-event-listener'
-        event:
-          - TYPO3\CMS\Core\Cache\Event\CacheFlushEvent
-# Config Resolver listener
-  CPSIT\ShortNr\EventListener\EncodeConfigResolverListener:
-    tags:
-      - name: event.listener
-        method: handleEvents
-        identifier: 'shortNrConfigEncodeResolve'
-        event:
-          - CPSIT\ShortNr\Event\ShortNrEncodeConfigResolverEvent
-  CPSIT\ShortNr\EventListener\DecodeVerifyListenerListener:
-    tags:
-      - name: event.listener
-        method: handleEvents
-        identifier: 'shortNrVerifyRequest'
-        event:
-          - CPSIT\ShortNr\Event\ShortNrVerifyRequestEvent

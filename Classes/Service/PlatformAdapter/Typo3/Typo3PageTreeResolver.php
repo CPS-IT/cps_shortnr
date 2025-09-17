@@ -82,7 +82,7 @@ class Typo3PageTreeResolver implements PageTreeResolverInterface
      */
     private function getRawPageData(): array
     {
-        return $this->shortNrRepository->getPageTreeData(
+        return $this->shortNrRepository->getDbTreeData(
             tableName: self::$pagesDB,
             indexField: self::$identifierField,
             parentPageField: self::$parentField,

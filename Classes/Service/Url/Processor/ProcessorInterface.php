@@ -2,8 +2,9 @@
 
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
+use TypedPatternEngine\Compiler\MatchResult;
 
 interface ProcessorInterface
 {
@@ -17,9 +18,10 @@ interface ProcessorInterface
     /**
      * Return a string (full URI) or throws ShortNrNotFoundException to trigger the notFound Fallback
      *
-     * @param DecoderDemandInterface $demand
+     * @param ConfigItemInterface $configItem
+     * @param MatchResult $matchResult
      * @return string|null
      * @throws ShortNrNotFoundException
      */
-    public function decode(DecoderDemandInterface $demand): ?string;
+    public function decode(ConfigItemInterface $configItem, MatchResult $matchResult): ?string;
 }

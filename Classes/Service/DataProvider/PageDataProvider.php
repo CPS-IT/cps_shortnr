@@ -3,9 +3,9 @@
 namespace CPSIT\ShortNr\Service\DataProvider;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
-use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
+use CPSIT\ShortNr\Exception\ShortNrProcessorException;
 use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
 use CPSIT\ShortNr\Service\PlatformAdapter\DTO\TreeProcessor\TreeProcessorResultItemInterface;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface;
@@ -22,10 +22,10 @@ class PageDataProvider
     ) {}
 
     /**
-     * @param array<string, FieldConditionInterface|mixed> $condition
+     * @param array<string, int|string|mixed> $condition
      * @param ConfigItemInterface $configItem
      * @return string|null
-     * @throws ShortNrNotFoundException
+     * @throws ShortNrProcessorException
      */
     public function getPageData(array $condition, ConfigItemInterface $configItem): ?string
     {
@@ -33,7 +33,7 @@ class PageDataProvider
             $slugKey = $configItem->getValue('slug');
             $uidKey = $configItem->getRecordIdentifier();
             $languageKey = $configItem->getLanguageField();
-            $rows = $this->shortNrRepository->resolveTable([$slugKey, $uidKey, $languageKey], $configItem->getTableName(), $condition);
+            $rows = $this->shortNrRepository->resolveTable([$slugKey, $uidKey, $languageKey], $configItem->getTableName(), $condition + $configItem->getCondition());
 
             // first active page is our winner!
             foreach ($rows as $row) {
@@ -56,10 +56,10 @@ class PageDataProvider
                 }
             }
         } catch (Throwable $e) {
-            throw new ShortNrNotFoundException($e->getMessage(), $e->getCode(), $e);
+            throw new ShortNrProcessorException($e->getMessage(), $e->getCode(), $e);
         }
 
-        throw new ShortNrNotFoundException();
+        return null;
     }
 
     /**

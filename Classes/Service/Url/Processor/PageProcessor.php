@@ -2,11 +2,12 @@
 
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\DataProvider\PageDataProvider;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
 use CPSIT\ShortNr\Traits\ValidateUriTrait;
+use TypedPatternEngine\Compiler\MatchResult;
 
 class PageProcessor implements ProcessorInterface
 {
@@ -27,17 +28,15 @@ class PageProcessor implements ProcessorInterface
     }
 
     /**
-     * @param DecoderDemandInterface $demand
+     * @param ConfigItemInterface $configItem
+     * @param MatchResult $matchResult
      * @return string|null
      * @throws ShortNrNotFoundException
      */
-    public function decode(DecoderDemandInterface $demand): ?string
+    public function decode(ConfigItemInterface $configItem, MatchResult $matchResult): ?string
     {
-        $configItem = $demand->getConfigItem();
-        if (!$configItem || empty($conditions = $configItem->getConditions())) {
-            return null;
-        }
-
+        $conditions = $matchResult->toArray();
+        unset($conditions['input']);
         return $this->pageDataProvider->getPageData($conditions, $configItem);
     }
 }

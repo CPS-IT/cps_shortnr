@@ -2,14 +2,6 @@ shortNr:
   _default:
     # support page id or hard-coded URI (detects it via is_numeric)
     notFound: "/"
-    # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
-    regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
-    prefixMatch: "{match-1}"
-    # hidden notfoundOverwrite type to replace the stock NotfoundProcessor with a custom Processor
-    # notFoundType: customNotFound
-    condition: # database conditions
-      uid: "{match-2}"
-      sys_language_uid: "{match-3}"
     languageParentField: "l10n_parent"  # default TYPO3 field name
     languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
     identifierField: "uid" # needed for language overlay if omitted or empty = no overlay

@@ -1,10 +1,10 @@
 shortNr:
   _default:
-    # support page id or hard-coded URI (starts with a / ) (detects it via is_numeric)
-    notFound: "404"
-    #languageParentField: "l10n_parent"  # default TYPO3 field name
-    #languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
-    #identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
+    # support page id or hard-coded URI (starts with a / ) (detect is via is_numeric, if page has a numeric slug use / at the beginning)
+    notFound: "/404"
+    languageParentField: "l10n_parent"  # default TYPO3 field name
+    languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
+    identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
 
 
   pages: # default page
@@ -12,3 +12,12 @@ shortNr:
     table: pages
     slug: slug
     pattern: "PAGE{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
+    condition:
+      doktype: 1
+  pages2: # default page
+    type: page
+    table: pages
+    slug: slug
+    pattern: "PAGE2{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
+    condition:
+      doktype: 254

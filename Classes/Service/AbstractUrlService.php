@@ -11,7 +11,6 @@ use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Processor\NotFoundProcessor;
 use CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface;
-use Psr\EventDispatcher\EventDispatcherInterface;
 
 abstract class AbstractUrlService
 {
@@ -19,8 +18,6 @@ abstract class AbstractUrlService
     private iterable $processors;
     private ConfigLoader $configLoader;
     private CacheManager $cacheManager;
-    private EventDispatcherInterface $eventDispatcher;
-
     public function setProcessors(iterable $processors)
     {
         $this->processors = $processors;
@@ -43,14 +40,6 @@ abstract class AbstractUrlService
     }
 
     /**
-     * @param EventDispatcherInterface $eventDispatcher
-     */
-    public function setEventDispatcher(EventDispatcherInterface $eventDispatcher): void
-    {
-        $this->eventDispatcher = $eventDispatcher;
-    }
-
-    /**
      * @return ConfigInterface
      * @throws ShortNrCacheException
      * @throws ShortNrConfigException
@@ -66,14 +55,6 @@ abstract class AbstractUrlService
     protected function getConfigLoader(): ConfigLoader
     {
         return $this->configLoader;
-    }
-
-    /**
-     * @return EventDispatcherInterface
-     */
-    public function getEventDispatcher(): EventDispatcherInterface
-    {
-        return $this->eventDispatcher;
     }
 
     /**

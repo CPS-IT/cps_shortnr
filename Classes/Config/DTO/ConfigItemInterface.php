@@ -2,9 +2,9 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
-use CPSIT\ShortNr\Config\Ast\Compiler\CompiledPattern;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 interface ConfigItemInterface
 {
@@ -54,21 +54,6 @@ interface ConfigItemInterface
      * @return string|null Table name like 'pages', 'tt_content' or null if not configured
      */
     public function getTableName(): ?string;
-
-    /**
-     * Get the database conditions for record filtering
-     *
-     * Contains field mappings and values for building.
-     *
-     * @return array<string, FieldConditionInterface> [FieldName => ConditionObject]
-     */
-    public function getConditions(): array;
-
-    /**
-     * WIP
-     * @return array
-     */
-    public function getJoins(): array;
 
     /**
      * Get plugin-specific configuration (not yet implemented)
@@ -129,4 +114,9 @@ interface ConfigItemInterface
      * @return CompiledPattern
      */
     public function getPattern(): CompiledPattern;
+
+    /**
+     * @return array
+     */
+    public function getCondition(): array;
 }

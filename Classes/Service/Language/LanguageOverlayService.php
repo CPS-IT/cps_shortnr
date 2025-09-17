@@ -6,6 +6,7 @@ use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface;
+use TypedPatternEngine\Compiler\MatchResult;
 
 class LanguageOverlayService
 {
@@ -16,58 +17,55 @@ class LanguageOverlayService
 
     /**
      * @param ConfigItemInterface $configItem
-     * @return ConfigItemInterface
+     * @param MatchResult $result
+     * @return MatchResult
      */
-    public function resolveLanguageOverlay(ConfigItemInterface $configItem): ConfigItemInterface
+    public function resolveLanguageOverlay(ConfigItemInterface $configItem, MatchResult $result): MatchResult
     {
         // special pages optimization
         if ($configItem->getTableName() === 'pages') {
-            //return $this->overlayPage($configItem);
+            return $this->overlayPage($configItem, $result);
         }
 
-        return $this->overlayGeneric($configItem);
+        return $this->overlayGeneric($configItem, $result);
     }
 
     /**
      * @param ConfigItemInterface $configItem
-     * @return ConfigItemInterface
+     * @param MatchResult $result
+     * @return MatchResult
      */
-    private function overlayPage(ConfigItemInterface $configItem): ConfigItemInterface
+    private function overlayPage(ConfigItemInterface $configItem, MatchResult $result): MatchResult
     {
-        $conditions = $configItem->getConditions();
-        $idFieldCondition = $conditions[$configItem->getRecordIdentifier() ?? ''] ?? null;
-
-        // we only support non-nested conditions
-
-        $uidMatch = $idFieldCondition?->getMatches()[0] ?? null;
-
-        if ($uidMatch === null || !$uidMatch->isInitialized()) {
-            return $configItem;
+        $uid = $result->get($configItem->getRecordIdentifier() ?? '');
+        if ($uid === null) {
+            return $result;
         }
 
-        // resolve page
-        $uid = (int)$uidMatch->getValue();
         $pageTree = $this->pageTreeResolver->getPageTree();
         if ($pageTree->isMultiTreeLanguageSetup() || ($pageItem = $pageTree->getItem($uid)) === null) {
             // skip multi tree setups
-            return $configItem;
+            return $result;
         }
 
         // language resolving
-        $languageFieldCondition = $conditions[$configItem->getLanguageField() ?? ''] ?? null;
-        // we only support non-nested conditions
-        $langIdMatch = $languageFieldCondition?->getMatches()[0] ?? null;
-        if ($langIdMatch === null || !$this->isPageSupportLanguageUid($uid, (int)$langIdMatch->getValue())) {
-            $langId = $this->getPageDefaultLanguageIdForPageUid($uid);
-        } else {
-            $langId = (int)$langIdMatch->getValue();
+        $langUid = $result->get($configItem->getLanguageField() ?? '');
+        if ($langUid === null || !$this->isPageSupportLanguageUid($uid, $langUid)) {
+            $langUid = $this->getPageDefaultLanguageIdForPageUid($uid);
         }
 
-        $currentLanguagePageItem = $pageItem->getTranslation($langId);
-        $uidMatch->setValue($currentLanguagePageItem?->getPrimaryId());
-        $langIdMatch?->setValue($currentLanguagePageItem?->getLanguageId());
+        $currentLanguagePageItem = $pageItem->getTranslation($langUid);
+        $newResult = new MatchResult($result->getInput());
+        foreach ($result->getGroups() as $name => $group) {
+            ['value' => $value, 'type' => $type, 'constraints' => $constraints] = $group;
+            $value = match ($name) {
+                $configItem->getRecordIdentifier() => $currentLanguagePageItem?->getPrimaryId() ?? $value,
+                $configItem->getLanguageField() => $currentLanguagePageItem?->getLanguageId() ?? $value
+            };
+            $newResult->addGroup($name, $value, $type, $constraints ?? []);
+        }
 
-        return $configItem;
+        return $newResult;
     }
 
     /**
@@ -91,28 +89,21 @@ class LanguageOverlayService
 
     /**
      * @param ConfigItemInterface $configItem
-     * @return ConfigItemInterface
+     * @param MatchResult $result
+     * @return MatchResult
      */
-    private function overlayGeneric(ConfigItemInterface $configItem): ConfigItemInterface
+    private function overlayGeneric(ConfigItemInterface $configItem, MatchResult $result): MatchResult
     {
-        $conditions = $configItem->getConditions();
-
-        // UID extraction
-        $idFieldCondition = $conditions[$configItem->getRecordIdentifier() ?? ''] ?? null;
-        $uidMatch = $idFieldCondition?->getMatches()[0] ?? null;
-        if ($uidMatch === null) {
-            return $configItem;
+        $uid = $result->get($configItem->getRecordIdentifier() ?? '');
+        if ($uid === null) {
+            return $result;
         }
-        $uid = (int)$uidMatch->getValue();
 
         // lang ID extraction
-        $languageFieldCondition = $conditions[$configItem->getLanguageField() ?? ''] ?? null;
-        $langIdMatch = $languageFieldCondition?->getMatches()[0] ?? null;
-        if (!($langIdMatch?->isInitialized() ?? false)) {
+        $langUid = $result->get($configItem->getLanguageField() ?? '');
+        if (!$langUid) {
             // default language
-            $langId = 0;
-        } else {
-            $langId = (int)($langIdMatch?->getValue());
+            $langUid = 0;
         }
 
         $table = $configItem->getTableName();
@@ -120,26 +111,32 @@ class LanguageOverlayService
         $languageField = $configItem->getLanguageField();
         $languageParentField = $configItem->getLanguageParentField();
         if (!$table || !$languageParentField || !$languageField) {
-            return $configItem;
+            return $result;
         }
 
         try {
             $resolvement = $this->repository->resolveCorrectUidWithLanguageUid($table, $uidField, $languageField, $languageParentField, $uid);
         } catch (ShortNrQueryException) {
-            return $configItem;
+            return $result;
         }
 
-        $resolvedUid = $resolvement[$langId] ?? null;
-
+        $resolvedUid = $resolvement[$langUid] ?? null;
         if ($resolvedUid === null) {
             // language not available -> fall back to base (0)
             $resolvedUid = $resolvement[0] ?? $uid;
-            $langIdMatch?->setValue(0);        // update the regex match as well
-        } else {
-            $langIdMatch?->setValue($langId);
+            $langUid = 0;
         }
-        $uidMatch->setValue($resolvedUid);
 
-        return $configItem;
+        $newResult = new MatchResult($result->getInput());
+        foreach ($result->getGroups() as $name => $group) {
+            ['value' => $value, 'type' => $type, 'constraints' => $constraints] = $group;
+            $value = match ($name) {
+                $configItem->getRecordIdentifier() => $resolvedUid ?? $value,
+                $configItem->getLanguageField() => $langUid ?? $value
+            };
+            $newResult->addGroup($name, $value, $type, $constraints ?? []);
+        }
+
+        return $newResult;
     }
 }

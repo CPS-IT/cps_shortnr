@@ -2,7 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-use CPSIT\ShortNr\Config\DTO\FieldCondition;
+use Generator;
 
 interface DecoderDemandInterface extends DemandInterface
 {
@@ -14,9 +14,13 @@ interface DecoderDemandInterface extends DemandInterface
     public function getShortNr(): string;
 
     /**
-     * get resolved conditions
-     *
-     * @return array<string, FieldCondition>
+     * @param ConfigCandidateInterface $candidate
+     * @return void
      */
-    public function getConditions(): array;
+    public function addConfigCandidate(ConfigCandidateInterface $candidate): void;
+
+    /**
+     * @return Generator<ConfigCandidateInterface>
+     */
+    public function getCandidates(): Generator;
 }

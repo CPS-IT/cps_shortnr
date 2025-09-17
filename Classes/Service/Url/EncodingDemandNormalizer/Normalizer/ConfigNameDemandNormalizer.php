@@ -3,12 +3,10 @@
 namespace CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer;
 
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
-use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Demand\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\DTO\EncoderDemandNormalizationResult;
-use phpDocumentor\Reflection\Types\This;
 
 class ConfigNameDemandNormalizer implements EncodingDemandNormalizerInterface
 {

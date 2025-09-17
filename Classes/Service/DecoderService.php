@@ -2,23 +2,22 @@
 
 namespace CPSIT\ShortNr\Service;
 
-use CPSIT\ShortNr\Event\ShortNrBeforeProcessorDecodingEvent;
-use CPSIT\ShortNr\Event\ShortNrConfigItemProcessedEvent;
-use CPSIT\ShortNr\Event\ShortNrUriFinishDecodingEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Exception\ShortNrDemandNormalizationException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Language\LanguageOverlayService;
-use CPSIT\ShortNr\Service\Url\ConfigResolver\ConfigItemResolveProcessor;
+use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidate;
+use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidateInterface;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\RequestDecoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
 use Throwable;
+use Generator;
 
 class DecoderService extends AbstractUrlService
 {
     public function __construct(
-        private readonly ConfigItemResolveProcessor $configItemResolveProcessor,
         private readonly LanguageOverlayService $languageOverlayService,
     )
     {}
@@ -33,10 +32,33 @@ class DecoderService extends AbstractUrlService
     {
         $demand = RequestDecoderDemand::makeFromRequest($request);
         if ($this->isValid($demand)) {
+
+            foreach ($this->getConfigItem($demand->getShortNr()) as $candidate) {
+                $demand->addConfigCandidate($candidate);
+            }
+
             return $demand;
         }
 
         return null;
+    }
+
+    /**
+     * @param string $shortNr
+     * @return Generator<ConfigCandidateInterface>
+     */
+    private function getConfigItem(string $shortNr): Generator
+    {
+        try {
+            $config = $this->getConfig();
+            foreach ($config->getPatterns() as $configName => $compiledPattern) {
+                $matchResult = $compiledPattern->match($shortNr);
+                if ($matchResult && !$matchResult->isFailed()) {
+                    yield new ConfigCandidate($config->getConfigItem($configName), $matchResult);
+                }
+            }
+        } catch (ShortNrCacheException|ShortNrConfigException) {
+        }
     }
 
     /**
@@ -46,9 +68,13 @@ class DecoderService extends AbstractUrlService
      */
     private function isValid(DecoderDemandInterface $demand): bool
     {
+        // default browser escape
+        if ($demand->getShortNr() === 'favicon.ico')
+            return false;
+
         try {
             return $this->getConfigLoader()->getHeuristicPattern()->support($demand->getShortNr());
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return false;
         }
     }
@@ -57,59 +83,59 @@ class DecoderService extends AbstractUrlService
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
      * @throws ShortNrNotFoundException
      */
     public function decode(DecoderDemandInterface $demand): ?string
     {
         // cache for one day
-        return $this->getCacheManager()->getType3CacheValue('decode_'.md5(strtolower($demand->getShortNr())), fn() => $this->decodeDemand($demand), 86_400);
+        return $this->getCacheManager()->getType3CacheValue(
+            sprintf('decode-%s', $demand->getShortNr()),
+            fn() => $this->decodeDemand($demand),
+            86_400
+        );
     }
 
     /**
      *
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
-     * @throws ShortNrCacheException
      * @throws ShortNrNotFoundException
-     * @throws ShortNrConfigException
      */
     private function decodeDemand(DecoderDemandInterface $demand): ?string
     {
-        $configItem = $this->configItemResolveProcessor->parseDecoderDemand($demand, $this->getConfig());
-        // used to alter / manipulate or replace the configItem that will be used ... it contains all the Match and condition information
-        $configItem = $this->getEventDispatcher()->dispatch(new ShortNrConfigItemProcessedEvent($demand, $configItem))->getConfigItem();
+        $anyCandidatesExecuted = false;
+        // try to match candidates, one at a time, to resolve the match via config to an uri
+        foreach ($demand->getCandidates() as $candidate) {
+            $configItem = $candidate->getConfigItem();
+            $matchResult = $candidate->getMatchResult();
 
-        // early exit no config item found, so we give that request free for other middleware
-        if ($configItem === null) {
-            return null;
-        }
-
-        $demand->setConfigItem($configItem);
-        // handle language overlay normalisation
-        // if key information missing in the config for that item, overlay is disabled
-        if ($configItem->canLanguageOverlay()) {
-            // replace to the needed UID
-            $this->languageOverlayService->resolveLanguageOverlay($configItem);
-        }
-
-        $demand = $this->getEventDispatcher()->dispatch(new ShortNrBeforeProcessorDecodingEvent($demand))->getDemand();
-        try {
-            // update processor to use the new MatchResult and The new FieldCondition Value system
-            $uri = $this->getProcessor($configItem)?->decode($demand);
-            if (empty($uri)) {
-                // empty URI are not allowed, at least a '/' must be there
-                throw new ShortNrNotFoundException();
+            if ($configItem->canLanguageOverlay()) {
+                // replace to the needed UID
+                $matchResult = $this->languageOverlayService->resolveLanguageOverlay($configItem, $matchResult);
             }
-            $notFound = false;
-        } catch (ShortNrNotFoundException) {
-            // not found fallback
-            $uri = $this->getNotFoundProcessor($configItem)?->decode($demand);
-            $notFound = true;
+
+            $uri = $this->getProcessor($configItem)?->decode($configItem, $matchResult);
+            // candidate gives us a valid answer, get the first one we can find
+            if (!empty($uri)) {
+                return $uri;
+            }
+            $anyCandidatesExecuted = true;
         }
 
-        /** @var ShortNrUriFinishDecodingEvent $event */
-        $event = $this->getEventDispatcher()->dispatch(new ShortNrUriFinishDecodingEvent($demand, $uri, $notFound));
-        return $event->getUri();
+        // no candidate satisfied, process NotFound
+        if ($anyCandidatesExecuted) {
+            foreach ($demand->getCandidates() as $candidate) {
+                $notFoundUri = $this->getNotFoundProcessor($candidate->getConfigItem())?->decode($candidate->getConfigItem(), $candidate->getMatchResult());
+                if (!empty($notFoundUri)) {
+                    return $notFoundUri;
+                }
+            }
+
+            // no NotFound config could be processed, fatal exception
+            throw new ShortNrNotFoundException('Could not match ANY pattern');
+        }
+
+        // no candidate was processed at this point, give up
+        return null;
     }
 }

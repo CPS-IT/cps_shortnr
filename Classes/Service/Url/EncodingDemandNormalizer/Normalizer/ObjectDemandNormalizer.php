@@ -3,10 +3,8 @@
 namespace CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer;
 
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
-use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrDemandNormalizationException;
-use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Url\Demand\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\ObjectEncoderDemand;
 use CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\DTO\EncoderDemandNormalizationResult;
@@ -20,7 +18,6 @@ class ObjectDemandNormalizer implements EncodingDemandNormalizerInterface
 
     public function __construct(
         private readonly DataMapper $dataMapper,
-        private readonly ConditionService $conditionService
     )
     {}
 
@@ -70,48 +67,5 @@ class ObjectDemandNormalizer implements EncodingDemandNormalizerInterface
     public function getPriority(): int
     {
         return 50;
-    }
-
-    /**
-     * @param object $obj
-     * @param ConfigItemInterface $configItem
-     * @return array
-     * @throws ShortNrDemandNormalizationException
-     */
-    private function convertObjectToArray(object $obj, ConfigItemInterface $configItem): array
-    {
-        $recordData = [];
-        foreach ($configItem->getConditions() as $field => $fieldCondition) {
-            if (!$fieldCondition->hasStaticElements()) {
-                $recordData[$field] = $this->getValueFromObjectField($obj, $field);
-            }
-        }
-
-        return $recordData;
-    }
-
-    /**
-     * @param object $obj
-     * @param string $fieldName
-     * @return mixed
-     * @throws ShortNrDemandNormalizationException catch that exception to deal with not found fields
-     */
-    private function getValueFromObjectField(object $obj, string $fieldName): mixed
-    {
-        $getters = $this->cache['initGetterNames'][$fieldName] ??= [
-            'getter' => 'get' . ($methodName = ucfirst($fieldName)),
-            'boolGetter' => 'is' . $methodName,
-        ];
-
-        $methodExists = $this->cache['methodExists'][$obj::class][$fieldName] ??= [
-            'getter' => method_exists($obj, $getters['getter']),
-            'boolGetter' => method_exists($obj, $getters['boolGetter']),
-        ];
-
-        return match (true) {
-            $methodExists['getter'] => $obj->{$getters['getter']}(),
-            $methodExists['boolGetter'] => $obj->{$getters['boolGetter']}(),
-            default => throw new ShortNrDemandNormalizationException('field ' . $fieldName . ' not found (no getter) in ' . $obj::class)
-        };
     }
 }
