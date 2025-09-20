@@ -49,10 +49,9 @@ interface ConfigItemInterface
     /**
      * Get plugin-specific configuration (not yet implemented)
      *
-     * @return array Plugin configuration array
-     * @throws ShortNrConfigException Until implementation is complete
+     * @return array|null Plugin configuration array
      */
-    public function getPluginConfig(): array;
+    public function getPluginConfig(): ?array;
 
     /**
      * Get the fallback URL/page for not found cases

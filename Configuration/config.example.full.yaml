@@ -8,12 +8,9 @@ shortNr:
 
   pages: # default page
     type: page
-    prefix: PAGE
     table: pages
-    slug: slug
-    condition:
-      uid: "{match-2}"
-      sys_language_uid: "{match-3}"
+    pattern: "PAGE{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
+    condition: # static conditions, dynamic conditions are in the pattern
       is_event:
         contains: "test2"
         not:
@@ -45,3 +42,17 @@ shortNr:
           between: [ 18, 65 ]     # shorthand for >= 18 AND <= 65
       blocked_users:
         not: [ "spam", "bot" ]  # opposite of implicit IN
+
+  myNews1:
+    type: plugin
+    table: tx_news_domain_model_news
+    pattern: "NEWS{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
+    condition: # full access to all possible conditions
+      type: 0
+    plugin: # plugin is mandatory for type plugin
+      extension: News
+      plugin: Pi1
+      pid: 123
+      action: detail
+      controller: News
+      objectName: news

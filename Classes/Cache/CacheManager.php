@@ -31,10 +31,11 @@ class CacheManager
      * @param string $cacheKey
      * @param callable $processBlock must return a string
      * @param int|null $ttl Lifetime of this cache entry in seconds. If NULL is specified, the default lifetime is used. "0" means unlimited lifetime.
-     * @return string|null
+     * @param array $tags
+     * @return string|array|null
      * @throws ShortNrCacheException
      */
-    public function getType3CacheValue(string $cacheKey, callable $processBlock, ?int $ttl = null): null|string|array
+    public function getType3CacheValue(string $cacheKey, callable $processBlock, ?int $ttl = null, array $tags = []): null|string|array
     {
         $cleanCacheKey = md5($cacheKey);
         $cache = $this->getCache();
@@ -52,7 +53,7 @@ class CacheManager
                 throw new ShortNrCacheException('invalid cache value, expected string/array');
             }
             if (is_string($value)) {
-                $cache?->set($cleanCacheKey, $value, lifetime:  $ttl);
+                $cache?->set($cleanCacheKey, $value, tags: $tags, lifetime:  $ttl);
             }
             return $rawValue;
         }
@@ -62,6 +63,11 @@ class CacheManager
         }
 
         return null;
+    }
+
+    public function invalidateByTag(string $tag): void
+    {
+        $this->getCache()->flushByTag($tag);
     }
 
     /**

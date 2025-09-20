@@ -2,8 +2,10 @@
 
 namespace CPSIT\ShortNr\Config;
 
+use CPSIT\ShortNr\Listener\ClearCacheDataHandlerHook;
 use TYPO3\CMS\Core\Cache\Backend\FileBackend;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
+use TYPO3\CMS\Core\DataHandling\DataHandler;
 
 class ExtensionSetup
 {
@@ -17,6 +19,7 @@ class ExtensionSetup
     public static function setup(): void
     {
         self::registerCache();
+        self::registerHooks();
     }
 
     /**
@@ -35,5 +38,10 @@ class ExtensionSetup
             ],
             ($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][static::CACHE_KEY] ?? [])
         );
+    }
+
+    private static function registerHooks(): void
+    {
+        $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tcemain.php']['clearCachePostProc'][static::CACHE_KEY] = new ClearCacheDataHandlerHook()->clearCache(...);
     }
 }

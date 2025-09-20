@@ -41,16 +41,19 @@ class LanguageOverlayService
         if ($uid === null) {
             return $result;
         }
+        $langUid = $result->get($configItem->getLanguageField() ?? '');
+        if ($langUid === null) {
+            return $result;
+        }
 
         $pageTree = $this->pageTreeResolver->getPageTree();
         if ($pageTree->isMultiTreeLanguageSetup() || ($pageItem = $pageTree->getItem($uid)) === null) {
-            // skip multi tree setups
+            // skip multi tree setups or not found in tree
             return $result;
         }
 
         // language resolving
-        $langUid = $result->get($configItem->getLanguageField() ?? '');
-        if ($langUid === null || !$this->isPageSupportLanguageUid($uid, $langUid)) {
+        if (!$this->isPageSupportLanguageUid($uid, $langUid)) {
             $langUid = $this->getPageDefaultLanguageIdForPageUid($uid);
         }
 

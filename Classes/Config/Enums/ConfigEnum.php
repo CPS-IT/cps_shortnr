@@ -24,6 +24,9 @@ enum ConfigEnum: string
     // condition
     case Condition = 'condition';
 
+    // plugin
+    case Plugin = 'plugin';
+
     // language handling
     case LanguageParentField = 'languageParentField';
     case LanguageField = 'languageField';

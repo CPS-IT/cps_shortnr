@@ -4,7 +4,6 @@ namespace CPSIT\ShortNr\Service;
 
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
-use CPSIT\ShortNr\Exception\ShortNrDemandNormalizationException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Language\LanguageOverlayService;
 use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidate;
@@ -12,6 +11,7 @@ use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidateInterface;
 use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\RequestDecoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use Generator;
 
@@ -19,6 +19,7 @@ class DecoderService extends AbstractUrlService
 {
     public function __construct(
         private readonly LanguageOverlayService $languageOverlayService,
+        private readonly LoggerInterface $logger,
     )
     {}
 
@@ -91,35 +92,53 @@ class DecoderService extends AbstractUrlService
         return $this->getCacheManager()->getType3CacheValue(
             sprintf('decode-%s', $demand->getShortNr()),
             fn() => $this->decodeDemand($demand),
-            86_400
+            ttl: 604_800, // one week
+            tags: ['all', 'uri']
         );
     }
 
     /**
      *
      * @param DecoderDemandInterface $demand
+     * @param array $tags
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrNotFoundException
      */
-    private function decodeDemand(DecoderDemandInterface $demand): ?string
+    private function decodeDemand(DecoderDemandInterface $demand, array &$tags = []): ?string
     {
         $anyCandidatesExecuted = false;
+        $errors = [];
         // try to match candidates, one at a time, to resolve the match via config to an uri
         foreach ($demand->getCandidates() as $candidate) {
             $configItem = $candidate->getConfigItem();
             $matchResult = $candidate->getMatchResult();
-
-            if ($configItem->canLanguageOverlay()) {
-                // replace to the needed UID
-                $matchResult = $this->languageOverlayService->resolveLanguageOverlay($configItem, $matchResult);
+            try {
+                if ($configItem->canLanguageOverlay()) {
+                    // replace to the needed UID
+                    $matchResult = $this->languageOverlayService->resolveLanguageOverlay($configItem, $matchResult);
+                }
+                $uri = $this->getProcessor($configItem)?->decode($configItem, $matchResult);
+            } catch (Throwable $e) {
+                $errors[] = $e;
+                $uri = null;
             }
 
-            $uri = $this->getProcessor($configItem)?->decode($configItem, $matchResult);
             // candidate gives us a valid answer, get the first one we can find
             if (!empty($uri)) {
                 return $uri;
             }
             $anyCandidatesExecuted = true;
+        }
+
+        // log errors
+        foreach ($errors as $error) {
+            $this->logger->error('[ShortNr] '.$error->getMessage(), [
+                // let's be safe since that is user generated code injected into the logs
+                'shortNr' => htmlentities(strip_tags($demand->getShortNr())),
+                'line' => $error->getLine(),
+                'file' => $error->getFile(),
+                'trace' => $error->getTrace()
+            ]);
         }
 
         // no candidate satisfied, process NotFound
@@ -132,7 +151,7 @@ class DecoderService extends AbstractUrlService
             }
 
             // no NotFound config could be processed, fatal exception
-            throw new ShortNrNotFoundException('Could not match ANY pattern');
+            throw new ShortNrNotFoundException('Could not match ANY pattern, invalid config?');
         }
 
         // no candidate was processed at this point, give up

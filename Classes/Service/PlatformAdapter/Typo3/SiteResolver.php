@@ -4,10 +4,15 @@ namespace CPSIT\ShortNr\Service\PlatformAdapter\Typo3;
 
 use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Throwable;
+use TYPO3\CMS\Core\Domain\Page;
+use TYPO3\CMS\Core\Routing\InvalidRouteArgumentsException;
+use TYPO3\CMS\Core\Routing\PageRouter;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class SiteResolver implements SiteResolverInterface
 {
@@ -68,6 +73,26 @@ class SiteResolver implements SiteResolverInterface
     public function getLanguagesByRootPageUid(int $rootPageUid): array
     {
         return $this->getLanguagesBySite($this->getSiteByPageUid($rootPageUid));
+    }
+
+    /**
+     * @param int|Page $page
+     * @param int|SiteLanguage $languageUid
+     * @param array $routeParams
+     * @return UriInterface
+     * @throws InvalidRouteArgumentsException
+     * @throws ShortNrSiteFinderException
+     */
+    public function getUriByPageId(int|Page $page, int|SiteLanguage $languageUid = 0, array $routeParams = []): string
+    {
+        $routeParams['_language'] ??= $languageUid;
+        if ($page instanceof Page) {
+            $pageId = $page->getPageId();
+        } else {
+            $pageId = $page;
+        }
+        $siteRouter = GeneralUtility::makeInstance(PageRouter::class, $this->getSiteByPageUid($pageId));
+        return (string)$siteRouter->generateUri($page, $routeParams);
     }
 
     /**

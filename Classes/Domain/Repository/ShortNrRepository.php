@@ -143,6 +143,7 @@ class ShortNrRepository
      */
     private function validateAndPrepareFields(array $fields, array $condition, string $tableName): array
     {
+        $fields = array_filter($fields);
         $fields = [...$fields, ...array_keys($condition)];
         $existingValidFields = $this->getValidFields($fields, $tableName);
         if (empty($existingValidFields)) {
@@ -206,7 +207,8 @@ class ShortNrRepository
         $list = $this->cacheManager->getType3CacheValue(
             cacheKey: 'getFieldFromTable_' . $tableName,
             processBlock: fn(): array => $this->fetchFieldsFromConnection($tableName),
-            ttl: 0
+            ttl: 0,
+            tags: ['meta', 'database', 'all', 'table', $tableName]
         ) ?? [];
 
         if (!is_array($list)) {

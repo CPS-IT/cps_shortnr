@@ -4,6 +4,9 @@ namespace CPSIT\ShortNr\Service\PlatformAdapter\Typo3;
 
 use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
+use TYPO3\CMS\Core\Domain\Page;
+use TYPO3\CMS\Core\Routing\InvalidRouteArgumentsException;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 
@@ -44,4 +47,14 @@ interface SiteResolverInterface
      * @return array<int, SiteLanguage>
      */
     public function getLanguagesByRootPageUid(int $rootPageUid): array;
+
+    /**
+     * @param int|Page $page
+     * @param int|SiteLanguage $languageUid
+     * @param array $routeParams
+     * @return UriInterface
+     * @throws ShortNrSiteFinderException
+     * @throws InvalidRouteArgumentsException
+     */
+    public function getUriByPageId(int|Page $page, int|SiteLanguage $languageUid = 0, array $routeParams = []): string;
 }

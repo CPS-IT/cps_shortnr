@@ -86,9 +86,9 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getPluginConfig(): array
+    public function getPluginConfig(): ?array
     {
-        throw new ShortNrConfigException('Plugin configuration not yet implemented');
+        return $this->config->getValue($this->name, ConfigEnum::Plugin);
     }
 
     /**

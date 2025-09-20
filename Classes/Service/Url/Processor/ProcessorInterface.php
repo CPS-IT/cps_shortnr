@@ -16,7 +16,7 @@ interface ProcessorInterface
     public function getType(): string;
 
     /**
-     * Return a string (full URI) or throws ShortNrNotFoundException to trigger the notFound Fallback
+     * Return a string (full URL OR URI) or throws ShortNrNotFoundException to trigger the notFound Fallback
      *
      * @param ConfigItemInterface $configItem
      * @param MatchResult $matchResult
