@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\Url\Demand;
+namespace CPSIT\ShortNr\Service\Url\Demand\Encode;
 
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Extbase\Mvc\ExtbaseRequestParameters;

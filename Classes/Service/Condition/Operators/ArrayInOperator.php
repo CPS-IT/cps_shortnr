@@ -4,7 +4,6 @@ namespace CPSIT\ShortNr\Service\Condition\Operators;
 
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
-use CPSIT\ShortNr\Service\Condition\Operators\DTO\EncodingOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
@@ -68,11 +67,10 @@ class ArrayInOperator implements QueryOperatorInterface
     /**
      * @param array $data
      * @param FieldConditionInterface $fieldCondition
-     * @param EncodingOperatorContext $context
      * @param OperatorHistory|null $parent
      * @return bool
      */
-    public function encodingProcess(array $data, FieldConditionInterface $fieldCondition, EncodingOperatorContext $context, ?OperatorHistory $parent): bool
+    public function encodingProcess(array $data, FieldConditionInterface $fieldCondition, ?OperatorHistory $parent): bool
     {
         // for encoding we don't need to respect the NOT operator since he can handle himself
         return in_array($data[$fieldCondition->getFieldName()] ?? [] ,$fieldCondition->getCondition());

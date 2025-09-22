@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\Url\Demand;
+namespace CPSIT\ShortNr\Service\Url\Demand\Encode;
 
 class ObjectEncoderDemand extends EncoderDemand
 {
     public function __construct(
-        private readonly object $object
+        private readonly object $entity
     )
     {}
 
@@ -14,6 +14,6 @@ class ObjectEncoderDemand extends EncoderDemand
      */
     public function getObject(): object
     {
-        return $this->object;
+        return $this->entity;
     }
 }

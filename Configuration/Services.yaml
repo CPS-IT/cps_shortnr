@@ -24,17 +24,11 @@ services:
       tags: ['cps_shortnr.result.operators']
     CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
       tags: [ 'cps_shortnr.processors' ]
-    CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\Normalizer\EncodingDemandNormalizerInterface:
-      tags: [ 'cps_shortnr.demand.normalizers' ]
 
   CPSIT\ShortNr\Service\Condition\ConditionService:
     arguments:
       $queryOperators: !tagged 'cps_shortnr.query.operators'
       $resultOperators: !tagged 'cps_shortnr.result.operators'
-
-  CPSIT\ShortNr\Service\Url\EncodingDemandNormalizer\EncodingDemandNormalizationService:
-    arguments:
-      $normalizers: !tagged 'cps_shortnr.demand.normalizers'
 
   CPSIT\ShortNr\Service\AbstractUrlService:
     calls:

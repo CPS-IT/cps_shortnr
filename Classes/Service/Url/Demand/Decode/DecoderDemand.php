@@ -1,9 +1,10 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\Url\Demand;
+namespace CPSIT\ShortNr\Service\Url\Demand\Decode;
 
+use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidateInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Demand;
 use Generator;
-use TypedPatternEngine\Compiler\MatchResult;
 
 class DecoderDemand extends Demand implements DecoderDemandInterface
 {

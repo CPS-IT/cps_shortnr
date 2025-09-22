@@ -43,8 +43,7 @@ class ConfigLoader
         private readonly FileSystemInterface $fileSystem,
         private readonly PathResolverInterface $pathResolver,
         private readonly YamlConfigSanitizer $yamlConfigSanitizer,
-        private readonly EventDispatcherInterface $eventDispatcher,
-
+        private readonly EventDispatcherInterface $eventDispatcher
     )
     {
         $this->patternEngine = new TypedPatternEngine();
@@ -288,7 +287,7 @@ class ConfigLoader
      * @return string
      * @throws ShortNrConfigException
      */
-    public function getYamlConfigFileSuffix(): string
+    private function getYamlConfigFileSuffix(): string
     {
         return $this->runtimeCache['file']['hash'] ??= md5(implode(',', $this->getAllConfigurationFiles()));
     }

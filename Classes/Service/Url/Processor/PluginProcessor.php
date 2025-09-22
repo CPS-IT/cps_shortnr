@@ -8,11 +8,15 @@ use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Exception\ShortNrProcessorException;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
+use CPSIT\ShortNr\Traits\PluginSignatureTrait;
 use Throwable;
 use TypedPatternEngine\Compiler\MatchResult;
 
-class PluginProcessor implements ProcessorInterface
+class PluginProcessor extends AbstractProcessor implements ProcessorInterface
 {
+    use PluginSignatureTrait;
+
     public function __construct(
         private readonly ShortNrRepository $repository,
         private readonly SiteResolverInterface $siteResolver
@@ -45,6 +49,15 @@ class PluginProcessor implements ProcessorInterface
         }
     }
 
+    public function encode(ConfigItemInterface $configItem, EncoderDemandInterface $demand): ?string
+    {
+        $requiredFields = $this->getRequiredEncodingFields($configItem);
+
+        return null;
+    }
+
+
+
     /**
      * @param ConfigItemInterface $configItem
      * @param MatchResult $matchResult
@@ -72,7 +85,7 @@ class PluginProcessor implements ProcessorInterface
         $action = $pluginConfig['action'] ?? throw new ShortNrProcessorException('Missing Plugin Processor Config \'action\'');
         $controller = $pluginConfig['controller'] ?? throw new ShortNrProcessorException('Missing Plugin Processor Config \'controller\'');
         $objectName = $pluginConfig['objectName'] ?? 'uid';
-        $pluginSignature = sprintf('tx_%s_%s', strtolower($extension), strtolower($plugin));
+        $pluginSignature = $this->generatePluginSignature($extension, $plugin);
 
         foreach ($rows as $row) {
             $uid = $row[$uidKey];

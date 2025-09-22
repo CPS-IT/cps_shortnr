@@ -3,10 +3,9 @@
 namespace CPSIT\ShortNr\Middleware;
 
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Exception\ShortNrDemandNormalizationException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\DecoderService;
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Decode\DecoderDemandInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;

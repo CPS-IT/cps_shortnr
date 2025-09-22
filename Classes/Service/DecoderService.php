@@ -6,10 +6,10 @@ use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\Language\LanguageOverlayService;
+use CPSIT\ShortNr\Service\Url\Demand\Decode\DecoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Decode\RequestDecoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidate;
 use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidateInterface;
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
-use CPSIT\ShortNr\Service\Url\Demand\RequestDecoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
@@ -75,7 +75,7 @@ class DecoderService extends AbstractUrlService
 
         try {
             return $this->getConfigLoader()->getHeuristicPattern()->support($demand->getShortNr());
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return false;
         }
     }
@@ -100,11 +100,10 @@ class DecoderService extends AbstractUrlService
     /**
      *
      * @param DecoderDemandInterface $demand
-     * @param array $tags
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrNotFoundException
      */
-    private function decodeDemand(DecoderDemandInterface $demand, array &$tags = []): ?string
+    private function decodeDemand(DecoderDemandInterface $demand): ?string
     {
         $anyCandidatesExecuted = false;
         $errors = [];

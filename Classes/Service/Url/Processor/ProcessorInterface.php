@@ -4,6 +4,7 @@ namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
 use TypedPatternEngine\Compiler\MatchResult;
 
 interface ProcessorInterface
@@ -24,4 +25,11 @@ interface ProcessorInterface
      * @throws ShortNrNotFoundException
      */
     public function decode(ConfigItemInterface $configItem, MatchResult $matchResult): ?string;
+
+    /**
+     * @param ConfigItemInterface $configItem
+     * @param EncoderDemandInterface $demand
+     * @return string|null
+     */
+    public function encode(ConfigItemInterface $configItem, EncoderDemandInterface $demand): ?string;
 }

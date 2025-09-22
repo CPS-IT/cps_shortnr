@@ -5,12 +5,16 @@ namespace CPSIT\ShortNr\Service\Url\Processor;
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
+use CPSIT\ShortNr\Exception\ShortNrProcessorException;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EnvironmentEncoderDemand;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\ObjectEncoderDemand;
 use CPSIT\ShortNr\Traits\ValidateUriTrait;
 use Throwable;
 use TypedPatternEngine\Compiler\MatchResult;
 
-class PageProcessor implements ProcessorInterface
+class PageProcessor extends AbstractProcessor implements ProcessorInterface
 {
     use ValidateUriTrait;
 
@@ -57,5 +61,43 @@ class PageProcessor implements ProcessorInterface
         }
 
         throw new ShortNrNotFoundException();
+    }
+
+    public function encode(ConfigItemInterface $configItem, EncoderDemandInterface $demand): ?string
+    {
+        try {
+            return $configItem->getPattern()->generate(
+                $this->getPageData(
+                    $demand,
+                    $configItem,
+                    $this->getRequiredEncodingFields($configItem)
+                ),
+            );
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function getPageData(EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
+    {
+        if ($demand instanceof EnvironmentEncoderDemand) {
+            $pageRecord = $demand->getPageRecord();
+            $langParentField = $configItem->getLanguageParentField();
+            $uidField = $configItem->getRecordIdentifier();
+            $parent = (int)($pageRecord[$langParentField] ?? null);
+            if ($parent === 0) {
+                $parent = null;
+            }
+
+            if ($demand->getLanguageId() > 0 || $parent > 0) {
+                $pageRecord[$uidField] = $parent ?? $pageRecord[$uidField] ?? throw new ShortNrProcessorException('Cannot find ' . $uidField . ' of Page to encode');
+            }
+            return array_intersect_key($pageRecord, array_fill_keys($requiredFields, true));
+        }
+        if ($demand instanceof ObjectEncoderDemand) {
+
+        }
+
+        return [];
     }
 }

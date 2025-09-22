@@ -1,7 +1,9 @@
 <?php declare(strict_types=1);
 
-namespace CPSIT\ShortNr\Service\Url\Demand;
+namespace CPSIT\ShortNr\Service\Url\Demand\Decode;
 
+use CPSIT\ShortNr\Service\Url\Demand\ConfigCandidateInterface;
+use CPSIT\ShortNr\Service\Url\Demand\DemandInterface;
 use Generator;
 
 interface DecoderDemandInterface extends DemandInterface

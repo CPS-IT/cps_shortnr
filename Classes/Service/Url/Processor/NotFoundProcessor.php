@@ -3,9 +3,10 @@
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
-use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Exception\ShortNrProcessorException;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
 use CPSIT\ShortNr\Traits\ValidateUriTrait;
+use Throwable;
 use TypedPatternEngine\Compiler\MatchResult;
 
 /**
@@ -30,7 +31,6 @@ class NotFoundProcessor extends PageProcessor
      * @param ConfigItemInterface $configItem
      * @param MatchResult $matchResult
      * @return string|null
-     * @throws ShortNrNotFoundException
      * @throws ShortNrProcessorException
      */
     public function decode(ConfigItemInterface $configItem, MatchResult $matchResult): ?string
@@ -45,7 +45,10 @@ class NotFoundProcessor extends PageProcessor
 
         // numeric not found config found treat it as PageUid and resolve it
         if (is_numeric($notFound)) {
-            return $this->pageDataProvider->getPageData([$uidField =>  $notFound], $configItem);
+            try {
+                // generate page, or try it, first success wins
+                return $this->siteResolver->getUriByPageId($notFound);
+            } catch (Throwable) {}
         } elseif ($this->validateUri($notFound)) {
             // full uri / domain as notFound Handling found use that instead
             return $notFound;
@@ -53,5 +56,11 @@ class NotFoundProcessor extends PageProcessor
 
         // If notFound is set but invalid, throw an exception
         throw new ShortNrProcessorException("Invalid notFound configuration: $notFound");
+    }
+
+    public function encode(ConfigItemInterface $configItem, EncoderDemandInterface $demand): ?string
+    {
+        // notFound did not handle Encoding
+        return null;
     }
 }
