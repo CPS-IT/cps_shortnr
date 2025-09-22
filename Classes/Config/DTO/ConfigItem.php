@@ -96,7 +96,12 @@ class ConfigItem implements ConfigItemInterface
      */
     public function getNotFound(): ?string
     {
-        return $this->config->getValue($this->name, ConfigEnum::NotFound);
+        $notFound = $this->config->getValue($this->name, ConfigEnum::NotFound);
+        if ($notFound !== null) {
+            return (string)$notFound;
+        }
+
+        return null;
     }
 
     /**

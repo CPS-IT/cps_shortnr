@@ -29,6 +29,6 @@ class ObjectEncoderDemand extends EncoderDemand
             return null;
         }
 
-        return $this->entity::class.'#'.$this->entity->getUid().'@'.$this->getLanguageId().'('. $this->isAbsolute() ? 'ABS':'NO-ABS' .')';
+        return $this->entity::class.'#'.$this->entity->getUid().'@'.$this->getLanguageId().'('. ($this->isAbsolute() ? 'ABS':'NO-ABS') .')';
     }
 }

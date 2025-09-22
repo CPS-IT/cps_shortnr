@@ -69,7 +69,7 @@ class EnvironmentEncoderDemand extends EncoderDemand
         }
 
         if ($signature) {
-            return md5($signature).'@'.$this->getLanguageId().'('. $this->isAbsolute() ? 'ABS':'NO-ABS' .')';
+            return md5($signature).'@'.$this->getLanguageId().'('. ($this->isAbsolute() ? 'ABS':'NO-ABS') .')';
         }
 
         return null;

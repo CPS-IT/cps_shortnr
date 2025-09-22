@@ -47,7 +47,7 @@ class NotFoundProcessor extends PageProcessor
         if (is_numeric($notFound)) {
             try {
                 // generate page, or try it, first success wins
-                return $this->siteResolver->getUriByPageId($notFound);
+                return $this->siteResolver->getUriByPageId((int)$notFound);
             } catch (Throwable) {}
         } elseif ($this->validateUri($notFound)) {
             // full uri / domain as notFound Handling found use that instead

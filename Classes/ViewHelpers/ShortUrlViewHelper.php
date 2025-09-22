@@ -11,9 +11,7 @@ use CPSIT\ShortNr\Service\Url\Demand\Encode\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EnvironmentEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\ObjectEncoderDemand;
-use Fr\IkiVideos\Domain\Model\Video;
 use Psr\Http\Message\ServerRequestInterface;
-use Symfony\Component\Filesystem\Path;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
@@ -77,9 +75,7 @@ final class ShortUrlViewHelper extends AbstractViewHelper
             return $this->parseChildren(['uri' => null]);
         }
 
-        $t = microtime(true);
         $uri = $this->encoderService->encode($demand);
-        $t = (microtime(true) - $t) * 1000;
         return $this->parseChildren(['uri' => $uri]);
     }
 

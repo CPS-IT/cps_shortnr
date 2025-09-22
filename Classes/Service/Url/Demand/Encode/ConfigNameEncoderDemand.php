@@ -31,6 +31,6 @@ class ConfigNameEncoderDemand extends EncoderDemand
      */
     public function getCacheKey(): ?string
     {
-        return $this->configName.'#'.$this->uid.'@'.$this->getLanguageId().'('. $this->isAbsolute() ? 'ABS':'NO-ABS' .')';
+        return $this->configName.'#'.$this->uid.'@'.$this->getLanguageId().'('. ($this->isAbsolute() ? 'ABS':'NO-ABS') .')';
     }
 }

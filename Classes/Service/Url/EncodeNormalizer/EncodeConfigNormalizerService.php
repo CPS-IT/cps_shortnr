@@ -92,7 +92,7 @@ class EncodeConfigNormalizerService
         }
 
         if (!empty($configs)) {
-            return array_unique($configs);
+            return $configs;
         }
 
         if (!empty($demand->getPageRecord()))
