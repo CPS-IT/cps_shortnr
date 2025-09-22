@@ -12,6 +12,7 @@ use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EnvironmentEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\ObjectEncoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Http\Uri;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
@@ -76,7 +77,7 @@ final class ShortUrlViewHelper extends AbstractViewHelper
         }
 
         $uri = $this->encoderService->encode($demand);
-        return $this->parseChildren(['uri' => $uri]);
+        return $this->parseChildren(['uri' => Uri::fromAnyScheme($uri)]);
     }
 
     /**

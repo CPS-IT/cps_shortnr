@@ -28,6 +28,16 @@ interface SiteResolverInterface
     public function getSiteBaseUri(int $pageUid, int $languageId): string;
 
     /**
+     * Get Site and language-specific base Domain URI for a page
+     *
+     * @param int $pageUid Page UID to resolve language for
+     * @param int $languageId Language ID
+     * @return string Language base URI (e.g., "https://acme.com/de", "https://acme.com/en", "https://acme.com/base/" "https://acme.com/base/en/")
+     * @throws ShortNrSiteFinderException When site/language cannot be resolved
+     */
+    public function getSiteFullBaseDomain(int $pageUid, int $languageId): string;
+
+    /**
      * [LanguageId => SiteLanguage]
      * @param Site $site
      * @return array<int, SiteLanguage>

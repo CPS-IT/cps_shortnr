@@ -80,13 +80,14 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
                 $data
             );
 
-            $prefix = '/';
+            $pluginPid = $configItem->getPluginConfig()['pid'] ?? throw new ShortNrProcessorException('could not find Plugin Pid');
             if ($demand->isAbsolute()) {
-                $pluginPid = $configItem->getPluginConfig()['pid'] ?? throw new ShortNrProcessorException('could not find Plugin Pid');
-                $prefix = $this->siteResolver->getSiteBaseUri($pluginPid, $demand->getLanguageId());
+                $base = $this->siteResolver->getSiteFullBaseDomain($pluginPid, $demand->getLanguageId());
+            } else {
+                $base = $this->siteResolver->getSiteBaseUri($pluginPid, $demand->getLanguageId());
             }
 
-            return Path::join($prefix, $shortNr);
+            return Path::join($base, $shortNr);
 
         } catch (Throwable) {
             return null;

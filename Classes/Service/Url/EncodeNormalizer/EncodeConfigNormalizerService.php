@@ -114,11 +114,15 @@ class EncodeConfigNormalizerService
             if (!empty($configItem->getPluginConfig())) {
                 $pluginConfig = $configItem->getPluginConfig();
                 if (
-                    $extbaseRequestParameters->getPluginName() === $pluginConfig['plugin']??null &&
                     $extbaseRequestParameters->getControllerExtensionName() === $pluginConfig['extension']??null &&
                     $extbaseRequestParameters->getControllerActionName() === $pluginConfig['action']??null &&
                     $extbaseRequestParameters->getControllerName() === $pluginConfig['controller']??null
                 ) {
+
+                    if (!$this->newsPluginWorkaround($extbaseRequestParameters->getPluginName(), $pluginConfig['plugin'], $extbaseRequestParameters->getControllerExtensionName())) {
+                        continue;
+                    }
+
 
                     // check if the argument name exists
                     try {
@@ -135,6 +139,24 @@ class EncodeConfigNormalizerService
         }
 
         return array_values($configs);
+    }
+
+    /**
+     * @param string $incomingPluginName
+     * @param string $configPluginName
+     * @param string $extension
+     * @return bool
+     */
+    private function newsPluginWorkaround(string $incomingPluginName, string $configPluginName, string $extension): bool
+    {
+        // news way
+        if ($extension === 'News') {
+            // news somehow force Pi1 for the plugin name...
+            return $incomingPluginName === $configPluginName || $configPluginName === 'Pi1';
+        }
+
+        // correct way
+        return $incomingPluginName === $configPluginName;
     }
 
 

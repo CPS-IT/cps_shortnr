@@ -63,13 +63,13 @@ class EnvironmentEncoderDemand extends EncoderDemand
         if ($this->extbaseRequestParameters) {
             $signature = serialize($this->extbaseRequestParameters->getArguments()) . '-' . $this->extbaseRequestParameters->getPluginName() . '-' . $this->extbaseRequestParameters->getControllerExtensionName() . '-' . $this->extbaseRequestParameters->getControllerName() . '-' . $this->extbaseRequestParameters->getControllerActionName();
         } elseif ($this->pageRoutingArguments) {
-            $signature = serialize($this->pageRoutingArguments->getArguments() + $this->pageRoutingArguments->getStaticArguments() + $this->pageRoutingArguments->getDynamicArguments() + $this->pageRoutingArguments->getRouteArguments() + $this->pageRoutingArguments->getQueryArguments());
+            $signature = serialize($this->pageRoutingArguments->getArguments() + $this->pageRoutingArguments->getStaticArguments() + $this->pageRoutingArguments->getDynamicArguments() + $this->pageRoutingArguments->getRouteArguments() + $this->pageRoutingArguments->getQueryArguments()). '-' . $this->pageRoutingArguments->getPageId();
         } elseif (!empty($this->queryParams)) {
             $signature = serialize($this->queryParams) . ($this->pageRecord['uid'] ?? '0');
         }
 
         if ($signature) {
-            return md5($signature).'@'.$this->getLanguageId().'('. ($this->isAbsolute() ? 'ABS':'NO-ABS') .')';
+            return sha1($signature).'@'.$this->getLanguageId().'('. ($this->isAbsolute() ? 'ABS':'NO-ABS') .')';
         }
 
         return null;

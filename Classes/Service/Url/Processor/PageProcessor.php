@@ -93,13 +93,15 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
                 $pageData
             );
 
-            $prefix = '/';
+            $uidField = $configItem->getRecordIdentifier();
+            $pid = $pageData[$uidField];
             if ($demand->isAbsolute()) {
-                $uidField = $configItem->getRecordIdentifier();
-                $prefix = $this->siteResolver->getSiteBaseUri($pageData[$uidField], $demand->getLanguageId());
+                $base = $this->siteResolver->getSiteFullBaseDomain($pid, $demand->getLanguageId());
+            } else {
+                $base = $this->siteResolver->getSiteBaseUri($pid, $demand->getLanguageId());
             }
 
-            return Path::join($prefix, $shortNr);
+            return Path::join($base, $shortNr);
 
         } catch (Throwable) {
             return null;

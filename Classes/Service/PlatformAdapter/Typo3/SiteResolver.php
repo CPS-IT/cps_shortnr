@@ -35,7 +35,25 @@ class SiteResolver implements SiteResolverInterface
      */
     public function getSiteBaseUri(int $pageUid, int $languageId): string
     {
-        return $this->getLanguageByPageUid($pageUid, $languageId)?->getBase()->getPath() ?? '';
+        return $this->getLanguageByPageUid($pageUid, $languageId)?->getBase()->getPath() ?? '/';
+    }
+
+    /**
+     * returns the base language path of the given page uid
+     *
+     * @param int $pageUid
+     * @param int $languageId
+     * @return string
+     * @throws ShortNrSiteFinderException
+     */
+    public function getSiteFullBaseDomain(int $pageUid, int $languageId): string
+    {
+        $base = $this->getLanguageByPageUid($pageUid, $languageId)?->getBase();
+        if (!$base) {
+            return '/';
+        }
+
+        return (string)$base;
     }
 
     /**
