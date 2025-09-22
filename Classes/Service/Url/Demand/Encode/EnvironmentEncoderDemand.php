@@ -53,4 +53,25 @@ class EnvironmentEncoderDemand extends EncoderDemand
     {
         return $this->extbaseRequestParameters;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function getCacheKey(): ?string
+    {
+        $signature = null;
+        if ($this->extbaseRequestParameters) {
+            $signature = serialize($this->extbaseRequestParameters->getArguments()) . '-' . $this->extbaseRequestParameters->getPluginName() . '-' . $this->extbaseRequestParameters->getControllerExtensionName() . '-' . $this->extbaseRequestParameters->getControllerName() . '-' . $this->extbaseRequestParameters->getControllerActionName();
+        } elseif ($this->pageRoutingArguments) {
+            $signature = serialize($this->pageRoutingArguments->getArguments() + $this->pageRoutingArguments->getStaticArguments() + $this->pageRoutingArguments->getDynamicArguments() + $this->pageRoutingArguments->getRouteArguments() + $this->pageRoutingArguments->getQueryArguments());
+        } elseif (!empty($this->queryParams)) {
+            $signature = serialize($this->queryParams) . ($this->pageRecord['uid'] ?? '0');
+        }
+
+        if ($signature) {
+            return md5($signature).'@'.$this->getLanguageId().'('. $this->isAbsolute() ? 'ABS':'NO-ABS' .')';
+        }
+
+        return null;
+    }
 }

@@ -93,7 +93,7 @@ class DecoderService extends AbstractUrlService
             sprintf('decode-%s', $demand->getShortNr()),
             fn() => $this->decodeDemand($demand),
             ttl: 604_800, // one week
-            tags: ['all', 'uri']
+            tags: ['all', 'uri', 'decode']
         );
     }
 

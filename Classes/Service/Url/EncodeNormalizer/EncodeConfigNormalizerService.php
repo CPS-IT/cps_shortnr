@@ -193,12 +193,12 @@ class EncodeConfigNormalizerService
     private function getTableNameFromObject(object $object): string
     {
         /** @var DataMap $factoryResult */
-        $factoryResult = $this->cacheManager->getType3CacheValue(
+        $tableName = $this->cacheManager->getType3CacheValue(
             'db_datamapper_' . $object::class,
-            fn() => $this->dataMapFactory->buildDataMap($object::class),
+            fn() => $this->dataMapFactory->buildDataMap($object::class)?->getTableName(),
             tags: ['all', 'meta', 'database', 'table']
         );
 
-        return $factoryResult->getTableName();
+        return $tableName;
     }
 }

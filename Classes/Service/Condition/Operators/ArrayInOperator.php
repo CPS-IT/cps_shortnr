@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
@@ -9,7 +10,7 @@ use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use Doctrine\DBAL\ArrayParameterType;
 
-class ArrayInOperator implements QueryOperatorInterface
+class ArrayInOperator implements QueryOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -65,15 +66,18 @@ class ArrayInOperator implements QueryOperatorInterface
     }
 
     /**
-     * @param array $data
-     * @param FieldConditionInterface $fieldCondition
-     * @param OperatorHistory|null $parent
-     * @return bool
+     * @inheritDoc
      */
-    public function encodingProcess(array $data, FieldConditionInterface $fieldCondition, ?OperatorHistory $parent): bool
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
     {
-        // for encoding we don't need to respect the NOT operator since he can handle himself
-        return in_array($data[$fieldCondition->getFieldName()] ?? [] ,$fieldCondition->getCondition());
+        $isNot = ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class));
+        $condition = in_array($data[$fieldCondition->getFieldName()] ?? [] ,$fieldCondition->getCondition());
+
+        if (($isNot && !$condition) || $condition) {
+            return $data;
+        }
+
+        return null;
     }
 
     /**

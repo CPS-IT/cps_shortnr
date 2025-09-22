@@ -4,15 +4,23 @@ namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Exception\ShortNrProcessorException;
+use CPSIT\ShortNr\Exception\ShortNrQueryException;
+use CPSIT\ShortNr\Service\Condition\ConditionService;
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EnvironmentEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\ObjectEncoderDemand;
 use CPSIT\ShortNr\Traits\ValidateUriTrait;
+use Symfony\Component\Filesystem\Path;
 use Throwable;
 use TypedPatternEngine\Compiler\MatchResult;
+use TYPO3\CMS\Core\Domain\Page;
+use TYPO3\CMS\Frontend\Page\PageInformation;
 
 class PageProcessor extends AbstractProcessor implements ProcessorInterface
 {
@@ -20,7 +28,8 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
 
     public function __construct(
         protected readonly SiteResolverInterface $siteResolver,
-        protected readonly ShortNrRepository $repository
+        protected readonly ShortNrRepository $repository,
+        protected readonly ConditionService $conditionService
     )
     {}
 
@@ -63,41 +72,182 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
         throw new ShortNrNotFoundException();
     }
 
+    /**
+     * @param ConfigItemInterface $configItem
+     * @param EncoderDemandInterface $demand
+     * @return string|null
+     */
     public function encode(ConfigItemInterface $configItem, EncoderDemandInterface $demand): ?string
     {
         try {
-            return $configItem->getPattern()->generate(
-                $this->getPageData(
-                    $demand,
-                    $configItem,
-                    $this->getRequiredEncodingFields($configItem)
-                ),
+            $pageData = $this->getPageData(
+                $demand,
+                $configItem,
+                $this->getRequiredEncodingFields($configItem)
             );
+            if (empty($pageData)) {
+                return null;
+            }
+
+            $shortNr = $configItem->getPattern()->generate(
+                $pageData
+            );
+
+            $prefix = '/';
+            if ($demand->isAbsolute()) {
+                $uidField = $configItem->getRecordIdentifier();
+                $prefix = $this->siteResolver->getSiteBaseUri($pageData[$uidField], $demand->getLanguageId());
+            }
+
+            return Path::join($prefix, $shortNr);
+
         } catch (Throwable) {
             return null;
         }
     }
 
+    /**
+     * @param EncoderDemandInterface $demand
+     * @param ConfigItemInterface $configItem
+     * @param array $requiredFields
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrProcessorException
+     * @throws ShortNrQueryException
+     */
     private function getPageData(EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
     {
+        $data = [];
         if ($demand instanceof EnvironmentEncoderDemand) {
-            $pageRecord = $demand->getPageRecord();
-            $langParentField = $configItem->getLanguageParentField();
-            $uidField = $configItem->getRecordIdentifier();
-            $parent = (int)($pageRecord[$langParentField] ?? null);
-            if ($parent === 0) {
-                $parent = null;
-            }
-
-            if ($demand->getLanguageId() > 0 || $parent > 0) {
-                $pageRecord[$uidField] = $parent ?? $pageRecord[$uidField] ?? throw new ShortNrProcessorException('Cannot find ' . $uidField . ' of Page to encode');
-            }
-            return array_intersect_key($pageRecord, array_fill_keys($requiredFields, true));
+            $data[] = $this->getDataFromPageRecord($demand, $configItem, $requiredFields);
+        } elseif ($demand instanceof ObjectEncoderDemand) {
+            $data[] = $this->getDataFromPageObject($demand, $configItem, $requiredFields);
+        } elseif ($demand instanceof ConfigNameEncoderDemand) {
+            $data[] = $this->getPageDataFromUid($demand, $configItem, $requiredFields);
         }
-        if ($demand instanceof ObjectEncoderDemand) {
 
+        if (!empty($configItem->getCondition())) {
+            $data = $this->conditionService->directFilterCondition(new DirectOperatorContext(
+                $data,
+                $configItem->getTableName(),
+                $configItem->getCondition(),
+                array_keys($data)
+            ));
+        }
+
+        foreach ($data as $item) {
+            return $item;
         }
 
         return [];
+    }
+
+    /**
+     * @param EnvironmentEncoderDemand $demand
+     * @param ConfigItemInterface $configItem
+     * @param array $requiredFields
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrProcessorException
+     * @throws ShortNrQueryException
+     */
+    private function getDataFromPageRecord(EnvironmentEncoderDemand $demand, ConfigItemInterface $configItem, array $requiredFields): array
+    {
+        $pageRecord = $demand->getPageRecord();
+        return $this->processPageDataArray($pageRecord, $demand, $configItem, $requiredFields);
+    }
+
+    /**
+     * @param ObjectEncoderDemand $demand
+     * @param ConfigItemInterface $configItem
+     * @param array $requiredFields
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrProcessorException
+     * @throws ShortNrQueryException
+     */
+    private function getDataFromPageObject(ObjectEncoderDemand $demand, ConfigItemInterface $configItem, array $requiredFields): array
+    {
+        $page = $demand->getObject();
+        $pageData = [];
+        if ($page instanceof Page) {
+            $pageData = $page->toArray();
+        } elseif ($page instanceof PageInformation) {
+            $pageData = $page->getPageRecord();
+        }
+
+        return $this->processPageDataArray($pageData, $demand, $configItem, $requiredFields);
+    }
+
+    /**
+     * @param ConfigNameEncoderDemand $demand
+     * @param ConfigItemInterface $configItem
+     * @param array $requiredFields
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrProcessorException
+     * @throws ShortNrQueryException
+     */
+    private function getPageDataFromUid(ConfigNameEncoderDemand $demand, ConfigItemInterface $configItem, array $requiredFields): array
+    {
+        $uidField = $configItem->getRecordIdentifier();
+        $pageData[$uidField] = $demand->getUid();
+
+        return $this->processPageDataArray($pageData, $demand, $configItem, $requiredFields);
+    }
+
+    /**
+     * @param array $pageRecord
+     * @param EncoderDemandInterface $demand
+     * @param ConfigItemInterface $configItem
+     * @param array $requiredFields
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrQueryException
+     */
+    private function processPageDataArray(array $pageRecord, EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
+    {
+        $languageField = $configItem->getLanguageField();
+        $pageRecord[$languageField] = $demand->getLanguageId();
+
+        $pageRecord = $this->populateMissingRequiredFields($pageRecord, $demand, $configItem, $requiredFields);
+        return array_intersect_key($pageRecord, array_fill_keys($requiredFields, true));
+    }
+
+    /**
+     * @param array $pageRecord
+     * @param EncoderDemandInterface $demand
+     * @param ConfigItemInterface $configItem
+     * @param array $requiredFields
+     * @return array
+     * @throws ShortNrCacheException
+     * @throws ShortNrQueryException
+     */
+    private function populateMissingRequiredFields(array $pageRecord, EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
+    {
+        $existingFields = array_keys($pageRecord);
+        $missingFields = array_diff($requiredFields, $existingFields);
+
+        // no missing fields
+        if (empty($missingFields)) {
+            return $pageRecord;
+        }
+
+        $uidField = $configItem->getRecordIdentifier();
+
+        $uid = $pageRecord[$uidField] ?? null;
+        if ($uid === null) {
+            return [];
+        }
+
+        $languageField = $configItem->getLanguageField();
+        $parentField = $configItem->getLanguageParentField();
+
+        $value = $this->repository->loadMissingFields([$languageField, ...$missingFields], $uidField, $languageField, $parentField, $uid, $demand->getLanguageId(), $configItem->getTableName());
+        if (empty($value)) {
+            return [];
+        }
+
+        return $pageRecord + $value;
     }
 }

@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Service\Condition;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DirectOperatorInterface;
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
@@ -31,6 +33,11 @@ class ConditionService
      */
     private readonly array $encodingOperators;
 
+    /**
+     * @var array<DirectOperatorInterface>
+     */
+    private readonly array $directOperators;
+
 
     /**
      * @param iterable<QueryOperatorInterface> $queryOperators
@@ -38,12 +45,14 @@ class ConditionService
      */
     public function __construct(
         iterable $queryOperators,
-        iterable $resultOperators
+        iterable $resultOperators,
+        iterable $directOperators
     )
     {
         // sort By Priority
         $this->queryOperators = $this->sortIteratableByPrioity($queryOperators);
         $this->resultOperators = $this->sortIteratableByPrioity($resultOperators);
+        $this->directOperators = $this->sortIteratableByPrioity($directOperators);
     }
 
     /**
@@ -111,6 +120,45 @@ class ConditionService
     }
 
     /**
+     * @param DirectOperatorContext $context
+     * @return array
+     */
+    public function directFilterCondition(DirectOperatorContext $context): array
+    {
+        $results = $context->getResults();
+        if (empty($results)) {
+            return [];
+        }
+
+        $conditions = $context->getConfigCondition();
+        $filteredResults = [];
+
+        foreach ($results as $result) {
+            $skipFilterResultFlag = false;
+            foreach ($conditions as $fieldName => $condition) {
+                if (
+                    $this->processDirectFieldConfig(
+                        $result,
+                        $this->generateFieldCondition($fieldName, $condition),
+                        $context,
+                        null
+                    ) === null
+                ) {
+                    // one result filter
+                    $skipFilterResultFlag = true;
+                    break;
+                }
+            }
+
+            if (!$skipFilterResultFlag) {
+                $filteredResults[] = $result;
+            }
+        }
+
+        return $filteredResults;
+    }
+
+    /**
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
@@ -157,6 +205,31 @@ class ConditionService
     }
 
     /**
+     * null means no match / result back means match
+     *
+     * @param array $result
+     * @param FieldConditionInterface $fieldCondition
+     * @param DirectOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return array|null
+     */
+    private function processDirectFieldConfig(array $result, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        $operator = $this->findDirectOperator($fieldCondition, $context, $parent);
+        // no operator found, mark as matched
+        if ($operator === null) {
+            return $result;
+        }
+
+        if ($operator instanceof WrappingOperatorInterface) {
+            // do magic to unwrap
+            return $operator->directWrap($result, $fieldCondition, $context, $parent, fn(array $result, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array => $this->processDirectFieldConfig($result, $fieldCondition, $context, $parent));
+        }
+
+        return $operator->directProcess($result, $fieldCondition, $context, $parent);
+    }
+
+    /**
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
@@ -182,6 +255,22 @@ class ConditionService
     {
         $operator = $this->findOperator($this->resultOperators, $fieldCondition, $context, $parent);
         if ($operator instanceof ResultOperatorInterface) {
+            return $operator;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param FieldConditionInterface $fieldCondition
+     * @param DirectOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @return DirectOperatorInterface|null
+     */
+    private function findDirectOperator(FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?DirectOperatorInterface
+    {
+        $operator = $this->findOperator($this->directOperators, $fieldCondition, $context, $parent);
+        if ($operator instanceof DirectOperatorInterface) {
             return $operator;
         }
 

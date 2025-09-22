@@ -2,13 +2,14 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\ResultOperatorContext;
 use Doctrine\DBAL\Query\Expression\CompositeExpression;
 
-interface WrappingOperatorInterface extends QueryOperatorInterface, ResultOperatorInterface
+interface WrappingOperatorInterface extends QueryOperatorInterface, ResultOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -30,4 +31,14 @@ interface WrappingOperatorInterface extends QueryOperatorInterface, ResultOperat
      * @return array|null
      */
     public function postResultWrap(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array;
+
+    /**
+     * @param array $result
+     * @param FieldConditionInterface $fieldCondition
+     * @param DirectOperatorContext $context
+     * @param OperatorHistory|null $parent
+     * @param callable $nestedCallback
+     * @return array|null
+     */
+    public function directWrap(array $result, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array;
 }

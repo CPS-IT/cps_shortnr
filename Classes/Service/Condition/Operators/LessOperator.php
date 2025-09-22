@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
@@ -9,7 +10,7 @@ use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use TYPO3\CMS\Core\Database\Connection;
 
-class LessOperator implements QueryOperatorInterface
+class LessOperator implements QueryOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -64,5 +65,28 @@ class LessOperator implements QueryOperatorInterface
         return $isLte
             ? $queryBuilder->expr()->lte($fieldName, $param)
             : $queryBuilder->expr()->lt($fieldName, $param);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        $isNot = ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class));
+        $condition = $fieldCondition->getCondition();
+        $isLte = array_key_exists(ConfigEnum::ConditionLessThanEqual->value, $condition);
+        $value = $isLte ? $condition[ConfigEnum::ConditionLessThanEqual->value] : $condition[ConfigEnum::ConditionLessThan->value];
+
+        if ($isLte) {
+            $condition = $value <= ($data[$fieldCondition->getFieldName()] ?? null);
+        } else {
+            $condition = $value < ($data[$fieldCondition->getFieldName()] ?? null);
+        }
+
+        if (($isNot && !$condition) || $condition) {
+            return $data;
+        }
+
+        return null;
     }
 }

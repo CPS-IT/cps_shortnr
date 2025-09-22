@@ -3,7 +3,6 @@
 namespace CPSIT\ShortNr\Service\Url\Processor;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
-use TypedPatternEngine\Compiler\CompiledPattern;
 
 abstract class AbstractProcessor implements ProcessorInterface
 {

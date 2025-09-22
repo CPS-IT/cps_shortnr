@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
@@ -51,6 +52,14 @@ class AndOperator implements WrappingOperatorInterface
      * @return array|null
      */
     public function postResultProcess(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
     {
         return null;
     }
@@ -134,5 +143,13 @@ class AndOperator implements WrappingOperatorInterface
 
         // All conditions passed
         return $result;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directWrap(array $result, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
+    {
+        return $this->postResultWrap($result, $fieldCondition, $context, $parent, $nestedCallback);
     }
 }

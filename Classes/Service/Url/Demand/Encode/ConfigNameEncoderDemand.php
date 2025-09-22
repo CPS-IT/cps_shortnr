@@ -25,4 +25,12 @@ class ConfigNameEncoderDemand extends EncoderDemand
     {
         return $this->uid;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function getCacheKey(): ?string
+    {
+        return $this->configName.'#'.$this->uid.'@'.$this->getLanguageId().'('. $this->isAbsolute() ? 'ABS':'NO-ABS' .')';
+    }
 }

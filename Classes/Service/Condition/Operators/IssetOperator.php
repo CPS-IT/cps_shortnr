@@ -2,13 +2,14 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 
-class IssetOperator implements QueryOperatorInterface
+class IssetOperator implements QueryOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -53,5 +54,20 @@ class IssetOperator implements QueryOperatorInterface
         return $isSet
             ? $queryBuilder->expr()->isNotNull($fieldName)
             : $queryBuilder->expr()->isNull($fieldName);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        $isNot = ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class));
+        $condition = isset($data[$fieldCondition->getFieldName()]);
+
+        if (($isNot && !$condition) || $condition) {
+            return $data;
+        }
+
+        return null;
     }
 }

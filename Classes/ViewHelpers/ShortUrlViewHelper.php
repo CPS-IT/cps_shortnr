@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\ViewHelpers;
 
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrViewHelperException;
 use CPSIT\ShortNr\Service\EncoderService;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
@@ -9,10 +11,11 @@ use CPSIT\ShortNr\Service\Url\Demand\Encode\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EnvironmentEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\ObjectEncoderDemand;
+use Fr\IkiVideos\Domain\Model\Video;
 use Psr\Http\Message\ServerRequestInterface;
+use Symfony\Component\Filesystem\Path;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
-use TYPO3\CMS\Frontend\Page\PageInformation;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 
 final class ShortUrlViewHelper extends AbstractViewHelper
@@ -64,6 +67,8 @@ final class ShortUrlViewHelper extends AbstractViewHelper
     /**
      * @return string
      * @throws ShortNrViewHelperException
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
      */
     public function render(): string
     {
@@ -72,7 +77,10 @@ final class ShortUrlViewHelper extends AbstractViewHelper
             return $this->parseChildren(['uri' => null]);
         }
 
-        return $this->parseChildren(['uri' => $this->encoderService->encode($demand)]);
+        $t = microtime(true);
+        $uri = $this->encoderService->encode($demand);
+        $t = (microtime(true) - $t) * 1000;
+        return $this->parseChildren(['uri' => $uri]);
     }
 
     /**
@@ -97,13 +105,6 @@ final class ShortUrlViewHelper extends AbstractViewHelper
                 $request->getAttribute('extbase')
             );
         }
-
-        $demand = new EnvironmentEncoderDemand(
-            $request->getQueryParams(),
-            $request->getAttribute('frontend.page.information')?->getPageRecord() ?? [],
-            null,//$request->getAttribute('routing'),
-            null//$request->getAttribute('extbase')
-        );
 
         return $demand
             ->setRequest($request)

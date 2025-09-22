@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
@@ -9,7 +10,7 @@ use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use TYPO3\CMS\Core\Database\Connection;
 
-class EqualOperator implements QueryOperatorInterface
+class EqualOperator implements QueryOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -58,5 +59,24 @@ class EqualOperator implements QueryOperatorInterface
         }
 
         return $queryBuilder->expr()->eq($fieldName, $queryBuilder->createNamedParameter($condition, $type));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        $isNot = ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class));
+        $equal = $fieldCondition->getCondition();
+        if (is_array($equal) && isset($equal[ConfigEnum::ConditionEqual->value])) {
+            $equal = $equal[ConfigEnum::ConditionEqual->value] ?? null;
+        }
+        $condition = $equal === ($data[$fieldCondition->getFieldName()] ?? null);
+
+        if (($isNot && !$condition) || $condition) {
+            return $data;
+        }
+
+        return null;
     }
 }

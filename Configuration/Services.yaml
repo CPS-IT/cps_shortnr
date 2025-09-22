@@ -22,6 +22,8 @@ services:
       tags: ['cps_shortnr.query.operators']
     CPSIT\ShortNr\Service\Condition\Operators\ResultOperatorInterface:
       tags: ['cps_shortnr.result.operators']
+    CPSIT\ShortNr\Service\Condition\Operators\DirectOperatorInterface:
+      tags: [ 'cps_shortnr.direct.operators' ]
     CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
       tags: [ 'cps_shortnr.processors' ]
 
@@ -29,6 +31,7 @@ services:
     arguments:
       $queryOperators: !tagged 'cps_shortnr.query.operators'
       $resultOperators: !tagged 'cps_shortnr.result.operators'
+      $directOperators: !tagged 'cps_shortnr.direct.operators'
 
   CPSIT\ShortNr\Service\AbstractUrlService:
     calls:

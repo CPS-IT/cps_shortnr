@@ -8,10 +8,13 @@ use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
 use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use function Symfony\Component\DependencyInjection\Loader\Configurator\expr;
 
 class ShortNrRepository
 {
@@ -57,6 +60,50 @@ class ShortNrRepository
     }
 
     /**
+     * @param array $missingFields
+     * @param string $uidField
+     * @param string $languageField
+     * @param string $parentField
+     * @param int $uid
+     * @param int $lagaugeUid
+     * @param string $tableName
+     * @return array|null
+     * @throws ShortNrCacheException
+     * @throws ShortNrQueryException
+     */
+    public function loadMissingFields(array $missingFields, string $uidField, string $languageField, string $parentField, int $uid, int $lagaugeUid, string $tableName): ?array
+    {
+        // normalize Conditions
+        $existingValidFields = $this->validateAndPrepareFields([$uidField, $languageField, $parentField ,...$missingFields], [], $tableName);
+        if (empty($existingValidFields)) {
+            return [];
+        }
+
+        $qb = $this->getQueryBuilder($tableName);
+        $qb->select(...$existingValidFields);
+        $qb->from($tableName);
+        $qb->where(
+            $qb->expr()->or(
+                $qb->expr()->eq($uidField, $uidParam = $qb->createNamedParameter($uid, ParameterType::INTEGER)),
+                $qb->expr()->eq($parentField, $uidParam),
+            ),
+            $qb->expr()->eq($languageField, $qb->createNamedParameter($lagaugeUid, ParameterType::INTEGER))
+        );
+
+        try {
+            $result = $qb->executeQuery()->fetchAssociative();
+            if (is_array($result) && !empty($result)) {
+                return $result;
+            }
+
+            return null;
+
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage() . ' | table: ' . $tableName, $e->getCode(), $e);
+        }
+    }
+
+    /**
      * Returns an array  [sys_language_uid => uid]  for the requested page and
      * all its translations.  Works for any table that uses the “translation pointer”
      * pattern (uid, sys_language_uid, l10n_parent).
@@ -77,8 +124,8 @@ class ShortNrRepository
             ->from($table)
             ->where(
                 $qb->expr()->or(
-                    $qb->expr()->eq($uidField,           $uid),
-                    $qb->expr()->eq($languageParentField, $uid)
+                    $qb->expr()->eq($uidField, $uidParam = $qb->createNamedParameter($uid, ParameterType::INTEGER)),
+                    $qb->expr()->eq($languageParentField, $uidParam)
                 )
             );
 
@@ -111,8 +158,8 @@ class ShortNrRepository
             ->from($table)
             ->where(
                 $qb->expr()->or(
-                    $qb->expr()->eq($uidField,           $baseUid),
-                    $qb->expr()->eq($languageParentField, $baseUid)
+                    $qb->expr()->eq($uidField, $baseUidParam = $qb->createNamedParameter($baseUid, ParameterType::INTEGER)),
+                    $qb->expr()->eq($languageParentField, $baseUidParam)
                 )
             );
 

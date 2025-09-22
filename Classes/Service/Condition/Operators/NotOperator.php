@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldCondition;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
@@ -57,6 +58,14 @@ class NotOperator implements WrappingOperatorInterface
     }
 
     /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        return null;
+    }
+
+    /**
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
@@ -106,5 +115,13 @@ class NotOperator implements WrappingOperatorInterface
             $context,
             new OperatorHistory($parent, $this)
         );
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directWrap(array $result, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent, callable $nestedCallback): ?array
+    {
+        return $this->postResultWrap($result, $fieldCondition, $context, $parent, $nestedCallback);
     }
 }

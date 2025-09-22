@@ -22,15 +22,35 @@ class EncoderService extends AbstractUrlService
      */
     public function encode(EncoderDemandInterface $demand): ?string
     {
-        $configItems = $this->configNormalizerService->getConfigItemForDemand($demand);
-        foreach ($configItems as $configItem) {
-            $uri = $this->getProcessor($configItem)->encode($configItem, $demand);
-
-            if (!empty($uri)) {
-                return $uri;
-            }
+        $cacheKey = $demand->getCacheKey();
+        if ($cacheKey === null) {
+            return $this->encodeWithDemand($demand);
         }
 
+        return $this->getCacheManager()->getType3CacheValue(
+            sprintf('encode-%s', $cacheKey),
+            fn() => $this->encodeWithDemand($demand),
+            ttl: 604_800, // one week
+            tags: ['all', 'uri', 'encode']
+        );
+    }
+
+    /**
+     * @param EncoderDemandInterface $demand
+     * @return string|null
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
+     */
+    private function encodeWithDemand(EncoderDemandInterface $demand): ?string
+    {
+        $configItems = $this->configNormalizerService->getConfigItemForDemand($demand);
+        foreach ($configItems as $configItem) {
+            $result = $this->getProcessor($configItem)->encode($configItem, $demand);
+
+            if (!empty($result)) {
+                return $result;
+            }
+        }
 
         return null;
     }

@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrOperatorException;
@@ -11,7 +12,7 @@ use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression;
 
-class BetweenOperator implements QueryOperatorInterface
+class BetweenOperator implements QueryOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -89,6 +90,36 @@ class BetweenOperator implements QueryOperatorInterface
             // Check if it's actually an integer value
             return (fmod($float, 1) === 0.0) ? (int)$float : $float;
         }
+        return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        $value = $this->transformToNumber($data[$fieldCondition->getFieldName()] ?? null);
+        $values = $condition[ConfigEnum::ConditionBetween->value] ?? null;
+        if (!is_array($values) || count($values) !== 2) {
+            throw new ShortNrOperatorException('Between operator requires exactly 2 numbers.');
+        }
+
+        $value1 = $this->transformToNumber($values[0] ?? null);
+        $value2 = $this->transformToNumber($values[1] ?? null);
+        if ($value1 === null || $value2 === null) {
+            throw new ShortNrOperatorException('Between operator requires exactly 2 numbers. got: ' . $value1. ' and ' . $value2);
+        }
+
+        $minValue = min($value1, $value2);
+        $maxValue = max($value1, $value2);
+
+
+        $isNot = ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class));
+        $condition = $value >= $minValue && $value <= $maxValue;
+        if (($isNot && !$condition) || $condition) {
+            return $data;
+        }
+
         return null;
     }
 }

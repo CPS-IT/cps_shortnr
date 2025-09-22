@@ -2,13 +2,14 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\ResultOperatorContext;
 
-class RegexMatchOperator implements ResultOperatorInterface
+class RegexMatchOperator implements ResultOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -39,8 +40,21 @@ class RegexMatchOperator implements ResultOperatorInterface
      */
     public function postResultProcess(array $result, FieldConditionInterface $fieldCondition, ResultOperatorContext $context, ?OperatorHistory $parent): ?array
     {
-        // WIP! skip test for now!
-        // TODO: add regex check ConfigEnum::ConditionRegexMatch->value
+        $regex = $fieldCondition->getCondition()[ConfigEnum::ConditionRegexMatch->value];
+        $value = $result[$fieldCondition->getFieldName()] ?? '';
+
+        if (preg_match($regex, $value) !== false) {
+            return $result;
+        }
+
         return null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        return $this->postResultProcess($data, $fieldCondition, $context, $parent);
     }
 }

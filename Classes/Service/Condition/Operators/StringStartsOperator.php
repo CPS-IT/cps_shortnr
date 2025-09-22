@@ -2,13 +2,14 @@
 
 namespace CPSIT\ShortNr\Service\Condition\Operators;
 
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\OperatorHistory;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 
-class StringStartsOperator implements QueryOperatorInterface
+class StringStartsOperator implements QueryOperatorInterface, DirectOperatorInterface
 {
     /**
      * @param FieldConditionInterface $fieldCondition
@@ -58,5 +59,21 @@ class StringStartsOperator implements QueryOperatorInterface
             $fieldName,
             $queryBuilder->createNamedParameter($queryBuilder->escapeLikeWildcards($value) . '%')
         );
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function directProcess(array $data, FieldConditionInterface $fieldCondition, DirectOperatorContext $context, ?OperatorHistory $parent): ?array
+    {
+        $isNot = ($parent && $parent->hasOperatorTypeInHistory(NotOperator::class));
+        $conditionValue = $fieldCondition->getCondition()[ConfigEnum::ConditionStingStarts->value];
+        $condition = str_contains($data[$fieldCondition->getFieldName()], $conditionValue);
+
+        if (($isNot && !$condition) || $condition) {
+            return $data;
+        }
+
+        return null;
     }
 }
