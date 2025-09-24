@@ -14,6 +14,10 @@ use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\EndTimeRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\StartTimeRestriction;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\expr;
 
 class ShortNrRepository
@@ -224,6 +228,11 @@ class ShortNrRepository
         $qb = $this->getQueryBuilder($tableName);
         $qb->select(...$requiredFields);
         $qb->from($tableName);
+        // only respect deleted
+        $qb->getRestrictions()
+            ->removeByType(HiddenRestriction::class)
+            ->removeByType(StartTimeRestriction::class)
+            ->removeByType(EndTimeRestriction::class);
 
         try {
             return $qb->executeQuery()->fetchAllAssociative();

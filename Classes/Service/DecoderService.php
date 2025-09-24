@@ -88,10 +88,14 @@ class DecoderService extends AbstractUrlService
      */
     public function decode(DecoderDemandInterface $demand): ?string
     {
+        if ($demand->noCache() || ($cacheKey = $demand->getCacheKey()) === null) {
+            return $this->decodeWithDemand($demand);
+        }
+
         // cache for one day
         return $this->getCacheManager()->getType3CacheValue(
-            sprintf('decode-%s', $demand->getShortNr()),
-            fn() => $this->decodeDemand($demand),
+            sprintf('decode-%s', $cacheKey),
+            fn() => $this->decodeWithDemand($demand),
             ttl: 604_800, // one week
             tags: ['all', 'uri', 'decode']
         );
@@ -103,7 +107,7 @@ class DecoderService extends AbstractUrlService
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrNotFoundException
      */
-    private function decodeDemand(DecoderDemandInterface $demand): ?string
+    private function decodeWithDemand(DecoderDemandInterface $demand): ?string
     {
         $anyCandidatesExecuted = false;
         $errors = [];

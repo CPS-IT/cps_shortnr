@@ -22,8 +22,7 @@ class EncoderService extends AbstractUrlService
      */
     public function encode(EncoderDemandInterface $demand): ?string
     {
-        $cacheKey = $demand->getCacheKey();
-        if ($cacheKey === null) {
+        if ($demand->noCache() || ($cacheKey = $demand->getCacheKey()) === null) {
             return $this->encodeWithDemand($demand);
         }
 

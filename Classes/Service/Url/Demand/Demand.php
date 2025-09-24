@@ -6,6 +6,8 @@ use Psr\Http\Message\ServerRequestInterface;
 
 abstract class Demand implements DemandInterface
 {
+    private bool $noCache = false;
+
     protected ?ServerRequestInterface $request = null;
     /**
      * Extract and normalize the ShortNr segment from any URI
@@ -47,5 +49,17 @@ abstract class Demand implements DemandInterface
         $this->request = $request;
 
         return $this;
+    }
+
+    public function setNoCache(bool $noCache): static
+    {
+        $this->noCache = $noCache;
+
+        return $this;
+    }
+
+    public function noCache(): bool
+    {
+        return $this->noCache;
     }
 }

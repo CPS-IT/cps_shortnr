@@ -43,4 +43,12 @@ class DecoderDemand extends Demand implements DecoderDemandInterface
     {
         yield from $this->candidates;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function getCacheKey(): ?string
+    {
+        return $this->shortNr;
+    }
 }

@@ -17,4 +17,16 @@ interface DemandInterface
      * @return Demand
      */
     public function setRequest(?ServerRequestInterface $request): static;
+
+    /**
+     * @return bool
+     */
+    public function noCache(): bool;
+
+    public function setNoCache(bool $noCache): static;
+
+    /**
+     * @return string|null
+     */
+    public function getCacheKey(): ?string;
 }

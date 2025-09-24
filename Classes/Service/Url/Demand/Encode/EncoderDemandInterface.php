@@ -27,9 +27,4 @@ interface EncoderDemandInterface extends DemandInterface
      * @return EncoderDemand
      */
     public function setLanguageId(?int $languageId): static;
-
-    /**
-     * @return string|null
-     */
-    public function getCacheKey(): ?string;
 }

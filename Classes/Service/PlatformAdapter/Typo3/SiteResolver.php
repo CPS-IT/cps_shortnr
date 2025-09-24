@@ -142,19 +142,23 @@ class SiteResolver implements SiteResolverInterface
             return $this->siteCache[$pageUid];
         }
 
-        // resolve page to rootPage
-        $rootPageId = $this->getRootPageId($pageUid);
+        try {
+            // resolve page to rootPage
+            $rootPageId = $this->getRootPageId($pageUid);
 
-        if ($rootPageId > 0) {
-            try {
-                // load site with root page (very cheap!)
-                return $this->siteCache[$pageUid] ??= $this->siteFinder->getSiteByRootPageId($rootPageId);
-            } catch (Throwable $e) {
-                throw new ShortNrSiteFinderException($e->getMessage(), $e->getCode(), $e);
+            if ($rootPageId > 0) {
+                try {
+                    // load site with root page (very cheap!)
+                    return $this->siteCache[$pageUid] ??= $this->siteFinder->getSiteByRootPageId($rootPageId);
+                } catch (Throwable $e) {
+                    throw new ShortNrSiteFinderException($e->getMessage(), $e->getCode(), $e);
+                }
+            } else {
+                return $this->siteFinder->getSiteByPageId($pageUid);
             }
+        } catch(Throwable $e) {
+            throw new ShortNrSiteFinderException('Could not resolve page uid via PageTree (uid: ' . $pageUid. ')', previous: $e);
         }
-
-        throw new ShortNrSiteFinderException('Could not resolve page uid via PageTree (uid: ' . $pageUid. ')');
     }
 
     /**

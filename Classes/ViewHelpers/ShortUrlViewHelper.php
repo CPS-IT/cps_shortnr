@@ -76,8 +76,13 @@ final class ShortUrlViewHelper extends AbstractViewHelper
             return $this->parseChildren(['uri' => null]);
         }
 
+        $demand->setNoCache(true);
         $uri = $this->encoderService->encode($demand);
-        return $this->parseChildren(['uri' => Uri::fromAnyScheme($uri)]);
+        $uriObj = null;
+        if ($uri !== null) {
+            $uriObj = Uri::fromAnyScheme($uri);
+        }
+        return $this->parseChildren(['uri' => $uriObj]);
     }
 
     /**
