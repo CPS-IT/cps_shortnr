@@ -76,6 +76,7 @@ final class ShortUrlViewHelper extends AbstractViewHelper
             return $this->parseChildren(['uri' => null]);
         }
 
+        $demand->setNoCache(true);
         $uri = $this->encoderService->encode($demand);
         $uriObj = null;
         if ($uri !== null) {

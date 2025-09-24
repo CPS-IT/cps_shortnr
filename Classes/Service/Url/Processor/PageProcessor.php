@@ -133,7 +133,7 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
                 $data,
                 $configItem->getTableName(),
                 $configItem->getCondition(),
-                array_keys($data)
+                $requiredFields
             ));
         }
 

@@ -118,7 +118,7 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
                 $data,
                 $configItem->getTableName(),
                 $configItem->getCondition(),
-                array_keys($data)
+                $requiredFields
             ));
         }
 
