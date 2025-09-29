@@ -71,7 +71,7 @@ class EncodeConfigNormalizerService
             return $this->configLoader->getConfig()->getConfigItemsByTableName(
                 $this->getTableNameFromObject($entity)
             );
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return [];
         }
     }
@@ -91,12 +91,11 @@ class EncodeConfigNormalizerService
             array_push($configs, ...$this->resolvePageRouteArguments($demand->getPageRoutingArguments()));
         }
 
+        // add pages at the end as fallback
+        $configs[] = $this->configLoader->getConfig()->getConfigItem('pages');
         if (!empty($configs)) {
             return $configs;
         }
-
-        if (!empty($demand->getPageRecord()))
-            return [$this->configLoader->getConfig()->getConfigItem('pages')];
 
         return [];
     }
@@ -150,13 +149,13 @@ class EncodeConfigNormalizerService
     private function newsPluginWorkaround(string $incomingPluginName, string $configPluginName, string $extension): bool
     {
         // news way
-        if ($extension === 'News') {
+        if ( strtolower($extension) === 'news') {
             // news somehow force Pi1 for the plugin name...
-            return $incomingPluginName === $configPluginName || $configPluginName === 'Pi1';
+            return strcasecmp($incomingPluginName, $configPluginName)  === 0 || strtolower($configPluginName) === 'pi1';
         }
 
         // correct way
-        return $incomingPluginName === $configPluginName;
+        return strcasecmp($incomingPluginName, $configPluginName)  === 0;
     }
 
 
@@ -215,12 +214,10 @@ class EncodeConfigNormalizerService
     private function getTableNameFromObject(object $object): string
     {
         /** @var DataMap $factoryResult */
-        $tableName = $this->cacheManager->getType3CacheValue(
+        return $this->cacheManager->getType3CacheValue(
             'db_datamapper_' . $object::class,
             fn() => $this->dataMapFactory->buildDataMap($object::class)?->getTableName(),
             tags: ['all', 'meta', 'database', 'table']
         );
-
-        return $tableName;
     }
 }
