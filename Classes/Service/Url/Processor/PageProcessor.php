@@ -24,7 +24,7 @@ use TYPO3\CMS\Frontend\Page\PageInformation;
 
 class PageProcessor extends AbstractProcessor implements ProcessorInterface
 {
-    use ValidateUriTrait;
+    use ValidateUriTrait, CommonTrait;
 
     public function __construct(
         protected readonly SiteResolverInterface $siteResolver,
@@ -103,7 +103,7 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
 
             return Path::join($base, $shortNr);
 
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             return null;
         }
     }
@@ -150,7 +150,6 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
      * @param array $requiredFields
      * @return array
      * @throws ShortNrCacheException
-     * @throws ShortNrProcessorException
      * @throws ShortNrQueryException
      */
     private function getDataFromPageRecord(EnvironmentEncoderDemand $demand, ConfigItemInterface $configItem, array $requiredFields): array
@@ -165,7 +164,6 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
      * @param array $requiredFields
      * @return array
      * @throws ShortNrCacheException
-     * @throws ShortNrProcessorException
      * @throws ShortNrQueryException
      */
     private function getDataFromPageObject(ObjectEncoderDemand $demand, ConfigItemInterface $configItem, array $requiredFields): array
@@ -187,7 +185,6 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
      * @param array $requiredFields
      * @return array
      * @throws ShortNrCacheException
-     * @throws ShortNrProcessorException
      * @throws ShortNrQueryException
      */
     private function getPageDataFromUid(ConfigNameEncoderDemand $demand, ConfigItemInterface $configItem, array $requiredFields): array
@@ -214,42 +211,5 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
 
         $pageRecord = $this->populateMissingRequiredFields($pageRecord, $demand, $configItem, $requiredFields);
         return array_intersect_key($pageRecord, array_fill_keys($requiredFields, true));
-    }
-
-    /**
-     * @param array $pageRecord
-     * @param EncoderDemandInterface $demand
-     * @param ConfigItemInterface $configItem
-     * @param array $requiredFields
-     * @return array
-     * @throws ShortNrCacheException
-     * @throws ShortNrQueryException
-     */
-    private function populateMissingRequiredFields(array $pageRecord, EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
-    {
-        $existingFields = array_keys($pageRecord);
-        $missingFields = array_diff($requiredFields, $existingFields);
-
-        // no missing fields
-        if (empty($missingFields)) {
-            return $pageRecord;
-        }
-
-        $uidField = $configItem->getRecordIdentifier();
-
-        $uid = $pageRecord[$uidField] ?? null;
-        if ($uid === null) {
-            return [];
-        }
-
-        $languageField = $configItem->getLanguageField();
-        $parentField = $configItem->getLanguageParentField();
-
-        $value = $this->repository->loadMissingFields([$languageField, ...$missingFields], $uidField, $languageField, $parentField, $uid, $demand->getLanguageId(), $configItem->getTableName());
-        if (empty($value)) {
-            return [];
-        }
-
-        return $pageRecord + $value;
     }
 }

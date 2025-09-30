@@ -18,8 +18,8 @@
         "typo3/minimal": "^13.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.5",
-        "typo3/testing-framework": "*",
+        "phpunit/phpunit": "^12.3",
+        "typo3/testing-framework": "^9.2",
         "brannow/typo3-dev-springboard": "dev-main"
     },
     "autoload": {

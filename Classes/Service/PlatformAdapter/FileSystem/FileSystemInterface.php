@@ -2,6 +2,10 @@
 
 namespace CPSIT\ShortNr\Service\PlatformAdapter\FileSystem;
 
+use Error;
+use ParseError;
+use Throwable;
+
 interface FileSystemInterface
 {
     /**
@@ -23,7 +27,7 @@ interface FileSystemInterface
      * files.
      * </p>
      * <p>
-     * This function returns false for files inaccessible due to safe mode restrictions. However these
+     * This function returns false for files inaccessible due to safe mode restrictions. However, these
      * files still can be included if
      * they are located in safe_mode_include_dir.
      * </p>
@@ -67,9 +71,9 @@ interface FileSystemInterface
      *
      * @param string $filename Path to the file to be included and evaluated
      * @return mixed The return value of the included file, typically an array for config files
-     * @throws \Error If the file contains a fatal error
-     * @throws \ParseError If the file contains a parse error
-     * @throws \Throwable Any exception thrown by the included file
+     * @throws Error If the file contains a fatal error
+     * @throws ParseError If the file contains a parse error
+     * @throws Throwable Any exception thrown by the included file
      *
      * @link https://php.net/manual/en/function.require.php
      */

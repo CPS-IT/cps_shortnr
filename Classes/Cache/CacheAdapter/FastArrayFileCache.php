@@ -7,7 +7,6 @@ use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use Symfony\Component\Filesystem\Path;
 use Throwable;
-use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Core\Environment;
 
 class FastArrayFileCache
@@ -15,8 +14,6 @@ class FastArrayFileCache
     private array $runtimeCache = [];
 
     private const FILE_NAME = 'config%s.php';
-
-    private readonly ?FrontendInterface $cache;
 
     public function __construct(
         private readonly FileSystemInterface $fileSystem

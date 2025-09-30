@@ -2,13 +2,15 @@
 
 namespace CPSIT\ShortNr\Exception;
 
-final class ShortNrPatternTypeException extends ShortNrPatternException 
+use Throwable;
+
+final class ShortNrPatternTypeException extends ShortNrPatternException
 {
     public function __construct(
-        string $message,
+        string                 $message,
         public readonly string $typeName,
-        public readonly array $availableTypes = [],
-        ?\Throwable $previous = null
+        public readonly array  $availableTypes = [],
+        ?Throwable             $previous = null
     ) {
         $available = empty($availableTypes) ? '' : ' Available: ' . implode(', ', $availableTypes);
         parent::__construct("Type error: $message$available", 0, $previous);

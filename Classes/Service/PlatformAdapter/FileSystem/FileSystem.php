@@ -27,7 +27,7 @@ class FileSystem implements FileSystemInterface
      * files.
      * </p>
      * <p>
-     * This function returns false for files inaccessible due to safe mode restrictions. However these
+     * This function returns false for files inaccessible due to safe mode restrictions. However, these
      * files still can be included if
      * they are located in safe_mode_include_dir.
      * </p>

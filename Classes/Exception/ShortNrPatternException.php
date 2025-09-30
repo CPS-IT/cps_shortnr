@@ -2,12 +2,14 @@
 
 namespace CPSIT\ShortNr\Exception;
 
+use Throwable;
+
 class ShortNrPatternException extends ShortNrException
 {
     public function __construct(
-        string $message,
+        string              $message,
         public readonly int $position = 0,
-        ?\Throwable $previous = null
+        ?Throwable          $previous = null
     ) {
         parent::__construct($message, 1650, $previous);
     }

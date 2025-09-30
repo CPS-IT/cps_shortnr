@@ -4,14 +4,11 @@ namespace CPSIT\ShortNr\Config\DTO;
 
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
-use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
 use TypedPatternEngine\Compiler\CompiledPattern;
 
 class ConfigItem implements ConfigItemInterface
 {
-    private array $cache = [];
-
     /**
      * Create a scoped config accessor for a specific config item
      *

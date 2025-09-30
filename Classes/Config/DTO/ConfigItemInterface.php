@@ -2,7 +2,6 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
-use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
 use TypedPatternEngine\Compiler\CompiledPattern;
 

@@ -50,9 +50,9 @@ class ConditionService
     )
     {
         // sort By Priority
-        $this->queryOperators = $this->sortIteratableByPrioity($queryOperators);
-        $this->resultOperators = $this->sortIteratableByPrioity($resultOperators);
-        $this->directOperators = $this->sortIteratableByPrioity($directOperators);
+        $this->queryOperators = $this->sortIterableByPriority($queryOperators);
+        $this->resultOperators = $this->sortIterableByPriority($resultOperators);
+        $this->directOperators = $this->sortIterableByPriority($directOperators);
     }
 
     /**

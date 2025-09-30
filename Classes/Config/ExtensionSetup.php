@@ -5,7 +5,6 @@ namespace CPSIT\ShortNr\Config;
 use CPSIT\ShortNr\Listener\ClearCacheDataHandlerHook;
 use TYPO3\CMS\Core\Cache\Backend\FileBackend;
 use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
-use TYPO3\CMS\Core\DataHandling\DataHandler;
 
 class ExtensionSetup
 {

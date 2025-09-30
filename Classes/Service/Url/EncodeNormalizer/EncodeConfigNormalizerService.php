@@ -211,11 +211,16 @@ class EncodeConfigNormalizerService
         return array_values($configs);
     }
 
+    /**
+     * @param object $object
+     * @return string
+     * @throws ShortNrCacheException
+     */
     private function getTableNameFromObject(object $object): string
     {
         /** @var DataMap $factoryResult */
         return $this->cacheManager->getType3CacheValue(
-            'db_datamapper_' . $object::class,
+            'db_dataMapper_' . $object::class,
             fn() => $this->dataMapFactory->buildDataMap($object::class)?->getTableName(),
             tags: ['all', 'meta', 'database', 'table']
         );

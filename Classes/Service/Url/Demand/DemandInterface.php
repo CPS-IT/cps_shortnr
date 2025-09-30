@@ -2,7 +2,6 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 interface DemandInterface

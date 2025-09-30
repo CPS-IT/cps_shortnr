@@ -18,7 +18,7 @@ abstract class AbstractUrlService
     private iterable $processors;
     private ConfigLoader $configLoader;
     private CacheManager $cacheManager;
-    public function setProcessors(iterable $processors)
+    public function setProcessors(iterable $processors): void
     {
         $this->processors = $processors;
     }

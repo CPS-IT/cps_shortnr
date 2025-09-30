@@ -118,15 +118,15 @@ class LanguageOverlayService
         }
 
         try {
-            $resolvement = $this->repository->resolveCorrectUidWithLanguageUid($table, $uidField, $languageField, $languageParentField, $uid);
+            $resolvment = $this->repository->resolveCorrectUidWithLanguageUid($table, $uidField, $languageField, $languageParentField, $uid);
         } catch (ShortNrQueryException) {
             return $result;
         }
 
-        $resolvedUid = $resolvement[$langUid] ?? null;
+        $resolvedUid = $resolvment[$langUid] ?? null;
         if ($resolvedUid === null) {
             // language not available -> fall back to base (0)
-            $resolvedUid = $resolvement[0] ?? $uid;
+            $resolvedUid = $resolvment[0] ?? $uid;
             $langUid = 0;
         }
 

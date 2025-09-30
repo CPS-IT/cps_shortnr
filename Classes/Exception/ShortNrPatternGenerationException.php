@@ -2,13 +2,15 @@
 
 namespace CPSIT\ShortNr\Exception;
 
-final class ShortNrPatternGenerationException extends ShortNrPatternException 
+use Throwable;
+
+final class ShortNrPatternGenerationException extends ShortNrPatternException
 {
     public function __construct(
-        string $message,
-        public readonly array $values,
+        string                 $message,
+        public readonly array  $values,
         public readonly string $groupName = '',
-        ?\Throwable $previous = null
+        ?Throwable             $previous = null
     ) {
         parent::__construct("Pattern generation error: $message", 0, $previous);
     }

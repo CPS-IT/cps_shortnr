@@ -2,13 +2,15 @@
 
 namespace CPSIT\ShortNr\Exception;
 
-final class ShortNrPatternParseException extends ShortNrPatternException 
+use Throwable;
+
+final class ShortNrPatternParseException extends ShortNrPatternException
 {
     public function __construct(
-        string $message,
+        string                 $message,
         public readonly string $pattern,
-        int $position = 0,
-        ?\Throwable $previous = null
+        int                    $position = 0,
+        ?Throwable             $previous = null
     ) {
         parent::__construct("Pattern parse error: $message", $position, $previous);
     }

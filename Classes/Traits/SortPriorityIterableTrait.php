@@ -8,7 +8,7 @@ trait SortPriorityIterableTrait
      * @param iterable<PriorityAwareInterface> $list
      * @return array
      */
-    private function sortIteratableByPrioity(iterable $list): array
+    private function sortIterableByPriority(iterable $list): array
     {
         $sortedNormalizers = [];
         foreach ($list as $item) {

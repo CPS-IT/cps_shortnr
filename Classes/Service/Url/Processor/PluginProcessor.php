@@ -24,7 +24,7 @@ use TYPO3\CMS\Extbase\DomainObject\AbstractEntity;
 
 class PluginProcessor extends AbstractProcessor implements ProcessorInterface
 {
-    use PluginSignatureTrait;
+    use PluginSignatureTrait, CommonTrait;
 
     public function __construct(
         private readonly ShortNrRepository $repository,
@@ -235,43 +235,6 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
 
         $pageRecord = $this->populateMissingRequiredFields($pluginData, $demand, $configItem, $requiredFields);
         return array_intersect_key($pageRecord, array_fill_keys($requiredFields, true));
-    }
-
-    /**
-     * @param array $pluginData
-     * @param EncoderDemandInterface $demand
-     * @param ConfigItemInterface $configItem
-     * @param array $requiredFields
-     * @return array
-     * @throws ShortNrCacheException
-     * @throws ShortNrQueryException
-     */
-    private function populateMissingRequiredFields(array $pluginData, EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
-    {
-        $existingFields = array_keys($pluginData);
-        $missingFields = array_diff($requiredFields, $existingFields);
-
-        // no missing fields
-        if (empty($missingFields)) {
-            return $pluginData;
-        }
-
-        $uidField = $configItem->getRecordIdentifier();
-
-        $uid = $pluginData[$uidField] ?? null;
-        if ($uid === null) {
-            return [];
-        }
-
-        $languageField = $configItem->getLanguageField();
-        $parentField = $configItem->getLanguageParentField();
-
-        $value = $this->repository->loadMissingFields([$languageField, ...$missingFields], $uidField, $languageField, $parentField, $uid, $demand->getLanguageId(), $configItem->getTableName());
-        if (empty($value)) {
-            return [];
-        }
-
-        return $pluginData + $value;
     }
 
     /**

@@ -38,9 +38,9 @@ class NotOperator implements WrappingOperatorInterface
      * @param FieldConditionInterface $fieldCondition
      * @param QueryOperatorContext $context
      * @param OperatorHistory|null $parent
-     * @return mixed
+     * @return null
      */
-    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): mixed
+    public function process(FieldConditionInterface $fieldCondition, QueryOperatorContext $context, ?OperatorHistory $parent): null
     {
         return null;
     }
