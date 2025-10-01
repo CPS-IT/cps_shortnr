@@ -19,13 +19,17 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^12.3",
-        "typo3/testing-framework": "^9.2",
-        "brannow/typo3-dev-springboard": "dev-main"
+        "typo3/testing-framework": "^9.2"
     },
     "autoload": {
         "psr-4": {
             "CPSIT\\ShortNr\\": "Classes/"
         }
+    },
+    "autoload-dev": {
+      "psr-4": {
+        "CPSIT\\ShortNr\\Tests\\": "Tests/"
+      }
     },
     "config": {
         "vendor-dir": ".Build/vendor",

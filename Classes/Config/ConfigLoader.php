@@ -16,7 +16,7 @@ use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
 use CPSIT\ShortNr\Traits\ArrayPackTrait;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Yaml\Yaml;
-use TypedPatternEngine\Heuristic\PatternHeuristic;
+use TypedPatternEngine\Heuristic\HeuristicPatternInterface;
 use TypedPatternEngine\TypedPatternEngine;
 
 class ConfigLoader
@@ -84,7 +84,7 @@ class ConfigLoader
      * @throws ShortNrCacheException
      * @throws ShortNrConfigException
      */
-    public function getHeuristicPattern(): PatternHeuristic
+    public function getHeuristicPattern(): HeuristicPatternInterface
     {
         if (!isset($this->runtimeCache[self::HEURISTIC_KEY])) {
             $compiler = $this->patternEngine->getHeuristicCompiler();

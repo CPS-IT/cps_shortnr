@@ -114,7 +114,6 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
      * @param array $requiredFields
      * @return array
      * @throws ShortNrCacheException
-     * @throws ShortNrProcessorException
      * @throws ShortNrQueryException
      */
     private function getPageData(EncoderDemandInterface $demand, ConfigItemInterface $configItem, array $requiredFields): array
