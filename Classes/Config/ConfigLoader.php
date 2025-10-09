@@ -267,6 +267,11 @@ class ConfigLoader
             // load all config files, user and default
             $cacheMTime = $this->cacheManager->getArrayFileCache()->getFileModificationTime($suffix);
             foreach ($this->getAllConfigurationFiles() as $configurationFile) {
+
+                if (!$this->fileSystem->file_exists($configurationFile)) {
+                    continue;
+                }
+
                 $yamlMTime = $this->fileSystem->filemtime($configurationFile);
                 if ($yamlMTime === false || $cacheMTime === null) {
                     return false;

@@ -156,8 +156,15 @@ class FastArrayFileCache
     public function getFileModificationTime(string $suffix): ?int
     {
         $suffix = $this->sanitizeSuffix($suffix);
-        $mtime = $this->fileSystem->filemtime($this->getArrayCacheFilePath($suffix));
-        if($mtime === false){
+        $file = $this->getArrayCacheFilePath($suffix);
+
+        if (!$this->fileSystem->file_exists($file)) {
+            return null;
+        }
+
+        $mtime = $this->fileSystem->filemtime($file);
+        // Treat corrupt files (invalid mtime) same as missing files
+        if ($mtime === false || $mtime <= 0) {
             return null;
         }
 
