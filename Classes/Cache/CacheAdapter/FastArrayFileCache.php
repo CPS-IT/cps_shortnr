@@ -74,6 +74,7 @@ class FastArrayFileCache
 
         try {
             $this->fileSystem->file_put_contents($tempFile, $phpCode, LOCK_EX);
+            $this->fileSystem->chmod($tempFile, 0664);
             $this->fileSystem->rename($tempFile, $cacheFile);
         } catch (Throwable $e) {
             $this->fileSystem->unlink($tempFile);
