@@ -82,9 +82,11 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
 
             $pluginPid = $configItem->getPluginConfig()['pid'] ?? throw new ShortNrProcessorException('could not find Plugin Pid');
             if ($demand->isAbsolute()) {
-                $base = $this->siteResolver->getSiteFullBaseDomain($pluginPid, $demand->getLanguageId());
+                // for now, we trust our middleware to handle the language correct and root everything to the root page
+                // maybe in the future we enable the correct language base handling via config toggle
+                $base = $this->siteResolver->getSiteFullBaseDomain($pluginPid);
             } else {
-                $base = $this->siteResolver->getSiteBaseUri($pluginPid, $demand->getLanguageId());
+                $base = $this->siteResolver->getSiteBaseUri($pluginPid);
             }
 
             return Path::join($base, $shortNr);
@@ -250,6 +252,14 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
         unset($conditions['input']);
         $uidKey = $configItem->getRecordIdentifier();
         $languageKey = $configItem->getLanguageField();
+
+        // special type way for language handling
+        $originalLanguageId = $conditions[$languageKey];
+        if (isset($conditions[$languageKey])) {
+            // we add -1 for the fallback languages
+            $conditions[$languageKey] = [$conditions[$languageKey], -1];
+        }
+
         try {
             // we need to fetch it since we must include potential other conditions from the configItem
             $rows = $this->repository->resolveTable([$uidKey, $languageKey], $configItem->getTableName(), $conditions + $configItem->getCondition());
@@ -268,7 +278,12 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
 
         foreach ($rows as $row) {
             $uid = $row[$uidKey];
-            $languageUid = $row[$languageKey];
+            $languageUid = (int)$row[$languageKey];
+            // language Normalizer to filter out -1, we fallback to the ask language ID if -1 is given
+            if ($languageUid === -1) {
+                // $originalLanguageId come from the $match
+                $languageUid = $originalLanguageId;
+            }
 
             $pluginConfig = [
                 'id' => $basePid,
@@ -279,6 +294,7 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
                 ]
             ];
             try {
+
                 return $this->siteResolver->getUriByPageId(
                     $basePid,
                     $languageUid,

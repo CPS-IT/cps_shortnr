@@ -53,6 +53,14 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
         unset($conditions['input']);
         $uidKey = $configItem->getRecordIdentifier();
         $languageKey = $configItem->getLanguageField();
+
+        // special type way for language handling
+        $originalLanguageId = $conditions[$languageKey];
+        if (isset($conditions[$languageKey])) {
+            // we add -1 for the fallback languages
+            $conditions[$languageKey] = [$conditions[$languageKey], -1];
+        }
+
         try {
             // we need to fetch it since we must include potential other conditions from the configItem
             $rows = $this->repository->resolveTable([$uidKey, $languageKey], $configItem->getTableName(), $conditions + $configItem->getCondition());
@@ -63,6 +71,12 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
         foreach ($rows as $row) {
             $uid = $row[$uidKey];
             $language = $row[$languageKey];
+
+            if ($language === -1) {
+                // $originalLanguageId come from the $match
+                $language = $originalLanguageId;
+            }
+
             try {
                 // generate page, or try it, first success wins
                 return $this->siteResolver->getUriByPageId($uid, $language);
@@ -96,9 +110,11 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
             $uidField = $configItem->getRecordIdentifier();
             $pid = $pageData[$uidField];
             if ($demand->isAbsolute()) {
-                $base = $this->siteResolver->getSiteFullBaseDomain($pid, $demand->getLanguageId());
+                // for now, we trust our middleware to handle the language correct and root everything to the root page
+                // maybe in the future we enable the correct language base handling via config toggle
+                $base = $this->siteResolver->getSiteFullBaseDomain($pid);
             } else {
-                $base = $this->siteResolver->getSiteBaseUri($pid, $demand->getLanguageId());
+                $base = $this->siteResolver->getSiteBaseUri($pid);
             }
 
             return Path::join($base, $shortNr);

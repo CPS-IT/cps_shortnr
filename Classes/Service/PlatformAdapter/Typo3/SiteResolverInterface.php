@@ -25,7 +25,7 @@ interface SiteResolverInterface
      * @return string Language base URI (e.g., "/de", "/en", "/" "/base/en/")
      * @throws ShortNrSiteFinderException When site/language cannot be resolved
      */
-    public function getSiteBaseUri(int $pageUid, int $languageId): string;
+    public function getSiteBaseUri(int $pageUid, int $languageId = 0): string;
 
     /**
      * Get Site and language-specific base Domain URI for a page
@@ -35,7 +35,7 @@ interface SiteResolverInterface
      * @return string Language base URI (e.g., "https://acme.com/de", "https://acme.com/en", "https://acme.com/base/" "https://acme.com/base/en/")
      * @throws ShortNrSiteFinderException When site/language cannot be resolved
      */
-    public function getSiteFullBaseDomain(int $pageUid, int $languageId): string;
+    public function getSiteFullBaseDomain(int $pageUid, int $languageId = 0): string;
 
     /**
      * [LanguageId => SiteLanguage]

@@ -8,6 +8,7 @@ use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
@@ -88,7 +89,7 @@ class ShortNrRepository
                 $qb->expr()->eq($uidField, $uidParam = $qb->createNamedParameter($uid, ParameterType::INTEGER)),
                 $qb->expr()->eq($parentField, $uidParam),
             ),
-            $qb->expr()->eq($languageField, $qb->createNamedParameter($languageUid, ParameterType::INTEGER))
+            $qb->expr()->in($languageField, $qb->createNamedParameter([$languageUid, -1], ArrayParameterType::INTEGER))
         );
 
         try {

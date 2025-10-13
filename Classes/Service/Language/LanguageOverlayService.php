@@ -123,10 +123,10 @@ class LanguageOverlayService
             return $result;
         }
 
-        $resolvedUid = $resolvment[$langUid] ?? null;
+        $resolvedUid = $resolvment[$langUid] ?? $resolvment[-1] ?? null;
         if ($resolvedUid === null) {
             // language not available -> fall back to base (0)
-            $resolvedUid = $resolvment[0] ?? $uid;
+            $resolvedUid = $resolvment[0] ?? $resolvment[-1] ?? $uid;
             $langUid = 0;
         }
 
