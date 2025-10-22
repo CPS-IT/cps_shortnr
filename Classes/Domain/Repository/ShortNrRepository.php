@@ -273,8 +273,8 @@ class ShortNrRepository
     private function fetchFieldsFromConnection(string $tableName): array
     {
         $fieldList = [];
-        foreach ($this->getConnection($tableName)->getSchemaInformation()->introspectTable($tableName)->getColumns() as $column) {
-            $fieldList[] = $column->getName();
+        foreach ($this->getConnection($tableName)->getSchemaInformation()->listTableColumnNames($tableName) as $column) {
+            $fieldList[] = $column;
         }
 
         return $fieldList;

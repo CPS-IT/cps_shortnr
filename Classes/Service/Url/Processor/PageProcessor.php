@@ -119,7 +119,7 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
 
             return Path::join($base, $shortNr);
 
-        } catch (Throwable) {
+        } catch (Throwable $e) {
             return null;
         }
     }
