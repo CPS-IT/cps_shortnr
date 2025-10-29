@@ -7,36 +7,48 @@ use CPSIT\ShortNr\Config\ConfigLoader\YamlConfigSanitizer;
 use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Config\DTO\ConfigInterface;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use CPSIT\ShortNr\Event\ShortNrConfigLoadedEvent;
+use CPSIT\ShortNr\Event\ShortNrConfigPathEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
+use CPSIT\ShortNr\Traits\ArrayPackTrait;
+use Psr\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Yaml\Yaml;
-use Throwable;
-use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
+use TypedPatternEngine\Heuristic\HeuristicPatternInterface;
+use TypedPatternEngine\TypedPatternEngine;
 
 class ConfigLoader
 {
-    private const DEFAULT_CONFIG_PATH = 'EXT:'. ExtensionSetup::EXT_KEY .'/Configuration/config.yaml';
-    private const COMPILED_REGEX_KEY = 'regex';
+    use ArrayPackTrait;
+
+    // Cache keys
     private const CONFIG_KEY = 'config';
+    private const CONFIG_OBJ_KEY = 'configObj';
+    private const HEURISTIC_KEY = 'heuristic';
+    private readonly TypedPatternEngine $patternEngine;
+
     private array $runtimeCache = [];
 
     /**
      * @param CacheManager $cacheManager
-     * @param ExtensionConfiguration $extensionConfiguration
      * @param FileSystemInterface $fileSystem
      * @param PathResolverInterface $pathResolver
      * @param YamlConfigSanitizer $yamlConfigSanitizer
+     * @param EventDispatcherInterface $eventDispatcher
      */
     public function __construct(
         private readonly CacheManager $cacheManager,
-        private readonly ExtensionConfiguration $extensionConfiguration,
         private readonly FileSystemInterface $fileSystem,
         private readonly PathResolverInterface $pathResolver,
-        private readonly YamlConfigSanitizer $yamlConfigSanitizer
+        private readonly YamlConfigSanitizer $yamlConfigSanitizer,
+        private readonly EventDispatcherInterface $eventDispatcher
     )
-    {}
+    {
+        $this->patternEngine = new TypedPatternEngine();
+    }
+
 
     /**
      * @throws ShortNrCacheException
@@ -44,84 +56,112 @@ class ConfigLoader
      */
     public function getConfig(): ConfigInterface
     {
-        return $this->runtimeCache[self::CONFIG_KEY] ??= new Config(
-            $this->getConfigArray(
+        if (!isset($this->runtimeCache[self::CONFIG_OBJ_KEY])) {
+            $configData = $this->getConfigArray(
                 self::CONFIG_KEY,
-                $this->parseAndMergeConfigFiles(...)
-            )
-        );
+                $this->buildCompleteConfig(...)
+            );
+
+            $patternCompiledName = ConfigEnum::Compiled->value;
+            $patternDecompiledName = ConfigEnum::Decompiled->value;
+            $compiler = $this->patternEngine->getPatternCompiler();
+            foreach ($configData[$patternDecompiledName] ?? [] as $configName => $decompiledPatternData) {
+                if (empty($decompiledPatternData)) {
+                    continue;
+                }
+                $configData[$patternCompiledName][$configName] = $compiler->hydrate($decompiledPatternData);
+                unset($configData[$patternDecompiledName]);
+            }
+            // create config
+            $this->runtimeCache[self::CONFIG_OBJ_KEY] = new Config($configData);
+        }
+
+        return $this->runtimeCache[self::CONFIG_OBJ_KEY] ?? throw new ShortNrConfigException('Could not create Config Object');
     }
 
     /**
-     * @return void
+     * Get heuristic pattern checker for fast pre-filtering
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
+     */
+    public function getHeuristicPattern(): HeuristicPatternInterface
+    {
+        if (!isset($this->runtimeCache[self::HEURISTIC_KEY])) {
+            $compiler = $this->patternEngine->getHeuristicCompiler();
+            $heuristicData = $this->getConfigArray(
+                self::HEURISTIC_KEY,
+                 fn(): array => $compiler->dehydrate(
+                     $compiler->compile(
+                         $this->getConfig()->getPatterns()
+                     )
+                 )
+            );
+
+            // rehydrate ast pattern heuristic data
+            $this->runtimeCache[self::HEURISTIC_KEY] = $compiler->hydrate($heuristicData);
+        }
+
+        return $this->runtimeCache[self::HEURISTIC_KEY];
+    }
+
+
+    /**
+     * Clear all caches
      */
     public function clearCache(): void
     {
         $this->cacheManager->getArrayFileCache()->invalidateCacheDirectory();
+        $this->runtimeCache = [];
     }
 
     /**
-     * store the fast lookup regex into
+     * Build complete configuration with AST compilation
      *
-     * depends on getConfig()
-     *
-     * @return string|null
-     * @throws ShortNrCacheException
+     * @return array
      * @throws ShortNrConfigException
      */
-    public function getCompiledRegexForFastCheck(): ?string
+    private function buildCompleteConfig(): array
     {
-        return $this->runtimeCache[self::COMPILED_REGEX_KEY] ??= $this->getConfigArray(
-            self::COMPILED_REGEX_KEY,
-            $this->compileYamlConfigRegex(...)
-        )[self::COMPILED_REGEX_KEY] ?? null;
-    }
+        // Load and merge YAML configs
+        // remove all NULL values
+        $mergedConfig = $this->reconstructFlattenArrayKeyPath(
+            array_filter(
+                $this->flattenArrayKeyPath(
+                    $this->parseAndMergeConfigFiles()
+                ),
+                fn(mixed $item): bool => $item !== null)
+        );
 
-    /**
-     * compiled ALL configs into one regex for a fast lookup
-     *
-     * @return array<string, string>
-     * @throws ShortNrConfigException
-     */
-    private function compileYamlConfigRegex(): array
-    {
-        $compiled = null;
-        try {
-            $regexList = array_keys($this->getConfig()->getUniqueRegexConfigNameGroup());
-            $count = count($regexList);
-
-            if ($count === 0) {
-                return [];
-            } elseif ($count === 1) {
-                return [self::COMPILED_REGEX_KEY => $regexList[0]];
-            }
-
-
-            $parts = [];
-
-            foreach ($regexList as $rx) {
-                // 1. Split into delimiter, body, modifiers
-                if (!preg_match('/^(.)(.*)\1([a-zA-Z]*)$/s', $rx, $m)) {
-                    // Malformed pattern – skip or log; do NOT treat as literal
-                    continue;
-                }
-                [, $delim, $body] = $m;
-                // 2. Escape the delimiter only if it occurs inside the body
-                $body = str_replace($delim, '\\' . $delim, $body);
-                // 3. Wrap in non-capturing group to preserve alternation semantics
-                $parts[] = "(?:$body)";
-            }
-
-            // 4. Re-assemble with a single set of delimiters and global modifiers
-            $compiled = '/' . implode('|', $parts) . '/i';
-        } catch (Throwable) {
-            throw new ShortNrConfigException('Could not generate Compiled Regex Lookup String');
+        if (empty($mergedConfig)) {
+            return [];
         }
 
-        return [self::COMPILED_REGEX_KEY => $compiled];
+        // Dispatch event to allow config manipulation
+        $event = new ShortNrConfigLoadedEvent($mergedConfig);
+        $this->eventDispatcher->dispatch($event);
+        $mergedConfig = $event->getConfiguration();
+
+        $patternCompiler =  $this->patternEngine->getPatternCompiler();
+        $defConfigName = ConfigEnum::DEFAULT_CONFIG->value;
+        $patternConfigName = ConfigEnum::Pattern->value;
+        $configEntryName = ConfigEnum::ENTRYPOINT->value;
+        $patternDecompiledName = ConfigEnum::Decompiled->value;
+
+        // compile the pattern
+        foreach ($mergedConfig[$configEntryName] ?? [] as $configName => $configItemData) {
+            if ($configName === $defConfigName || empty($configItemData[$patternConfigName])) {
+                continue;
+            }
+
+            $compiledPattern = $patternCompiler->compile($configItemData[$patternConfigName]);
+            $mergedConfig[$patternDecompiledName][$configName] = $patternCompiler->dehydrate($compiledPattern);
+        }
+
+        return $mergedConfig;
     }
 
     /**
+     * Get config array with caching
      * @param string $prefix
      * @param callable $datasource
      * @return array
@@ -134,29 +174,44 @@ class ConfigLoader
             throw new ShortNrConfigException('Config prefix cannot be empty');
         }
 
-        $suffix = $prefix.'_'.$this->getYamlConfigFileSuffix();
-        // cache file is outdated ... remove and process a fresh one
+        $suffix = $prefix . '_' . $this->getYamlConfigFileSuffix();
+
+        // Check cache validity
         if (!$this->isConfigCacheValid($suffix)) {
             $this->cacheManager->getArrayFileCache()->invalidateFileCache($suffix);
         } else {
-            $config = $this->runtimeCache[$prefix] ??= $this->cacheManager->getArrayFileCache()->readArrayFileCache($suffix);
-            if ($config)
-                return $config;
+            // Try to load from cache
+            $cached = $this->cacheManager->getArrayFileCache()->readArrayFileCache($suffix);
+            if ($cached !== null) {
+                $this->runtimeCache[$prefix] = $cached;
+                return $cached;
+            }
         }
 
+        // Generate fresh data
         if (!is_callable($datasource)) {
-            throw new ShortNrConfigException('Config Datasource must be callable');
+            throw new ShortNrConfigException('Config datasource must be callable');
         }
 
-        if (!is_array($result = $datasource()) && !empty($result)) {
-            throw new ShortNrConfigException('Config Datasource must return an array that is not empty, '.gettype($result).' given.');
-        }
-        $config = $this->runtimeCache[$prefix] ??= $result;
-        if ($config) {
-            $this->cacheManager->getArrayFileCache()->writeArrayFileCache($config, $suffix);
+        $result = $datasource();
+        if (!is_array($result)) {
+            throw new ShortNrConfigException(
+                'Config datasource must return an array, ' . gettype($result) . ' given.'
+            );
         }
 
-        return $config ?? [];
+        // Allow empty arrays for patterns/heuristics when no patterns defined
+        if (empty($result) && $prefix !== self::CONFIG_KEY) {
+            $result = [];
+        }
+
+        // Cache the result
+        $this->runtimeCache[$prefix] = $result;
+        if (!empty($result) || $prefix === self::HEURISTIC_KEY || $prefix === ConfigEnum::Pattern->value) {
+            $this->cacheManager->getArrayFileCache()->writeArrayFileCache($result, $suffix);
+        }
+
+        return $result;
     }
 
     /**
@@ -167,31 +222,19 @@ class ConfigLoader
      */
     private function parseAndMergeConfigFiles(): ?array
     {
-        $config = [];
-        $priority = 0;
+        $configs = [];
         $entryPointKey = ConfigEnum::ENTRYPOINT->value;
-        $priorityKey = ConfigEnum::Priority->value;
-        $defaultKey = ConfigEnum::DEFAULT_CONFIG->value;
         foreach ($this->getAllConfigurationFiles() as $file) {
             $subConfig = $this->parseYamlConfigFile($file);
-            if (is_array($subConfig) && !empty($subConfig)) {
-                // increase the priority of each SubConfig if not already set
-                foreach ($subConfig[$entryPointKey]??[] as $subConfigKey => $subConfigValue) {
-                    if ($subConfigKey === $defaultKey) {
-                        continue;
-                    }
-                    $subConfig[$entryPointKey][$subConfigKey][$priorityKey] ??= $priority;
-                }
-                $config[] = $subConfig;
+            if (!empty($subConfig[$entryPointKey]) && is_array($subConfig[$entryPointKey])) {
+                $configs[] = $subConfig;
             }
-            $priority++;
+        }
+        if (count($configs) > 1) {
+            return array_replace_recursive(...$configs);
         }
 
-        $mergedConfig = $config === [] ? null : array_replace_recursive(...$config);
-        // this list is mandatory since it also indicate if the List is empty for some reason
-        $mergedConfig[Config::PREFIX_MAP_KEY] = $this->generateFastPrefixLookupMap($mergedConfig);
-        $mergedConfig[Config::SORTED_REGEX_LIST_KEY] = $this->generateSortedRegexList($mergedConfig);
-        return $mergedConfig;
+        return $configs[0]??[];
     }
 
     /**
@@ -213,92 +256,22 @@ class ConfigLoader
     }
 
     /**
-     * Generate a fast lookUp map that map all PREFIX (CASE INSENSITIVE) to the corresponding config Names
-     *
-     * @param array $configArray
-     * @return array
-     */
-    private function generateFastPrefixLookupMap(array $configArray): array
-    {
-        // load default config
-        $defaultConfigName = ConfigEnum::DEFAULT_CONFIG->value;
-        $configPrefixKey = ConfigEnum::Prefix->value;
-        $defaultConfig = $configArray[ConfigEnum::ENTRYPOINT->value][$defaultConfigName] ?? [];
-
-        $lookupMap = [];
-        foreach ($configArray[ConfigEnum::ENTRYPOINT->value] ?? [] as $configName => $configItemData) {
-            // skip default config entry
-            if ($configName === $defaultConfigName) {
-                continue;
-            }
-
-            $prefix = strtolower($configItemData[$configPrefixKey] ?? '');
-            if (!empty($prefix)) {
-                $lookupMap[$prefix] = $configName;
-            }
-        }
-
-        return $lookupMap;
-    }
-
-    /**
-     * Generate sorted regex list grouped by regex pattern, sorted by priority (high to low)
-     *
-     * @param array $configArray
-     * @return array<string, array>
-     */
-    private function generateSortedRegexList(array $configArray): array
-    {
-        $defaultConfigName = ConfigEnum::DEFAULT_CONFIG->value;
-        $entryPointKey = ConfigEnum::ENTRYPOINT->value;
-        $regexKey = ConfigEnum::Regex->value;
-        $priorityKey = ConfigEnum::Priority->value;
-        $defaultConfig = $configArray[$entryPointKey][$defaultConfigName] ?? [];
-
-        $configData = [];
-        foreach ($configArray[$entryPointKey] ?? [] as $configName => $configItemData) {
-            // skip default config entry
-            if ($configName === $defaultConfigName) {
-                continue;
-            }
-
-            $regex = $configItemData[$regexKey] ?? $defaultConfig[$regexKey] ?? null;
-            if ($regex === null) {
-                continue;
-            }
-
-            $priority = (int)($configItemData[$priorityKey] ?? 0);
-            $configData[] = [
-                'name' => $configName,
-                'priority' => $priority,
-                'regex' => $regex
-            ];
-        }
-
-        // Sort by priority (high to low)
-        usort($configData, fn($a, $b) => $b['priority'] <=> $a['priority']);
-
-        // Build regex list grouped by regex pattern
-        $regexNameList = [];
-        foreach ($configData as $config) {
-            $regexNameList[$config['regex']][] = $config['name'];
-        }
-
-        return $regexNameList;
-    }
-
-    /**
      * @throws ShortNrConfigException
      */
     protected function isConfigCacheValid(string $suffix): bool
     {
-        // is yaml file is more up to date then cache file ... it's considered not valid
+        // is at least one yaml file is more up to date then cache file ... it's considered not valid
         // we only run this check once per execution
         return ($this->runtimeCache['file']['valid'][$suffix] ??= (function(string $suffix): bool {
 
             // load all config files, user and default
             $cacheMTime = $this->cacheManager->getArrayFileCache()->getFileModificationTime($suffix);
             foreach ($this->getAllConfigurationFiles() as $configurationFile) {
+
+                if (!$this->fileSystem->file_exists($configurationFile)) {
+                    continue;
+                }
+
                 $yamlMTime = $this->fileSystem->filemtime($configurationFile);
                 if ($yamlMTime === false || $cacheMTime === null) {
                     return false;
@@ -319,7 +292,7 @@ class ConfigLoader
      * @return string
      * @throws ShortNrConfigException
      */
-    public function getYamlConfigFileSuffix(): string
+    private function getYamlConfigFileSuffix(): string
     {
         return $this->runtimeCache['file']['hash'] ??= md5(implode(',', $this->getAllConfigurationFiles()));
     }
@@ -330,32 +303,28 @@ class ConfigLoader
      */
     private function getAllConfigurationFiles(): array
     {
-        return $this->runtimeCache['file']['list'] = array_filter(array_unique([
-            $this->getDefaultYamlConfigFilePath(),
-            $this->getUserYamlConfigFilePath()
-        ]));
-    }
+        if (isset($this->runtimeCache['file']['list'])) {
+            return $this->runtimeCache['file']['list'];
+        }
 
-    /**
-     * default config
-     * @return string
-     */
-    private function getDefaultYamlConfigFilePath(): string
-    {
-        return $this->runtimeCache['file']['default_path'] ??= $this->processYamlConfigFilePath(
-            self::DEFAULT_CONFIG_PATH
-        );
-    }
+        // Dispatch event to collect additional config paths
+        $event = new ShortNrConfigPathEvent();
+        $this->eventDispatcher->dispatch($event);
 
-    /**
-     * @return string|null
-     * @throws ShortNrConfigException
-     */
-    private function getUserYamlConfigFilePath(): ?string
-    {
-        return $this->runtimeCache['file']['path'] ??= $this->processYamlConfigFilePath(
-            $this->getTypo3Configuration()['configFile'] ?? null
-        );
+        // Add paths from event
+        $configPaths = [];
+        foreach ($event->getConfigPaths() as $path) {
+            $processedPath = $this->processYamlConfigFilePath($path);
+            if ($processedPath !== null) {
+                $configPaths[] = $processedPath;
+            }
+        }
+
+        $configPaths = array_filter(array_unique($configPaths));
+        if (empty($configPaths)) {
+            throw new ShortNrConfigException('No config found, please add a valid config via ' . ShortNrConfigPathEvent::class);
+        }
+        return $this->runtimeCache['file']['list'] = $configPaths;
     }
 
     /**
@@ -384,17 +353,5 @@ class ConfigLoader
         }
 
         return $this->pathResolver->getAbsolutePath($path);
-    }
-
-    /**
-     * @throws ShortNrConfigException
-     */
-    private function getTypo3Configuration(): array
-    {
-        try {
-            return $this->extensionConfiguration->get(ExtensionSetup::EXT_KEY);
-        } catch (Throwable $e) {
-            throw new ShortNrConfigException('Could not load Config for key: '. ExtensionSetup::EXT_KEY, previous: $e);
-        }
     }
 }

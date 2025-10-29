@@ -31,31 +31,43 @@ class CacheManager
      * @param string $cacheKey
      * @param callable $processBlock must return a string
      * @param int|null $ttl Lifetime of this cache entry in seconds. If NULL is specified, the default lifetime is used. "0" means unlimited lifetime.
-     * @return string|null
+     * @param array $tags
+     * @return string|array|null
      * @throws ShortNrCacheException
      */
-    public function getType3CacheValue(string $cacheKey, callable $processBlock, ?int $ttl = null): ?string
+    public function getType3CacheValue(string $cacheKey, callable $processBlock, ?int $ttl = null, array $tags = []): null|string|array
     {
         $cleanCacheKey = md5($cacheKey);
         $cache = $this->getCache();
         $cacheValue = $cache?->get($cleanCacheKey);
-
-        if ($cacheValue === null || $cacheValue === false) {
-            $value = $processBlock();
-            if (!is_string($value) && !$value === null && $value !== false) {
-                throw new ShortNrCacheException('invalid cache value, expected string');
-            }
-            if (is_string($value)) {
-                $cache?->set($cleanCacheKey, $value, lifetime:  $ttl);
-            }
-            return $value;
+        if (is_string($cacheValue) && str_starts_with($cacheValue, 'a:') && str_ends_with($cacheValue, '}')) {
+            $cacheValue = unserialize($cacheValue);
         }
 
-        if (is_string($cacheValue)) {
+        if ($cacheValue === null || $cacheValue === false) {
+            $rawValue = $value = $processBlock();
+            if (is_array($value)) {
+                $value = serialize($value);
+            }
+            if (!is_string($value) && !$value === null && $value !== false) {
+                throw new ShortNrCacheException('invalid cache value, expected string/array');
+            }
+            if (is_string($value)) {
+                $cache?->set($cleanCacheKey, $value, tags: $tags, lifetime:  $ttl);
+            }
+            return $rawValue;
+        }
+
+        if (is_string($cacheValue) || is_array($cacheValue)) {
             return $cacheValue;
         }
 
         return null;
+    }
+
+    public function invalidateByTag(string $tag): void
+    {
+        $this->getCache()->flushByTag($tag);
     }
 
     /**

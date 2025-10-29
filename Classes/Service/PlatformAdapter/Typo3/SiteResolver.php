@@ -4,10 +4,15 @@ namespace CPSIT\ShortNr\Service\PlatformAdapter\Typo3;
 
 use CPSIT\ShortNr\Exception\ShortNrSiteFinderException;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Message\UriInterface;
 use Throwable;
+use TYPO3\CMS\Core\Domain\Page;
+use TYPO3\CMS\Core\Routing\InvalidRouteArgumentsException;
+use TYPO3\CMS\Core\Routing\PageRouter;
 use TYPO3\CMS\Core\Site\Entity\SiteInterface;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class SiteResolver implements SiteResolverInterface
 {
@@ -28,9 +33,27 @@ class SiteResolver implements SiteResolverInterface
      * @return string
      * @throws ShortNrSiteFinderException
      */
-    public function getSiteBaseUri(int $pageUid, int $languageId): string
+    public function getSiteBaseUri(int $pageUid, int $languageId = 0): string
     {
-        return $this->getLanguageByPageUid($pageUid, $languageId)?->getBase()->getPath() ?? '';
+        return $this->getLanguageByPageUid($pageUid, $languageId)?->getBase()->getPath() ?? '/';
+    }
+
+    /**
+     * returns the base language path of the given page uid
+     *
+     * @param int $pageUid
+     * @param int $languageId
+     * @return string
+     * @throws ShortNrSiteFinderException
+     */
+    public function getSiteFullBaseDomain(int $pageUid, int $languageId = 0): string
+    {
+        $base = $this->getLanguageByPageUid($pageUid, $languageId)?->getBase();
+        if (!$base) {
+            return '/';
+        }
+
+        return (string)$base;
     }
 
     /**
@@ -71,6 +94,26 @@ class SiteResolver implements SiteResolverInterface
     }
 
     /**
+     * @param int|Page $page
+     * @param int|SiteLanguage $languageUid
+     * @param array $routeParams
+     * @return UriInterface
+     * @throws InvalidRouteArgumentsException
+     * @throws ShortNrSiteFinderException
+     */
+    public function getUriByPageId(int|Page $page, int|SiteLanguage $languageUid = 0, array $routeParams = []): string
+    {
+        $routeParams['_language'] ??= $languageUid;
+        if ($page instanceof Page) {
+            $pageId = $page->getPageId();
+        } else {
+            $pageId = $page;
+        }
+        $siteRouter = GeneralUtility::makeInstance(PageRouter::class, $this->getSiteByPageUid($pageId));
+        return (string)$siteRouter->generateUri($page, $routeParams);
+    }
+
+    /**
      * get Language on that site where the page is
      *
      * @param int $pageUid
@@ -99,19 +142,23 @@ class SiteResolver implements SiteResolverInterface
             return $this->siteCache[$pageUid];
         }
 
-        // resolve page to rootPage
-        $rootPageId = $this->getRootPageId($pageUid);
+        try {
+            // resolve page to rootPage
+            $rootPageId = $this->getRootPageId($pageUid);
 
-        if ($rootPageId > 0) {
-            try {
-                // load site with root page (very cheap!)
-                return $this->siteCache[$pageUid] ??= $this->siteFinder->getSiteByRootPageId($rootPageId);
-            } catch (Throwable $e) {
-                throw new ShortNrSiteFinderException($e->getMessage(), $e->getCode(), $e);
+            if ($rootPageId > 0) {
+                try {
+                    // load site with root page (very cheap!)
+                    return $this->siteCache[$pageUid] ??= $this->siteFinder->getSiteByRootPageId($rootPageId);
+                } catch (Throwable $e) {
+                    throw new ShortNrSiteFinderException($e->getMessage(), $e->getCode(), $e);
+                }
+            } else {
+                return $this->siteFinder->getSiteByPageId($pageUid);
             }
+        } catch(Throwable $e) {
+            throw new ShortNrSiteFinderException('Could not resolve page uid via PageTree (uid: ' . $pageUid. ')', previous: $e);
         }
-
-        throw new ShortNrSiteFinderException('Could not resolve page uid via PageTree (uid: ' . $pageUid. ')');
     }
 
     /**

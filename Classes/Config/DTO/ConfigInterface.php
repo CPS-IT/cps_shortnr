@@ -2,35 +2,42 @@
 
 namespace CPSIT\ShortNr\Config\DTO;
 
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use BackedEnum;
+use Generator;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 interface ConfigInterface
 {
     /**
+     * [ConfigName => Pattern]
+     *
+     * @return Generator<string, string>
+     */
+    public function getConfigNamePattern(): iterable;
+
+    /**
+     * @param string $name
+     * @return bool true if the name exists, false if the name not exists
+     */
+    public function hasConfigItemName(string $name): bool;
+
+    /**
      * Get all available config names (excluding _default)
      *
-     * @return string[] List of config names like ['pages', 'plugins', 'events']
+     * all configNames will be in a key value list where the key and the value is the same configName
+     *
+     * @return array<string, string> List of config names like ['pages' => 'pages', 'myPlugins' => 'myPlugins', 'events' => 'events']
      */
     public function getConfigNames(): array;
 
     /**
      * Get all available config names (excluding _default)
      *
-     * @return iterable<ConfigItemInterface> List of config items ... name as key
+     * @return Generator<ConfigItemInterface> List of config items ... name as key
      */
     public function getConfigItems(): iterable;
-
-    /**
-     * Group config names by their regex patterns for route matching
-     *
-     * Creates a map where identical regex patterns are grouped together
-     * to avoid duplicate regex processing during URL decoding.
-     *
-     * @return array<string, array> Map of regex pattern to config names
-     *                              e.g., ['/^PAGE(\d+)$/' => ['pages', 'events']]
-     */
-    public function getUniqueRegexConfigNameGroup(): array;
 
     /**
      * Create a scoped config accessor for a specific config item
@@ -42,13 +49,13 @@ interface ConfigInterface
     public function getConfigItem(string $name): ConfigItemInterface;
 
     /**
-     * Create a scoped config accessor for a specific config item based on the Prefix, since Prefixes are UNIQUE
+     * Create a scoped config accessor for a specific config items based on the TableName
      *
-     * @param string $prefix
-     * @return ConfigItemInterface
+     * @param string $tableName
+     * @return array<ConfigItemInterface>
      * @throws ShortNrConfigException
      */
-    public function getConfigItemByPrefix(string $prefix): ConfigItemInterface;
+    public function getConfigItemsByTableName(string $tableName): array;
 
     /**
      * Get a config value with _default fallback (internal use only)
@@ -63,4 +70,23 @@ interface ConfigInterface
      * @internal Use ConfigItem methods instead of calling this directly
      */
     public function getValue(string $name, string|BackedEnum $key): mixed;
+
+    /**
+     * get the compiled Pattern
+     *
+     * @param string $name
+     * @return CompiledPattern
+     * @throws ShortNrCacheException
+     *
+     * @internal Use ConfigItem methods instead of calling this directly
+     */
+    public function getPattern(string $name): CompiledPattern;
+
+    /**
+     * [configItemName => CompiledPattern]
+     *
+     * return all Compiled Patterns
+     * @return Generator<string ,CompiledPattern>
+     */
+    public function getPatterns(): Generator;
 }

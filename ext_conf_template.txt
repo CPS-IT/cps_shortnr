@@ -1,2 +1,0 @@
-# cat=basic/enable/010; type=string; label=Configuration file:Path to configuration yaml file
-configFile = EXT:cps_shortnr/Configuration/config.yaml

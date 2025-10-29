@@ -2,26 +2,15 @@ shortNr:
   _default:
     # support page id or hard-coded URI (detects it via is_numeric)
     notFound: "/"
-    # placeholder are based on the regex match groups {match-1}, {match-2}, {match-3}, ... etc
-    regex: "/^([a-zA-Z]+?)(\\d+)[-]?(\\d+)?$/"
-    prefixMatch: "{match-1}"
-    # hidden notfoundOverwrite type to replace the stock NotfoundProcessor with a custom Processor
-    # notFoundType: customNotFound
-    condition: # database conditions
-      uid: "{match-2}"
-      sys_language_uid: "{match-3}"
     languageParentField: "l10n_parent"  # default TYPO3 field name
     languageField: "sys_language_uid" # needed for language overlay if omitted or empty = no overlay
     identifierField: "uid" # needed for language overlay if omitted or empty = no overlay
 
   pages: # default page
     type: page
-    prefix: PAGE
     table: pages
-    slug: slug
-    condition:
-      uid: "{match-2}"
-      sys_language_uid: "{match-3}"
+    pattern: "PAGE{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
+    condition: # static conditions, dynamic conditions are in the pattern
       is_event:
         contains: "test2"
         not:
@@ -53,3 +42,17 @@ shortNr:
           between: [ 18, 65 ]     # shorthand for >= 18 AND <= 65
       blocked_users:
         not: [ "spam", "bot" ]  # opposite of implicit IN
+
+  myNews1:
+    type: plugin
+    table: tx_news_domain_model_news
+    pattern: "NEWS{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})"
+    condition: # full access to all possible conditions
+      type: 0
+    plugin: # plugin is mandatory for type plugin
+      extension: News
+      plugin: Pi1
+      pid: 123
+      action: detail
+      controller: News
+      objectName: news

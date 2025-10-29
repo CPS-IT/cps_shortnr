@@ -3,41 +3,106 @@
 namespace CPSIT\ShortNr\Domain\Repository;
 
 use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Config\DTO\FieldConditionInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
-use CPSIT\ShortNr\Service\Url\Condition\ConditionService;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\QueryOperatorContext;
-use CPSIT\ShortNr\Service\Url\Condition\Operators\DTO\ResultOperatorContext;
-use Doctrine\DBAL\Exception;
+use CPSIT\ShortNr\Service\Condition\ConditionService;
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\QueryOperatorContext;
+use CPSIT\ShortNr\Service\Condition\Operators\DTO\ResultOperatorContext;
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
 use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Database\Query\Restriction\EndTimeRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\StartTimeRestriction;
 
 class ShortNrRepository
 {
     public function __construct(
         private readonly ConnectionPool $connectionPool,
-        private readonly ConditionService $conditionService,
-        private readonly CacheManager $cacheManager
+        private readonly CacheManager $cacheManager,
+        private readonly ConditionService $conditionService
     )
     {}
 
     /**
      * @param array $fields
      * @param string $tableName
-     * @param array<string, FieldConditionInterface|mixed> $condition
+     * @param array<string, string|int|mixed> $condition
      * @return array return all matching records that are active
      * @throws ShortNrQueryException
      * @throws ShortNrCacheException
      */
     public function resolveTable(array $fields, string $tableName, array $condition): array
     {
+        // normalize Conditions
         $existingValidFields = $this->validateAndPrepareFields($fields, $condition, $tableName);
-        $queryBuilder = $this->buildQuery($existingValidFields, $tableName, $condition);
-        $allResults = $this->executeQuery($queryBuilder, $tableName);
-        return $this->filterResults($allResults, $existingValidFields, $tableName, $condition);
+        if (empty($existingValidFields)) {
+            return [];
+        }
+
+        $qb = $this->getQueryBuilder($tableName);
+        $qb->select(...$existingValidFields);
+        $qb->from($tableName);
+
+        $queryConditions = $this->conditionService->buildQueryCondition(new QueryOperatorContext($qb, $tableName, $condition, $existingValidFields));
+        if (empty($queryConditions)) {
+            throw new ShortNrQueryException('table: ' . $tableName.', must have at least one VALID condition');
+        } else {
+            $qb->where(...$queryConditions);
+        }
+
+        try {
+            return $this->conditionService->postQueryResultFilterCondition(new ResultOperatorContext($qb->executeQuery()->fetchAllAssociative(), $tableName, $condition, $existingValidFields));
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage() . ' | table: ' . $tableName, $e->getCode(), $e);
+        }
+    }
+
+    /**
+     * @param array $missingFields
+     * @param string $uidField
+     * @param string $languageField
+     * @param string $parentField
+     * @param int $uid
+     * @param int $languageUid
+     * @param string $tableName
+     * @return array|null
+     * @throws ShortNrCacheException
+     * @throws ShortNrQueryException
+     */
+    public function loadMissingFields(array $missingFields, string $uidField, string $languageField, string $parentField, int $uid, int $languageUid, string $tableName): ?array
+    {
+        // normalize Conditions
+        $existingValidFields = $this->validateAndPrepareFields([$uidField, $languageField, $parentField ,...$missingFields], [], $tableName);
+        if (empty($existingValidFields)) {
+            return [];
+        }
+
+        $qb = $this->getQueryBuilder($tableName);
+        $qb->select(...$existingValidFields);
+        $qb->from($tableName);
+        $qb->where(
+            $qb->expr()->or(
+                $qb->expr()->eq($uidField, $uidParam = $qb->createNamedParameter($uid, ParameterType::INTEGER)),
+                $qb->expr()->eq($parentField, $uidParam),
+            ),
+            $qb->expr()->in($languageField, $qb->createNamedParameter([$languageUid, -1], ArrayParameterType::INTEGER))
+        );
+
+        try {
+            $result = $qb->executeQuery()->fetchAssociative();
+            if (is_array($result) && !empty($result)) {
+                return $result;
+            }
+
+            return null;
+
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage() . ' | table: ' . $tableName, $e->getCode(), $e);
+        }
     }
 
     /**
@@ -56,22 +121,7 @@ class ShortNrRepository
     ): array {
 
         /* ---------- 1st query: find the base uid ------------------------------ */
-        $qb = $this->getQueryBuilder($table);
-        $qb->select($uidField, $languageParentField)
-            ->from($table)
-            ->where(
-                $qb->expr()->or(
-                    $qb->expr()->eq($uidField,           $uid),
-                    $qb->expr()->eq($languageParentField, $uid)
-                )
-            );
-
-        try {
-            $rows = $qb->executeQuery()->fetchAllAssociative();
-        } catch (Throwable $e) {
-            throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
-        }
-
+        $rows = $this->fetchRowForLanguageUidBase($table, [$uidField, $languageParentField], $uidField, $languageParentField, $uid);
         if (empty($rows)) {
             return [];
         }
@@ -90,22 +140,7 @@ class ShortNrRepository
         }
 
         /* ---------- 2nd query: load all language variants --------------------- */
-        $qb = $this->getQueryBuilder($table);
-        $qb->select($uidField, $languageField)
-            ->from($table)
-            ->where(
-                $qb->expr()->or(
-                    $qb->expr()->eq($uidField,           $baseUid),
-                    $qb->expr()->eq($languageParentField, $baseUid)
-                )
-            );
-
-        try {
-            $result = $qb->executeQuery()->fetchAllAssociative();
-        } catch (Throwable $e) {
-            throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
-        }
-
+        $result = $this->fetchRowForLanguageUidBase($table, [$uidField, $languageField], $uidField, $languageParentField, $baseUid);
         /* ---------- build [sys_language_uid => uid] map ----------------------- */
         $list = [];
         foreach ($result as $row) {
@@ -118,6 +153,34 @@ class ShortNrRepository
     }
 
     /**
+     * @param string $table
+     * @param array $fields
+     * @param string $uidField
+     * @param string $languageParentField
+     * @param int $uid
+     * @return array
+     * @throws ShortNrQueryException
+     */
+    private function fetchRowForLanguageUidBase(string $table, array $fields, string $uidField, string $languageParentField, int $uid): array
+    {
+        $qb = $this->getQueryBuilder($table);
+        $qb->select(...$fields)
+            ->from($table)
+            ->where(
+                $qb->expr()->or(
+                    $qb->expr()->eq($uidField, $uidParam = $qb->createNamedParameter($uid, ParameterType::INTEGER)),
+                    $qb->expr()->eq($languageParentField, $uidParam)
+                )
+            );
+
+        try {
+            return $qb->executeQuery()->fetchAllAssociative();
+        } catch (Throwable $e) {
+            throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
      * @param array $fields
      * @param array $condition
      * @param string $tableName
@@ -127,71 +190,13 @@ class ShortNrRepository
      */
     private function validateAndPrepareFields(array $fields, array $condition, string $tableName): array
     {
+        $fields = array_filter($fields);
         $fields = [...$fields, ...array_keys($condition)];
         $existingValidFields = $this->getValidFields($fields, $tableName);
         if (empty($existingValidFields)) {
             throw new ShortNrQueryException('No Valid Fields Provided');
         }
         return $existingValidFields;
-    }
-
-    /**
-     * @param array $existingValidFields
-     * @param string $tableName
-     * @param array<string, FieldConditionInterface|mixed> $condition
-     * @return QueryBuilder
-     * @throws ShortNrQueryException
-     */
-    private function buildQuery(array $existingValidFields, string $tableName, array $condition): QueryBuilder
-    {
-        $qb = $this->getQueryBuilder($tableName);
-        $qb->select(...$existingValidFields);
-        $qb->from($tableName);
-
-        $queryConditions = $this->conditionService->buildQueryCondition(
-            (new QueryOperatorContext($qb))
-                ->setTableName($tableName)
-                ->setExistingFields($existingValidFields)
-                ->setConfigCondition($condition)
-        );
-        if (empty($queryConditions)) {
-            throw new ShortNrQueryException('DB resolve without Conditions are not supported');
-        }
-
-        $qb->where(...$queryConditions);
-        return $qb;
-    }
-
-    /**
-     * @param QueryBuilder $queryBuilder
-     * @param string $tableName
-     * @return array
-     * @throws ShortNrQueryException
-     */
-    private function executeQuery(QueryBuilder $queryBuilder, string $tableName): array
-    {
-        try {
-            return $queryBuilder->executeQuery()->fetchAllAssociative();
-        } catch (Throwable $e) {
-            throw new ShortNrQueryException($e->getMessage() . ' | table: ' . $tableName, $e->getCode(), $e);
-        }
-    }
-
-    /**
-     * @param array $allResults
-     * @param array $existingValidFields
-     * @param string $tableName
-     * @param array $condition
-     * @return array
-     */
-    private function filterResults(array $allResults, array $existingValidFields, string $tableName, array $condition): array
-    {
-        return $this->conditionService->postQueryResultFilterCondition(
-            (new ResultOperatorContext($allResults))
-                ->setTableName($tableName)
-                ->setExistingFields($existingValidFields)
-                ->setConfigCondition($condition)
-        );
     }
 
     /**
@@ -203,7 +208,7 @@ class ShortNrRepository
      * @return array tree data from table
      * @throws ShortNrQueryException
      */
-    public function getPageTreeData(string $tableName, string $indexField, string $parentPageField, string $languageField, string $languageParentField): array
+    public function getDbTreeData(string $tableName, string $indexField, string $parentPageField, string $languageField, string $languageParentField): array
     {
         $requiredFields = [$indexField, $parentPageField, $languageField, $languageParentField];
         try {
@@ -219,6 +224,11 @@ class ShortNrRepository
         $qb = $this->getQueryBuilder($tableName);
         $qb->select(...$requiredFields);
         $qb->from($tableName);
+        // only respect deleted
+        $qb->getRestrictions()
+            ->removeByType(HiddenRestriction::class)
+            ->removeByType(StartTimeRestriction::class)
+            ->removeByType(EndTimeRestriction::class);
 
         try {
             return $qb->executeQuery()->fetchAllAssociative();
@@ -246,17 +256,28 @@ class ShortNrRepository
      */
     private function getFieldFromTable(string $tableName): array
     {
-        $list = explode(',', $this->cacheManager->getType3CacheValue(
+        $list = $this->cacheManager->getType3CacheValue(
             cacheKey: 'getFieldFromTable_' . $tableName,
-            processBlock: fn(): string => implode(',', array_keys($this->getConnection($tableName)->getSchemaInformation()->introspectTable($tableName)->getColumns())),
-            ttl: 0
-        ) ?? '');
+            processBlock: fn(): array => $this->fetchFieldsFromConnection($tableName),
+            ttl: 0,
+            tags: ['meta', 'database', 'all', 'table', $tableName]
+        ) ?? [];
 
         if (!is_array($list)) {
             return [];
         }
 
         return $list;
+    }
+
+    private function fetchFieldsFromConnection(string $tableName): array
+    {
+        $fieldList = [];
+        foreach ($this->getConnection($tableName)->getSchemaInformation()->listTableColumnNames($tableName) as $column) {
+            $fieldList[] = $column;
+        }
+
+        return $fieldList;
     }
 
     /**

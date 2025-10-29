@@ -13,12 +13,13 @@
         }
     ],
     "require": {
-        "php": "^8.1",
-        "typo3/minimal": "^12.4"
+        "php": "^8.2",
+        "brannow/typed-pattern-engine": "dev-main",
+        "typo3/minimal": "^13.4"
     },
     "require-dev": {
-        "phpunit/phpunit": "*",
-        "typo3/testing-framework": "*"
+        "phpunit/phpunit": "^12.3",
+        "typo3/testing-framework": "^9.2"
     },
     "autoload": {
         "psr-4": {
@@ -26,9 +27,9 @@
         }
     },
     "autoload-dev": {
-        "psr-4": {
-            "CPSIT\\ShortNr\\Tests\\": "Tests/"
-        }
+      "psr-4": {
+        "CPSIT\\ShortNr\\Tests\\": "Tests/"
+      }
     },
     "config": {
         "vendor-dir": ".Build/vendor",

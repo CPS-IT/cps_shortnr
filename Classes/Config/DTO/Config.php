@@ -4,68 +4,67 @@ namespace CPSIT\ShortNr\Config\DTO;
 
 use BackedEnum;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use Generator;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 class Config implements ConfigInterface
 {
-    public const PREFIX_MAP_KEY = '__prefix_map';
-    public const SORTED_REGEX_LIST_KEY = '__sorted_regex_list';
-
-    private readonly array $prefixMap;
-    private readonly array $regexList;
-
     private array $cache = [];
 
     /**
      * @param array $data
-     * @throws ShortNrConfigException
      */
     public function __construct(
         private readonly array $data
     )
-    {
-        // we use the map as indicator to know if the Config is "empty"
-        if (empty($this->data[static::PREFIX_MAP_KEY]) || empty($this->data[static::SORTED_REGEX_LIST_KEY])) {
-            throw new ShortNrConfigException('Malformed Configuration detected (Regex / Prefix maps could not be found)');
-        }
-        $this->prefixMap = $this->data[static::PREFIX_MAP_KEY];
+    {}
 
-        // Use pre-built sorted regex list from ConfigLoader
-        $this->regexList = $this->data[static::SORTED_REGEX_LIST_KEY];
+    /**
+     * [ConfigName => Pattern]
+     *
+     * @return Generator<string, string>
+     * @throws ShortNrConfigException
+     */
+    public function getConfigNamePattern(): Generator
+    {
+        foreach ($this->getConfigItems() as $configItem) {
+            yield $configItem->getName() => $configItem->getPattern();
+        }
     }
 
     /**
-     * @return string[]
+     * @param string $name
+     * @return bool true if the name exists, false if the name not exists
+     */
+    public function hasConfigItemName(string $name): bool
+    {
+        return (bool)($this->getConfigNames()[$name] ?? false);
+    }
+
+    /**
+     * @return array<string, string>
      */
     public function getConfigNames(): array
     {
-        return $this->cache['configNames'] ??= array_values(array_filter(
+        return $this->cache['configNames'] ??= array_combine($names = array_values(array_filter(
             array_keys($this->data[ConfigEnum::ENTRYPOINT->value] ?? []),
             fn($name) : bool => ($name !== ConfigEnum::DEFAULT_CONFIG->value)
-        ));
+        )), $names);
     }
 
     /**
      * Get all available config names (excluding _default)
      *
-     * @return iterable<ConfigItemInterface> List of config items ... name as key
+     * @return Generator<ConfigItemInterface> List of config items ... name as key
      * @throws ShortNrConfigException
      */
-    public function getConfigItems(): iterable
+    public function getConfigItems(): Generator
     {
         foreach ($this->getConfigNames() as $configName) {
             yield $this->getConfigItem($configName);
         }
-    }
-
-    /**
-     * Get pre-built regex list grouped by regex pattern, sorted by priority (high to low)
-     *
-     * @return array<string, array>
-     */
-    public function getUniqueRegexConfigNameGroup(): array
-    {
-        return $this->regexList;
     }
 
     /**
@@ -84,25 +83,31 @@ class Config implements ConfigInterface
     }
 
     /**
-     * return the ConfigItem based on the Prefix, since Prefixes are UNIQUE
-     *
-     * @param string $prefix
-     * @return ConfigItemInterface
+     * @param string $tableName
+     * @return ConfigItemInterface[]
      * @throws ShortNrConfigException
      */
-    public function getConfigItemByPrefix(string $prefix): ConfigItemInterface
+    public function getConfigItemsByTableName(string $tableName): array
     {
-        // the configLoader uses strtolower() to generate the map, (case-insensitive)
-        $configName = $this->prefixMap[strtolower($prefix)] ?? null;
-        if ($configName === null) {
-            throw new ShortNrConfigException('Prefix \''. $prefix .'\' does not exist in PrefixMap does not exist, available prefixes are: '. implode(', ', array_keys($this->prefixMap)));
+        if (!isset($this->cache['tableNameList'])) {
+            $this->cache['tableNameList'] = $this->getConfigItemsByTableNameList();
         }
 
-        try {
-            return $this->getConfigItem($configName);
-        } catch (ShortNrConfigException $e) {
-            throw new ShortNrConfigException(sprintf('Prefix %s that is defined in PrefixMap and resolves to Name %s did not exists', $prefix, $configName), $e->getCode(), $e);
+        return $this->cache['tableNameList'][$tableName] ?? [];
+    }
+
+    /**
+     * @return array<string, ConfigItemInterface[]>
+     * @throws ShortNrConfigException
+     */
+    private function getConfigItemsByTableNameList(): array
+    {
+        $tableList = [];
+        foreach ($this->getConfigItems() as $configItem) {
+            $tableList[$configItem->getTableName()][] = $configItem;
         }
+
+        return $tableList;
     }
 
     // Core route properties
@@ -124,5 +129,25 @@ class Config implements ConfigInterface
         $defaultValue = ConfigEnum::DEFAULT_CONFIG->value;
 
         return $this->data[$entryPoint][$name][$key] ?? $this->data[$entryPoint][$defaultValue][$key] ?? null;
+    }
+
+    /**
+     * @param string $name
+     * @return CompiledPattern
+     * @throws ShortNrCacheException
+     *
+     * @internal
+     */
+    public function getPattern(string $name): CompiledPattern
+    {
+        return $this->data[ConfigEnum::Compiled->value][$name] ?? throw new ShortNrCacheException('No Compiled Pattern Found for name: ' . $name);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getPatterns(): Generator
+    {
+        yield from $this->data[ConfigEnum::Compiled->value];
     }
 }

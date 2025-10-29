@@ -41,7 +41,8 @@ class Typo3PageTreeResolver implements PageTreeResolverInterface
         $serializedPageTree = $this->cacheManager->getType3CacheValue(
             cacheKey: 'page_tree',
             processBlock: fn(): string => serialize($this->generatePageTree()),
-            ttl: 3600
+            ttl: 3600,
+            tags: ['meta', 'database', 'all', 'tree', 'pages']
         );
 
         if (is_string($serializedPageTree) && !empty($serializedPageTree)) {
@@ -82,7 +83,7 @@ class Typo3PageTreeResolver implements PageTreeResolverInterface
      */
     private function getRawPageData(): array
     {
-        return $this->shortNrRepository->getPageTreeData(
+        return $this->shortNrRepository->getDbTreeData(
             tableName: self::$pagesDB,
             indexField: self::$identifierField,
             parentPageField: self::$parentField,

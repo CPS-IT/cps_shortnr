@@ -2,14 +2,17 @@
 
 namespace CPSIT\ShortNr\ViewHelpers;
 
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrViewHelperException;
 use CPSIT\ShortNr\Service\EncoderService;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
-use CPSIT\ShortNr\Service\Url\Demand\ConfigNameEncoderDemand;
-use CPSIT\ShortNr\Service\Url\Demand\EncoderDemandInterface;
-use CPSIT\ShortNr\Service\Url\Demand\EnvironmentEncoderDemand;
-use CPSIT\ShortNr\Service\Url\Demand\ObjectEncoderDemand;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\ConfigNameEncoderDemand;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\EnvironmentEncoderDemand;
+use CPSIT\ShortNr\Service\Url\Demand\Encode\ObjectEncoderDemand;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Http\Uri;
 use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Fluid\Core\Rendering\RenderingContext;
 use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
@@ -63,6 +66,8 @@ final class ShortUrlViewHelper extends AbstractViewHelper
     /**
      * @return string
      * @throws ShortNrViewHelperException
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
      */
     public function render(): string
     {
@@ -71,7 +76,12 @@ final class ShortUrlViewHelper extends AbstractViewHelper
             return $this->parseChildren(['uri' => null]);
         }
 
-        return $this->parseChildren(['uri' => $this->encoderService->encode($demand)]);
+        $uri = $this->encoderService->encode($demand);
+        $uriObj = null;
+        if ($uri !== null) {
+            $uriObj = Uri::fromAnyScheme($uri);
+        }
+        return $this->parseChildren(['uri' => $uriObj]);
     }
 
     /**
@@ -91,7 +101,7 @@ final class ShortUrlViewHelper extends AbstractViewHelper
         } else {
             $demand = new EnvironmentEncoderDemand(
                 $request->getQueryParams(),
-                $request->getAttribute('frontend.controller')?->page ?? [],
+                $request->getAttribute('frontend.page.information')?->getPageRecord() ?? [],
                 $request->getAttribute('routing'),
                 $request->getAttribute('extbase')
             );
@@ -105,21 +115,25 @@ final class ShortUrlViewHelper extends AbstractViewHelper
 
     /**
      * @param ServerRequestInterface $request
-     * @param int|string|null $requestedLanguageUid
+     * @param int|string|SiteLanguage|null $requestedLanguageUid
      * @return int
      * @throws ShortNrViewHelperException
      */
-    private function getLanguageUid(ServerRequestInterface $request, null|int|string $requestedLanguageUid): int
+    private function getLanguageUid(ServerRequestInterface $request, null|int|string|SiteLanguage $requestedLanguageUid): int
     {
-        if ($requestedLanguageUid === null || $requestedLanguageUid === '') {
+        if ($requestedLanguageUid instanceof SiteLanguage) {
+            return $requestedLanguageUid->getLanguageId();
+        }
+
+        if ($requestedLanguageUid === null || $requestedLanguageUid === '' ) {
             if (($languageUid = ($request->getAttribute('language')?->getLanguageId() ?? null)) !== null) {
                 return $languageUid;
             }
-        } else {
-            $languages = $this->siteResolver->getLanguagesByRequest($request);
-            if (isset($languages[$requestedLanguageUid]) && $languages[$requestedLanguageUid] instanceof SiteLanguage) {
-                return $languages[$requestedLanguageUid]->getLanguageId();
-            }
+        }
+
+        $languages = $this->siteResolver->getLanguagesByRequest($request);
+        if (isset($languages[$requestedLanguageUid]) && $languages[$requestedLanguageUid] instanceof SiteLanguage) {
+            return $languages[$requestedLanguageUid]->getLanguageId();
         }
 
         throw new ShortNrViewHelperException('Could not determine current language ID from Request');

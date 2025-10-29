@@ -2,21 +2,10 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 interface DemandInterface
 {
-    /**
-     * @return ?ConfigItemInterface
-     */
-    public function getConfigItem(): ?ConfigItemInterface;
-
-    /**
-     * @param ConfigItemInterface $configItem
-     */
-    public function setConfigItem(ConfigItemInterface $configItem): void;
-
     /**
      * @return ServerRequestInterface|null
      */
@@ -27,4 +16,16 @@ interface DemandInterface
      * @return Demand
      */
     public function setRequest(?ServerRequestInterface $request): static;
+
+    /**
+     * @return bool
+     */
+    public function noCache(): bool;
+
+    public function setNoCache(bool $noCache): static;
+
+    /**
+     * @return string|null
+     */
+    public function getCacheKey(): ?string;
 }

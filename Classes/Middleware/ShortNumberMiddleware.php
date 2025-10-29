@@ -5,7 +5,7 @@ namespace CPSIT\ShortNr\Middleware;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Service\DecoderService;
-use CPSIT\ShortNr\Service\Url\Demand\DecoderDemandInterface;
+use CPSIT\ShortNr\Service\Url\Demand\Decode\DecoderDemandInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -31,10 +31,12 @@ class ShortNumberMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         // this verifies if the request is a valid shortNr request
-        if (($demand = $this->decoderService->getDecoderDemandFromRequest($request)) instanceof DecoderDemandInterface) {
+        // we only support GET method currently to reduce extra load
+        if ($request->getMethod() === 'GET' && ($demand = $this->decoderService->getDecoderDemandFromRequest($request)) instanceof DecoderDemandInterface) {
             // process and return redirect result to real url (move permanent)
             $realUri = $this->decoderService->decode($demand);
             if ($realUri !== null) {
+
                 return new RedirectResponse($realUri, 301, [
                     'Cache-Control' => 'no-cache, no-store, must-revalidate',
                     'X-Robots-Tag' => 'noindex, nofollow'

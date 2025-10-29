@@ -23,6 +23,12 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     public function __serialize(): array
     {
         return [
+            'c' => [
+                'p' => $this->primaryKey,
+                'r' => $this->relationKey,
+                'l' => $this->languageKey,
+                'lr' => $this->languageRelationKey
+            ],
             'r' => $this->rootItems,
             'l' => $this->list,
         ];
@@ -32,6 +38,10 @@ class TreeProcessorResult implements TreeProcessorGeneratorInterface
     {
         $this->rootItems = $data['r'];
         $this->list = $data['l'];
+        $this->primaryKey = $data['c']['p'];
+        $this->relationKey = $data['c']['r'];
+        $this->languageKey = $data['c']['l'];
+        $this->languageRelationKey = $data['c']['lr'];
     }
 
     /**

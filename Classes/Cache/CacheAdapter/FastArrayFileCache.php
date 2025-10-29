@@ -7,7 +7,6 @@ use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use Symfony\Component\Filesystem\Path;
 use Throwable;
-use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Core\Environment;
 
 class FastArrayFileCache
@@ -15,8 +14,6 @@ class FastArrayFileCache
     private array $runtimeCache = [];
 
     private const FILE_NAME = 'config%s.php';
-
-    private readonly ?FrontendInterface $cache;
 
     public function __construct(
         private readonly FileSystemInterface $fileSystem
@@ -77,6 +74,7 @@ class FastArrayFileCache
 
         try {
             $this->fileSystem->file_put_contents($tempFile, $phpCode, LOCK_EX);
+            $this->fileSystem->chmod($tempFile, 0664);
             $this->fileSystem->rename($tempFile, $cacheFile);
         } catch (Throwable $e) {
             $this->fileSystem->unlink($tempFile);
@@ -159,8 +157,15 @@ class FastArrayFileCache
     public function getFileModificationTime(string $suffix): ?int
     {
         $suffix = $this->sanitizeSuffix($suffix);
-        $mtime = $this->fileSystem->filemtime($this->getArrayCacheFilePath($suffix));
-        if($mtime === false){
+        $file = $this->getArrayCacheFilePath($suffix);
+
+        if (!$this->fileSystem->file_exists($file)) {
+            return null;
+        }
+
+        $mtime = $this->fileSystem->filemtime($file);
+        // Treat corrupt files (invalid mtime) same as missing files
+        if ($mtime === false || $mtime <= 0) {
             return null;
         }
 
@@ -196,7 +201,7 @@ class FastArrayFileCache
     private function createDirIfNotExists(string $dirPath): bool
     {
         if (!$this->fileSystem->file_exists($dirPath)) {
-            return $this->fileSystem->mkdir($dirPath, 0755, true);
+            return $this->fileSystem->mkdir($dirPath, 0775, true);
         }
 
         return true;

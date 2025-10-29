@@ -3,13 +3,12 @@
 namespace CPSIT\ShortNr\Config\DTO;
 
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
-use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use BackedEnum;
+use TypedPatternEngine\Compiler\CompiledPattern;
 
 class ConfigItem implements ConfigItemInterface
 {
-    private array $cache = [];
-
     /**
      * Create a scoped config accessor for a specific config item
      *
@@ -32,22 +31,6 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getPrefixMatch(): string
-    {
-        return $this->config->getValue($this->name, ConfigEnum::PrefixMatch);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getPriority(): int
-    {
-        return (int)$this->config->getValue($this->name, ConfigEnum::Priority);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
     public function getName(): string
     {
         return $this->name;
@@ -62,19 +45,23 @@ class ConfigItem implements ConfigItemInterface
     }
 
     /**
-     * {@inheritDoc}
+     * @return string|null
+     * @throws ShortNrCacheException
      */
     public function getRegex(): ?string
     {
-        return $this->config->getValue($this->name, ConfigEnum::Regex);
+        return $this->getPattern()->getRegex();
     }
 
     /**
-     * {@inheritDoc}
+     * AST DSL Pattern
+     *
+     * @return CompiledPattern
+     * @throws ShortNrCacheException
      */
-    public function getPrefix(): ?string
+    public function getPattern(): CompiledPattern
     {
-        return $this->config->getValue($this->name, ConfigEnum::Prefix);
+        return $this->config->getPattern($this->name);
     }
 
     /**
@@ -96,31 +83,9 @@ class ConfigItem implements ConfigItemInterface
     /**
      * {@inheritDoc}
      */
-    public function getCondition(): array
+    public function getPluginConfig(): ?array
     {
-        return $this->cache['conditions'] ??= $this->generateFieldConditions($this->config->getValue($this->name, ConfigEnum::Condition) ?? []);
-    }
-
-    /**
-     * @param array $conditions
-     * @return array<string, FieldConditionInterface> [FieldName => Condition]
-     */
-    private function generateFieldConditions(array $conditions): array
-    {
-        $list = [];
-        foreach ($conditions as $fieldName => $condition) {
-            $list[$fieldName] = new FieldCondition($fieldName, $condition);
-        }
-
-        return $list;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function getPluginConfig(): array
-    {
-        throw new ShortNrConfigException('Plugin configuration not yet implemented');
+        return $this->config->getValue($this->name, ConfigEnum::Plugin);
     }
 
     /**
@@ -128,7 +93,12 @@ class ConfigItem implements ConfigItemInterface
      */
     public function getNotFound(): ?string
     {
-        return $this->config->getValue($this->name, ConfigEnum::NotFound);
+        $notFound = $this->config->getValue($this->name, ConfigEnum::NotFound);
+        if ($notFound !== null) {
+            return (string)$notFound;
+        }
+
+        return null;
     }
 
     /**
@@ -161,5 +131,13 @@ class ConfigItem implements ConfigItemInterface
     public function canLanguageOverlay(): bool
     {
         return !empty($this->getRecordIdentifier()) && !empty($this->getLanguageField());
+    }
+
+    /**
+     * @return array
+     */
+    public function getCondition(): array
+    {
+        return $this->config->getValue($this->name, ConfigEnum::Condition) ?? [];
     }
 }

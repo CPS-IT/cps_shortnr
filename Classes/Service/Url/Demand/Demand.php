@@ -2,13 +2,13 @@
 
 namespace CPSIT\ShortNr\Service\Url\Demand;
 
-use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 abstract class Demand implements DemandInterface
 {
+    private bool $noCache = false;
+
     protected ?ServerRequestInterface $request = null;
-    protected ?ConfigItemInterface $configItem = null;
     /**
      * Extract and normalize the ShortNr segment from any URI
      *
@@ -33,22 +33,6 @@ abstract class Demand implements DemandInterface
     }
 
     /**
-     * @return ?ConfigItemInterface
-     */
-    public function getConfigItem(): ?ConfigItemInterface
-    {
-        return $this->configItem;
-    }
-
-    /**
-     * @param ConfigItemInterface $configItem
-     */
-    public function setConfigItem(ConfigItemInterface $configItem): void
-    {
-        $this->configItem = $configItem;
-    }
-
-    /**
      * @return ServerRequestInterface|null
      */
     public function getRequest(): ?ServerRequestInterface
@@ -65,5 +49,17 @@ abstract class Demand implements DemandInterface
         $this->request = $request;
 
         return $this;
+    }
+
+    public function setNoCache(bool $noCache): static
+    {
+        $this->noCache = $noCache;
+
+        return $this;
+    }
+
+    public function noCache(): bool
+    {
+        return $this->noCache;
     }
 }

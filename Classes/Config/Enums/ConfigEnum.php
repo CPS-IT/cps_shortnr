@@ -8,22 +8,24 @@ enum ConfigEnum: string
     case ENTRYPOINT = 'shortNr';
     case DEFAULT_CONFIG = '_default';
     case Type = 'type';
-    case Priority = 'priority';
 
     // not found handling
     case NotFound = 'notFound';
     case NotFoundType = 'notFoundType';
 
-    // regex
-    case Regex = 'regex';
-    case Prefix = 'prefix';
-    case PrefixMatch = 'prefixMatch';
+    // Pattern
+    case Pattern = 'pattern';
+    case Compiled = '__compiled';
+    case Decompiled = '__decompiled';
 
     // database fields
     case Table = 'table';
 
     // condition
     case Condition = 'condition';
+
+    // plugin
+    case Plugin = 'plugin';
 
     // language handling
     case LanguageParentField = 'languageParentField';

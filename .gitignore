@@ -2,3 +2,7 @@
 /Tests/.phpunit_result/
 .idea
 .DS_Store
+composer.lock
+/typo3temp/
+/var/
+/.phpunit.result.cache
