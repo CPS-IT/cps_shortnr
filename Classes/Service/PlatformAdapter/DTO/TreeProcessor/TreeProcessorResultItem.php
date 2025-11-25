@@ -249,6 +249,6 @@ class TreeProcessorResultItem implements TreeProcessorResultItemInterface
      */
     private function flattenLanguageReferences(): array
     {
-        return $this->languageBase?->flattenLanguageReferences() ?? array_map('reset', $this->languageReference);
+        return $this->languageBase?->flattenLanguageReferences() ?? array_map(fn($arr) => reset($arr), $this->languageReference);
     }
 }
