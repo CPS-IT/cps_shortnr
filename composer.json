@@ -14,7 +14,7 @@
     ],
     "require": {
         "php": "^8.2",
-        "brannow/typed-pattern-engine": "dev-main",
+        "brannow/typed-pattern-engine": "^0.4",
         "typo3/minimal": "^13.4"
     },
     "require-dev": {
