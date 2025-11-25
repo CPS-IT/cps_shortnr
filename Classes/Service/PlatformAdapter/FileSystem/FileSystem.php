@@ -116,6 +116,9 @@ class FileSystem implements FileSystemInterface
      */
     public function mkdir(string $directory, int $permissions = 0777, bool $recursive = false, mixed $context = null): bool
     {
+        if ($this->file_exists($directory)) {
+            return true;
+        }
         return mkdir($directory, $permissions, $recursive, $context);
     }
 
