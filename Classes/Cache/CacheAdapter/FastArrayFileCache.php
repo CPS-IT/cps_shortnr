@@ -200,11 +200,11 @@ class FastArrayFileCache
      */
     private function createDirIfNotExists(string $dirPath): bool
     {
-        if (!$this->fileSystem->file_exists($dirPath)) {
-            return $this->fileSystem->mkdir($dirPath, 0775, true);
+        if ($this->fileSystem->file_exists($dirPath)) {
+            return true;
         }
 
-        return true;
+        return @$this->fileSystem->mkdir($dirPath, 0775, true) || $this->fileSystem->file_exists($dirPath);
     }
 
     /**
