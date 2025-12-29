@@ -1,4 +1,5 @@
 <?php
+
 namespace CPSIT\CpsShortnr\Tests\Functional\Controller;
 
 /***************************************************************
@@ -66,7 +67,7 @@ class PageNotFoundControllerTest extends AbstractShortnrTestCase
     public function resolvePathRedirectsToExpectedPath($currentUrl, $expectedPath): void
     {
         $subject = $this->getMock(PageNotFoundController::class, ['shutdown']);
-        $subject->expects($this->once())->method('shutdown')->with($expectedPath);
+        $subject->expects(self::once())->method('shutdown')->with($expectedPath);
 
         $subject->resolvePath([
             'currentUrl' => $currentUrl,
@@ -87,7 +88,7 @@ class PageNotFoundControllerTest extends AbstractShortnrTestCase
                 0,
             ]
         );
-        $frontendController->expects($this->once())->method('pageNotFoundHandler')->with('', '', 'No record for "42" found');
+        $frontendController->expects(self::once())->method('pageNotFoundHandler')->with('', '', 'No record for "42" found');
         $GLOBALS['TSFE'] = $frontendController;
 
         $subject = new PageNotFoundController();

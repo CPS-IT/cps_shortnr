@@ -1,4 +1,5 @@
 <?php
+
 namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
@@ -31,10 +32,6 @@ use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 
 class Shortlink
 {
-    /**
-     * @param string $content
-     * @return string
-     */
     public function create(string $content, array $configuration): string
     {
         if (empty($configuration['record']) && empty($configuration['record.'])) {
@@ -47,10 +44,10 @@ class Shortlink
 
         $extensionConfiguration = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('cps_shortnr');
 
-        if (!str_starts_with((string) $extensionConfiguration['configFile'], 'FILE:')) {
+        if (!str_starts_with((string)$extensionConfiguration['configFile'], 'FILE:')) {
             $configurationFile = Environment::getPublicPath() . '/' . $extensionConfiguration['configFile'];
         } else {
-            $configurationFile = GeneralUtility::getFileAbsFileName(substr((string) $extensionConfiguration['configFile'], 5));
+            $configurationFile = GeneralUtility::getFileAbsFileName(substr((string)$extensionConfiguration['configFile'], 5));
         }
         $encoder = Encoder::createFromConfigurationFile($configurationFile);
 

@@ -1,4 +1,5 @@
 <?php
+
 namespace CPSIT\CpsShortnr\Tests\Functional\Shortlink;
 
 /***************************************************************
@@ -100,6 +101,6 @@ class ShortlinkTest extends AbstractShortnrTestCase
 
         $subject = new Shortlink();
 
-        $this->assertEquals($expectedShortlink, $subject->create('', $configuration));
+        self::assertEquals($expectedShortlink, $subject->create('', $configuration));
     }
 }

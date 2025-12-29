@@ -10,15 +10,14 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
-use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
+use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
 use TYPO3\CMS\Frontend\Controller\ErrorController;
 use TYPO3\CMS\Frontend\Controller\TypoScriptFrontendController;
-use TYPO3\CMS\Core\Http\RedirectResponse;
 
 class ShortUrlMiddleware implements MiddlewareInterface
 {
@@ -26,14 +25,13 @@ class ShortUrlMiddleware implements MiddlewareInterface
      * @var array
      */
     private array $configuration = [];
-    public function __construct(private readonly \TYPO3\CMS\Core\Context\Context $context)
-    {
-    }
+
+    public function __construct(private readonly \TYPO3\CMS\Core\Context\Context $context) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $this->configuration = $this->getExtConfig();
-        if(!preg_match($this->configuration['runWizardRegExp'], rtrim($request->getUri()->getPath(), '/'))) {
+        if (!preg_match($this->configuration['runWizardRegExp'], rtrim($request->getUri()->getPath(), '/'))) {
             return $handler->handle($request);
         }
 
@@ -42,20 +40,27 @@ class ShortUrlMiddleware implements MiddlewareInterface
         $type = $request->getQueryParams()['type'] ?? $request->getParsedBody()['type'] ?? '0';
         $url = $request->getUri()->getPath();
 
-        if (!str_starts_with((string) $this->configuration['configFile'], 'FILE:')) {
+        if (!str_starts_with((string)$this->configuration['configFile'], 'FILE:')) {
             $configurationFile = Environment::getPublicPath() . '/' . $this->configuration['configFile'];
         } else {
-            $configurationFile = GeneralUtility::getFileAbsFileName(substr((string) $this->configuration['configFile'], 5));
+            $configurationFile = GeneralUtility::getFileAbsFileName(substr(
+                (string)$this->configuration['configFile'],
+                5
+            ));
         }
         $language = $request->getAttribute('language');
-        $shortlinkDecoder = Decoder::createFromConfigurationFile($configurationFile, $url, $this->configuration['regExp']);
+        $shortlinkDecoder = Decoder::createFromConfigurationFile(
+            $configurationFile,
+            $url,
+            $this->configuration['regExp']
+        );
 
         $pageArguments = $request->getAttribute('routing');
         if (!$pageArguments instanceof PageArguments) {
             $pageArguments = new PageArguments((int)$id, (string)$type, []);
         }
 
-        $tsfe = GeneralUtility::makeInstance(
+        $GLOBALS['TSFE'] = GeneralUtility::makeInstance(
             TypoScriptFrontendController::class,
             $this->context,
             $site,
@@ -64,28 +69,27 @@ class ShortUrlMiddleware implements MiddlewareInterface
             GeneralUtility::makeInstance(FrontendUserAuthentication::class)
         );
         // Write register
-        array_push($GLOBALS['TSFE']->registerStack, $tsfe->register);
+        array_push($GLOBALS['TSFE']->registerStack, $GLOBALS['TSFE']->register);
         $shortlinkParts = $shortlinkDecoder->getShortlinkParts();
 
         if ($shortlinkParts) {
             foreach ($shortlinkParts as $key => $value) {
-                $tsfe->register['tx_cpsshortnr_match_' . $key] = $value;
+                $GLOBALS['TSFE']->register['tx_cpsshortnr_match_' . $key] = $value;
             }
             try {
                 $recordInformation = $shortlinkDecoder->getRecordInformation();
             } catch (\RuntimeException) {
             }
 
-            if(empty($recordInformation) || $recordInformation['record']['hidden'] === 1 || $recordInformation['record']['deleted'] === 1 ) {
+            if (empty($recordInformation) || $recordInformation['record']['hidden'] === 1 || $recordInformation['record']['deleted'] === 1) {
                 /** @var ErrorController $errorController */
                 $errorController = GeneralUtility::makeInstance(ErrorController::class);
                 return $errorController->pageNotFoundAction($request, 'Object not found');
             }
 
-            $tsfe->id = $recordInformation['table'] === 'pages' ? $recordInformation['record']['uid']
+            $GLOBALS['TSFE']->id = $recordInformation['table'] === 'pages' ? $recordInformation['record']['uid']
                 : $recordInformation['record']['pid'];
-            $tsfe->sys_page = GeneralUtility::makeInstance(PageRepository::class, $this->context);
-            $GLOBALS['TSFE'] = $tsfe;
+            $GLOBALS['TSFE']->sys_page = GeneralUtility::makeInstance(PageRepository::class, $this->context);
             $path = $shortlinkDecoder->getPath($request);
             return new RedirectResponse($path, 301);
         }
@@ -93,9 +97,6 @@ class ShortUrlMiddleware implements MiddlewareInterface
         return $handler->handle($request);
     }
 
-    /**
-     * @return mixed
-     */
     protected function getExtConfig(): mixed
     {
         return GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('cps_shortnr');

@@ -1,4 +1,5 @@
 <?php
+
 namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
@@ -26,12 +27,11 @@ namespace CPSIT\CpsShortnr\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Context\Context;
-use TYPO3\CMS\Core\TypoScript\TypoScriptStringFactory;
+use TYPO3\CMS\Core\Log\LogLevel;
 use TYPO3\CMS\Core\Log\LogManager;
+use TYPO3\CMS\Core\TypoScript\TypoScriptStringFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Core\Log\LogLevel;
 
 class Decoder
 {
@@ -45,17 +45,11 @@ class Decoder
      */
     private $recordInformation;
 
-    /**
-     * @param string $shortlink
-     * @param string $pattern
-     */
     public function __construct(
         private array $configuration,
-        private string $shortlink,
-        private string $pattern
-    )
-    {
-    }
+        private readonly string $shortlink,
+        private readonly string $pattern
+    ) {}
 
     /**
      * @param string $configurationFile
@@ -81,7 +75,6 @@ class Decoder
                 $file
             )
             ->toArray();
-
 
         if (!isset($typoScriptArray['cps_shortnr.'])) {
             throw new \RuntimeException('No "cps_shortnr" configuration found', 1490608923);
@@ -169,11 +162,9 @@ class Decoder
             $this->getRecordInformation();
         }
 
-
         $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
         $contentObjectRenderer->setRequest($request);
         $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table']);
-
 
         return $contentObjectRenderer->stdWrap('', $this->configuration[$this->decodeIdentifier . '.']['path.']);
     }
@@ -186,7 +177,7 @@ class Decoder
         }
 
         if (empty($this->configuration['decoder.'])) {
-            $this->decodeIdentifier = strtolower((string) $this->configuration['decoder']);
+            $this->decodeIdentifier = strtolower((string)$this->configuration['decoder']);
         } else {
             $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
             $this->decodeIdentifier = strtolower($contentObjectRenderer->stdWrap(

@@ -27,21 +27,16 @@ namespace CPSIT\CpsShortnr\Service;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 use TYPO3\CMS\Core\TypoScript\TypoScriptStringFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
-use TYPO3\CMS\Core\Domain\Repository\PageRepository;
-
 
 class Encoder
 {
-    public function __construct(private array $configuration, private array $encodeFormat)
-    {
-    }
+    public function __construct(private readonly array $configuration, private readonly array $encodeFormat) {}
 
     /**
-     * @param string $configurationFile
-     * @return Encoder
      * @throws \RuntimeException
      */
     public static function createFromConfigurationFile(string $configurationFile): Encoder
@@ -75,7 +70,7 @@ class Encoder
                 continue;
             }
 
-            $key = trim((string) $key, '.');
+            $key = trim((string)$key, '.');
 
             $configuration[$key] = [
                 'table' => $value['source.']['table'],
@@ -89,11 +84,6 @@ class Encoder
         return new self($configuration, $typoScriptArray['cps_shortnr.']['encoder.']);
     }
 
-    /**
-     * @param int $recordUid
-     * @param string $table
-     * @return string
-     */
     public function getShortlink(int $recordUid, string $table): string
     {
         $record = BackendUtility::getRecordWSOL($table, $recordUid);
@@ -137,10 +127,6 @@ class Encoder
         return $contentObjectRenderer->stdWrap('', $this->encodeFormat);
     }
 
-    /**
-     * @param string $table
-     * @return string
-     */
     private function findIdentifier(string $table, array $record): string
     {
         $availableIdentifier = array_filter($this->configuration, fn($configuration) => $configuration['table'] === $table);
