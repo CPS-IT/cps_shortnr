@@ -91,11 +91,10 @@ class ShortlinkTest extends AbstractShortnrTestCase
     /**
      * @test
      * @dataProvider createReturnsShortlinkForRecordDataProvider
-     * @param array $configuration
      * @param int $language
      * @param string $expectedShortlink
      */
-    public function createReturnsShortlinkForRecord(array $configuration, $language, $expectedShortlink)
+    public function createReturnsShortlinkForRecord(array $configuration, $language, $expectedShortlink): void
     {
         $GLOBALS['TSFE']->sys_language_uid = $language;
 

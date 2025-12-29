@@ -48,6 +48,7 @@ abstract class AbstractShortnrTestCase extends FunctionalTestCase
         'typo3conf/ext/news',
     ];
 
+    #[\Override]
     protected function setUp()
     {
         parent::setUp();

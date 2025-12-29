@@ -33,10 +33,9 @@ class Shortlink
 {
     /**
      * @param string $content
-     * @param array $configuration
      * @return string
      */
-    public function create($content, array $configuration)
+    public function create(string $content, array $configuration): string
     {
         if (empty($configuration['record']) && empty($configuration['record.'])) {
             throw new \RuntimeException('No record defined', 1490653681);
@@ -48,10 +47,10 @@ class Shortlink
 
         $extensionConfiguration = GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('cps_shortnr');
 
-        if (!str_starts_with($extensionConfiguration['configFile'], 'FILE:')) {
+        if (!str_starts_with((string) $extensionConfiguration['configFile'], 'FILE:')) {
             $configurationFile = Environment::getPublicPath() . '/' . $extensionConfiguration['configFile'];
         } else {
-            $configurationFile = GeneralUtility::getFileAbsFileName(substr($extensionConfiguration['configFile'], 5));
+            $configurationFile = GeneralUtility::getFileAbsFileName(substr((string) $extensionConfiguration['configFile'], 5));
         }
         $encoder = Encoder::createFromConfigurationFile($configurationFile);
 
@@ -60,7 +59,7 @@ class Shortlink
         } else {
             $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
             $recordUid = (int)$contentObjectRenderer->stdWrap(
-                isset($configuration['record']) ? $configuration['record'] : '',
+                $configuration['record'] ?? '',
                 $configuration['record.']
             );
         }

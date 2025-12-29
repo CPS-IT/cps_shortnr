@@ -26,6 +26,9 @@ class ShortUrlMiddleware implements MiddlewareInterface
      * @var array
      */
     private array $configuration = [];
+    public function __construct(private readonly \TYPO3\CMS\Core\Context\Context $context)
+    {
+    }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
@@ -39,10 +42,10 @@ class ShortUrlMiddleware implements MiddlewareInterface
         $type = $request->getQueryParams()['type'] ?? $request->getParsedBody()['type'] ?? '0';
         $url = $request->getUri()->getPath();
 
-        if (!str_starts_with($this->configuration['configFile'], 'FILE:')) {
+        if (!str_starts_with((string) $this->configuration['configFile'], 'FILE:')) {
             $configurationFile = Environment::getPublicPath() . '/' . $this->configuration['configFile'];
         } else {
-            $configurationFile = GeneralUtility::getFileAbsFileName(substr($this->configuration['configFile'], 5));
+            $configurationFile = GeneralUtility::getFileAbsFileName(substr((string) $this->configuration['configFile'], 5));
         }
         $language = $request->getAttribute('language');
         $shortlinkDecoder = Decoder::createFromConfigurationFile($configurationFile, $url, $this->configuration['regExp']);
@@ -52,26 +55,25 @@ class ShortUrlMiddleware implements MiddlewareInterface
             $pageArguments = new PageArguments((int)$id, (string)$type, []);
         }
 
-        $GLOBALS['TSFE'] = GeneralUtility::makeInstance(
+        $tsfe = GeneralUtility::makeInstance(
             TypoScriptFrontendController::class,
-            GeneralUtility::makeInstance(Context::class),
+            $this->context,
             $site,
             $language,
             $pageArguments,
             GeneralUtility::makeInstance(FrontendUserAuthentication::class)
         );
         // Write register
-        array_push($GLOBALS['TSFE']->registerStack, $GLOBALS['TSFE']->register);
+        array_push($GLOBALS['TSFE']->registerStack, $tsfe->register);
         $shortlinkParts = $shortlinkDecoder->getShortlinkParts();
-
 
         if ($shortlinkParts) {
             foreach ($shortlinkParts as $key => $value) {
-                $GLOBALS['TSFE']->register['tx_cpsshortnr_match_' . $key] = $value;
+                $tsfe->register['tx_cpsshortnr_match_' . $key] = $value;
             }
             try {
                 $recordInformation = $shortlinkDecoder->getRecordInformation();
-            } catch (\RuntimeException $exception) {
+            } catch (\RuntimeException) {
             }
 
             if(empty($recordInformation) || $recordInformation['record']['hidden'] === 1 || $recordInformation['record']['deleted'] === 1 ) {
@@ -80,11 +82,10 @@ class ShortUrlMiddleware implements MiddlewareInterface
                 return $errorController->pageNotFoundAction($request, 'Object not found');
             }
 
-
-            $GLOBALS['TSFE']->id = $recordInformation['table'] === 'pages' ? $recordInformation['record']['uid']
+            $tsfe->id = $recordInformation['table'] === 'pages' ? $recordInformation['record']['uid']
                 : $recordInformation['record']['pid'];
-            $context  =  GeneralUtility::makeInstance(Context::class);
-            $GLOBALS['TSFE']->sys_page = GeneralUtility::makeInstance(PageRepository::class, $context);
+            $tsfe->sys_page = GeneralUtility::makeInstance(PageRepository::class, $this->context);
+            $GLOBALS['TSFE'] = $tsfe;
             $path = $shortlinkDecoder->getPath($request);
             return new RedirectResponse($path, 301);
         }
@@ -95,7 +96,7 @@ class ShortUrlMiddleware implements MiddlewareInterface
     /**
      * @return mixed
      */
-    protected function getExtConfig()
+    protected function getExtConfig(): mixed
     {
         return GeneralUtility::makeInstance(ExtensionConfiguration::class)->get('cps_shortnr');
     }

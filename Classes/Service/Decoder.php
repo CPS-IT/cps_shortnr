@@ -26,29 +26,19 @@ namespace CPSIT\CpsShortnr\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Context\Context;
+use TYPO3\CMS\Core\TypoScript\TypoScriptStringFactory;
 use TYPO3\CMS\Core\Log\LogManager;
-use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Core\Log\LogLevel;
 
 class Decoder
 {
     /**
-     * @var array
-     */
-    private $configuration;
-
-    /**
      * @var string
      */
     private $decodeIdentifier;
-
-    /**
-     * @var string
-     */
-    private $pattern;
 
     /**
      * @var array
@@ -56,20 +46,15 @@ class Decoder
     private $recordInformation;
 
     /**
-     * @var string
-     */
-    private $shortlink;
-
-    /**
-     * @param array $configuration
      * @param string $shortlink
      * @param string $pattern
      */
-    public function __construct(array $configuration, $shortlink, $pattern)
+    public function __construct(
+        private array $configuration,
+        private string $shortlink,
+        private string $pattern
+    )
     {
-        $this->configuration = $configuration;
-        $this->pattern = $pattern;
-        $this->shortlink = $shortlink;
     }
 
     /**
@@ -90,11 +75,13 @@ class Decoder
             throw new \RuntimeException('Configuration file could not be read', 1490608852);
         }
 
-        $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
-        $conditionMatcher = GeneralUtility::makeInstance(ConditionMatcher::class);
-        $typoScriptParser->parse($file, $conditionMatcher);
+        $typoScriptArray = GeneralUtility::makeInstance(TypoScriptStringFactory::class)
+            ->parseFromStringWithIncludes(
+                'cps_shortnr_configuration',
+                $file
+            )
+            ->toArray();
 
-        $typoScriptArray = $typoScriptParser->setup;
 
         if (!isset($typoScriptArray['cps_shortnr.'])) {
             throw new \RuntimeException('No "cps_shortnr" configuration found', 1490608923);
@@ -117,12 +104,9 @@ class Decoder
         return $matches;
     }
 
-    /**
-     * @return array
-     */
     public function getRecordInformation(): array
     {
-        $loger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
+        $loger = GeneralUtility::makeInstance(LogManager::class)->getLogger(self::class);
 
         if ($this->decodeIdentifier === null) {
             $this->resolveDecodeIdentifier();
@@ -153,7 +137,7 @@ class Decoder
         } else {
             $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
             $recordUid = (int)$contentObjectRenderer->stdWrap(
-                isset($shortLinkConfiguration['source.']['record']) ? $shortLinkConfiguration['source.']['record'] : '',
+                $shortLinkConfiguration['source.']['record'] ?? '',
                 $shortLinkConfiguration['source.']['record.']
             );
         }
@@ -187,16 +171,14 @@ class Decoder
 
 
         $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
-        $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table'], $request);
+        $contentObjectRenderer->setRequest($request);
+        $contentObjectRenderer->start($this->recordInformation['record'], $this->recordInformation['table']);
 
 
         return $contentObjectRenderer->stdWrap('', $this->configuration[$this->decodeIdentifier . '.']['path.']);
     }
 
-    /**
-     * @return void
-     */
-    private function resolveDecodeIdentifier()
+    private function resolveDecodeIdentifier(): void
     {
         // Get decode information and configuration
         if (empty($this->configuration['decoder']) && empty($this->configuration['decoder.'])) {
@@ -204,11 +186,11 @@ class Decoder
         }
 
         if (empty($this->configuration['decoder.'])) {
-            $this->decodeIdentifier = strtolower($this->configuration['decoder']);
+            $this->decodeIdentifier = strtolower((string) $this->configuration['decoder']);
         } else {
             $contentObjectRenderer = GeneralUtility::makeInstance(ContentObjectRenderer::class);
             $this->decodeIdentifier = strtolower($contentObjectRenderer->stdWrap(
-                isset($this->configuration['decoder']) ? $this->configuration['decoder'] : '',
+                $this->configuration['decoder'] ?? '',
                 $this->configuration['decoder.']
             ));
         }

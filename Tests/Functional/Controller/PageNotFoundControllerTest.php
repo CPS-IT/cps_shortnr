@@ -63,7 +63,7 @@ class PageNotFoundControllerTest extends AbstractShortnrTestCase
      * @param string $currentUrl
      * @param string $expectedPath
      */
-    public function resolvePathRedirectsToExpectedPath($currentUrl, $expectedPath)
+    public function resolvePathRedirectsToExpectedPath($currentUrl, $expectedPath): void
     {
         $subject = $this->getMock(PageNotFoundController::class, ['shutdown']);
         $subject->expects($this->once())->method('shutdown')->with($expectedPath);
@@ -76,7 +76,7 @@ class PageNotFoundControllerTest extends AbstractShortnrTestCase
     /**
      * @test
      */
-    public function invalidPathCallsPageNotFoundHandler()
+    public function invalidPathCallsPageNotFoundHandler(): void
     {
         $frontendController = $this->getMock(
             TypoScriptFrontendController::class,

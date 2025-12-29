@@ -35,27 +35,8 @@ use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 
 class Encoder
 {
-    /**
-     * @var array
-     */
-    private $configuration;
-
-    /**
-     * @var array
-     */
-    private $encodeFormat;
-
-    /**
-     * @param array $configuration
-     * @param array $encodeFormat
-     */
-    public function __construct(
-        array $configuration,
-        array $encodeFormat
-    )
+    public function __construct(private array $configuration, private array $encodeFormat)
     {
-        $this->configuration = $configuration;
-        $this->encodeFormat = $encodeFormat;
     }
 
     /**
@@ -63,7 +44,7 @@ class Encoder
      * @return Encoder
      * @throws \RuntimeException
      */
-    public static function createFromConfigurationFile($configurationFile)
+    public static function createFromConfigurationFile(string $configurationFile): Encoder
     {
         if (!file_exists($configurationFile)) {
             throw new \RuntimeException('Configuration file not found', 1490688798);
@@ -94,7 +75,7 @@ class Encoder
                 continue;
             }
 
-            $key = trim($key, '.');
+            $key = trim((string) $key, '.');
 
             $configuration[$key] = [
                 'table' => $value['source.']['table'],
@@ -113,7 +94,7 @@ class Encoder
      * @param string $table
      * @return string
      */
-    public function getShortlink($recordUid, $table)
+    public function getShortlink(int $recordUid, string $table): string
     {
         $record = BackendUtility::getRecordWSOL($table, $recordUid);
         if ($record === null) {
@@ -158,14 +139,11 @@ class Encoder
 
     /**
      * @param string $table
-     * @param array $record
      * @return string
      */
-    private function findIdentifier($table, array $record)
+    private function findIdentifier(string $table, array $record): string
     {
-        $availableIdentifier = array_filter($this->configuration, function ($configuration) use ($table) {
-            return $configuration['table'] === $table;
-        });
+        $availableIdentifier = array_filter($this->configuration, fn($configuration) => $configuration['table'] === $table);
         if (empty($availableIdentifier)) {
             return '';
         }
@@ -174,9 +152,7 @@ class Encoder
             return key($availableIdentifier);
         }
 
-        $defaultIdentifier = array_filter($availableIdentifier, function ($configuration) {
-            return !isset($configuration['encodeMatchFields']);
-        });
+        $defaultIdentifier = array_filter($availableIdentifier, fn($configuration) => !isset($configuration['encodeMatchFields']));
 
         $conditionalIdentifier = array_diff_key($availableIdentifier, $defaultIdentifier);
 
