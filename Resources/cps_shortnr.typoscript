@@ -1,0 +1,59 @@
+cps_shortnr {
+  decoder.data = register:tx_cpsshortnr_match_1
+
+  encoder {
+    field = tx_cpsshortnr_language_parent
+    dataWrap = {field:tx_cpsshortnr_identifier_upper}|
+    dataWrap.override = {field:tx_cpsshortnr_identifier_upper}|-{field:tx_cpsshortnr_language}
+    dataWrap.override.if.isTrue.field = tx_cpsshortnr_language
+  }
+
+  p {
+    source {
+      record.data = register:tx_cpsshortnr_match_2
+      table = pages
+    }
+    path {
+      typolink {
+        parameter.field = uid
+        addQueryString = 1
+        returnLast = url
+        additionalParams.wrap = &L=|
+        additionalParams.data = register:tx_cpsshortnr_match_3
+        additionalParams.required = 1
+      }
+    }
+  }
+
+  n {
+    source {
+      record.data = register:tx_cpsshortnr_match_2
+      table = tx_news_domain_model_news
+    }
+    path {
+      typolink {
+        parameter = 1
+        addQueryString = 1
+        additionalParams.cObject = COA
+        additionalParams.cObject {
+          10 = TEXT
+          10 {
+            value = &tx_news_pi1[controller]=News&tx_news_pi1[action]=detail&tx_news_pi1[news]={field:uid}
+            insertData = 1
+          }
+
+          20 = TEXT
+          20 {
+            wrap = &L=|
+            required = 1
+            data = register:tx_cpsshortnr_match_3
+          }
+        }
+        returnLast = url
+      }
+    }
+  }
+
+  in < .n
+  in.source.encodeMatchFields.type = 1
+}

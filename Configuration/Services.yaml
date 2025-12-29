@@ -1,0 +1,14 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  CPSIT\CpsShortnr\:
+    resource: '../Classes/*'
+
+  # Explicit middleware configuration with dependency injection
+  CPSIT\CpsShortnr\Middleware\ShortUrlMiddleware:
+    public: true
+    arguments:
+      $context: '@TYPO3\CMS\Core\Context\Context'
