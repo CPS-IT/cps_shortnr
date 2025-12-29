@@ -1,4 +1,5 @@
 <?php
+
 namespace CPSIT\CpsShortnr\Service;
 
 /***************************************************************
@@ -26,9 +27,8 @@ namespace CPSIT\CpsShortnr\Service;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Context\Context;
-use TYPO3\CMS\Core\TypoScript\Parser\TypoScriptParser;
+use TYPO3\CMS\Core\TypoScript\TypoScriptStringFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Frontend\Configuration\TypoScript\ConditionMatching\ConditionMatcher;
 use TYPO3\CMS\Frontend\ContentObject\ContentObjectRenderer;
 use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 
@@ -49,7 +49,10 @@ class Encoder
      * @param array $configuration
      * @param array $encodeFormat
      */
-    public function __construct(array $configuration, array $encodeFormat)
+    public function __construct(
+        array $configuration,
+        array $encodeFormat
+    )
     {
         $this->configuration = $configuration;
         $this->encodeFormat = $encodeFormat;
@@ -57,8 +60,8 @@ class Encoder
 
     /**
      * @param string $configurationFile
-     * @throws \RuntimeException
      * @return Encoder
+     * @throws \RuntimeException
      */
     public static function createFromConfigurationFile($configurationFile)
     {
@@ -70,12 +73,12 @@ class Encoder
         if (empty($file)) {
             throw new \RuntimeException('Configuration file could not be read', 1490653728);
         }
-
-        $typoScriptParser = GeneralUtility::makeInstance(TypoScriptParser::class);
-        $conditionMatcher = GeneralUtility::makeInstance(ConditionMatcher::class);
-        $typoScriptParser->parse($file, $conditionMatcher);
-
-        $typoScriptArray = $typoScriptParser->setup;
+        $typoScriptArray = GeneralUtility::makeInstance(TypoScriptStringFactory::class)
+            ->parseFromStringWithIncludes(
+                'cps_shortnr_configuration',
+                $file
+            )
+            ->toArray();
 
         if (!isset($typoScriptArray['cps_shortnr.'])) {
             throw new \RuntimeException('No "cps_shortnr" configuration found', 1490653738);
@@ -117,13 +120,13 @@ class Encoder
             return '';
         }
 
-        $language = $this->getLanguage();
+        $languageAspect = GeneralUtility::makeInstance(Context::class)->getAspect('language');
         if (!empty($GLOBALS['TCA'][$table]['ctrl']['languageField'])) {
             if (!empty($record[$GLOBALS['TCA'][$table]['ctrl']['languageField']])) {
                 $language = $record[$GLOBALS['TCA'][$table]['ctrl']['languageField']];
             } elseif ($language > 0) {
                 $pageRepository = GeneralUtility::makeInstance(PageRepository::class);
-                $record = $pageRepository->getRecordOverlay($table, $record, $language);
+                $record = $pageRepository->getLanguageOverlay($table, $record, $languageAspect);
                 if ($record === null) {
                     return '';
                 }
@@ -199,14 +202,5 @@ class Encoder
         }
 
         return '';
-    }
-
-    /**
-     * @return int
-     */
-    private function getLanguage(): int
-    {
-        $languageAspect = GeneralUtility::makeInstance(Context::class)->getAspect('language');
-        return $languageAspect->getId();
     }
 }
