@@ -92,6 +92,7 @@ class Encoder
         }
 
         $languageAspect = GeneralUtility::makeInstance(Context::class)->getAspect('language');
+        $language = $languageAspect->getId();
         if (!empty($GLOBALS['TCA'][$table]['ctrl']['languageField'])) {
             if (!empty($record[$GLOBALS['TCA'][$table]['ctrl']['languageField']])) {
                 $language = $record[$GLOBALS['TCA'][$table]['ctrl']['languageField']];
