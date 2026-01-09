@@ -1,0 +1,49 @@
+<?php declare(strict_types=1);
+
+namespace CPSIT\ShortNr\Config\Enums;
+
+enum ConfigEnum: string
+{
+    // default names
+    case ENTRYPOINT = 'shortNr';
+    case DEFAULT_CONFIG = '_default';
+    case Type = 'type';
+
+    // not found handling
+    case NotFound = 'notFound';
+    case NotFoundType = 'notFoundType';
+
+    // Pattern
+    case Pattern = 'pattern';
+    case Compiled = '__compiled';
+    case Decompiled = '__decompiled';
+
+    // database fields
+    case Table = 'table';
+
+    // condition
+    case Condition = 'condition';
+
+    // plugin
+    case Plugin = 'plugin';
+
+    // language handling
+    case LanguageParentField = 'languageParentField';
+    case LanguageField = 'languageField';
+    case IdentifierField = 'identifierField';
+
+    // condition operators
+    case ConditionContains = 'contains';
+    case ConditionNot = 'not';
+    case ConditionEqual = 'eq';
+    case ConditionInArray = 'in';
+    case ConditionGreaterThanEqual = 'gte';
+    case ConditionGreaterThan = 'gt';
+    case ConditionLessThan = 'lt';
+    case ConditionLessThanEqual = 'lte';
+    case ConditionStringEnds = 'ends';
+    case ConditionStingStarts = 'starts';
+    case ConditionIsset = 'isset';
+    case ConditionRegexMatch = 'match';
+    case ConditionBetween = 'between';
+}

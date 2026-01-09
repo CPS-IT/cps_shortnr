@@ -1,0 +1,60 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  CPSIT\ShortNr\:
+    resource: '../Classes/*'
+    exclude:
+      - '../Classes/Config/DTO'
+      - '../Classes/Event'
+      - '../Classes/Domain/DTO'
+      - '../Classes/Service/Condition/Operators/DTO'
+      - '../Classes/Service/Url/Processor/DTO'
+      - '../Classes/Service/PlatformAdapter/DTO'
+      - '../Classes/Service/Url/Demand'
+      - '../Classes/Service/Url/EncodingDemandNormalizer/Normalizer/DTO'
+      - '../Classes/Exception'
+
+  _instanceof:
+    CPSIT\ShortNr\Service\Condition\Operators\QueryOperatorInterface:
+      tags: ['cps_shortnr.query.operators']
+    CPSIT\ShortNr\Service\Condition\Operators\ResultOperatorInterface:
+      tags: ['cps_shortnr.result.operators']
+    CPSIT\ShortNr\Service\Condition\Operators\DirectOperatorInterface:
+      tags: [ 'cps_shortnr.direct.operators' ]
+    CPSIT\ShortNr\Service\Url\Processor\ProcessorInterface:
+      tags: [ 'cps_shortnr.processors' ]
+
+  CPSIT\ShortNr\Service\Condition\ConditionService:
+    arguments:
+      $queryOperators: !tagged 'cps_shortnr.query.operators'
+      $resultOperators: !tagged 'cps_shortnr.result.operators'
+      $directOperators: !tagged 'cps_shortnr.direct.operators'
+
+  CPSIT\ShortNr\Service\AbstractUrlService:
+    calls:
+      - setProcessors: [!tagged 'cps_shortnr.processors']
+      - setConfigLoader: ['@CPSIT\ShortNr\Config\ConfigLoader']
+      - setCacheManager: ['@CPSIT\ShortNr\Cache\CacheManager']
+
+  # Concrete services inherit
+  CPSIT\ShortNr\Service\DecoderService:
+    parent: CPSIT\ShortNr\Service\AbstractUrlService
+  CPSIT\ShortNr\Service\EncoderService:
+    parent: CPSIT\ShortNr\Service\AbstractUrlService
+
+# Interface announcement
+  CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystem
+    public: true
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PathResolver
+    public: true
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolver
+    public: true
+  CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface:
+    alias: CPSIT\ShortNr\Service\PlatformAdapter\Typo3\Typo3PageTreeResolver
+    public: true

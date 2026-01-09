@@ -1,0 +1,84 @@
+<?php declare(strict_types=1);
+
+namespace CPSIT\ShortNr\Cache;
+
+use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
+use CPSIT\ShortNr\Config\ExtensionSetup;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Cache\CacheManager as Typo3CacheManager;
+use Throwable;
+
+class CacheManager
+{
+    private readonly ?FrontendInterface $cache;
+
+    public function __construct(
+        private readonly FastArrayFileCache $arrayFileCache
+    )
+    {}
+
+    /**
+     * @return FastArrayFileCache|null
+     */
+    public function getArrayFileCache(): ?FastArrayFileCache
+    {
+        return $this->arrayFileCache;
+    }
+
+    /**
+     * @param string $cacheKey
+     * @param callable $processBlock must return a string
+     * @param int|null $ttl Lifetime of this cache entry in seconds. If NULL is specified, the default lifetime is used. "0" means unlimited lifetime.
+     * @param array $tags
+     * @return string|array|null
+     * @throws ShortNrCacheException
+     */
+    public function getType3CacheValue(string $cacheKey, callable $processBlock, ?int $ttl = null, array $tags = []): null|string|array
+    {
+        $cleanCacheKey = md5($cacheKey);
+        $cache = $this->getCache();
+        $cacheValue = $cache?->get($cleanCacheKey);
+        if (is_string($cacheValue) && str_starts_with($cacheValue, 'a:') && str_ends_with($cacheValue, '}')) {
+            $cacheValue = unserialize($cacheValue);
+        }
+
+        if ($cacheValue === null || $cacheValue === false) {
+            $rawValue = $value = $processBlock();
+            if (is_array($value)) {
+                $value = serialize($value);
+            }
+            if (!is_string($value) && !$value === null && $value !== false) {
+                throw new ShortNrCacheException('invalid cache value, expected string/array');
+            }
+            if (is_string($value)) {
+                $cache?->set($cleanCacheKey, $value, tags: $tags, lifetime:  $ttl);
+            }
+            return $rawValue;
+        }
+
+        if (is_string($cacheValue) || is_array($cacheValue)) {
+            return $cacheValue;
+        }
+
+        return null;
+    }
+
+    public function invalidateByTag(string $tag): void
+    {
+        $this->getCache()->flushByTag($tag);
+    }
+
+    /**
+     * @return FrontendInterface|null
+     */
+    protected function getCache(): ?FrontendInterface
+    {
+        try {
+            return $this->cache ??= GeneralUtility::makeInstance(Typo3CacheManager::class)->getCache(ExtensionSetup::CACHE_KEY);
+        } catch (Throwable) {
+            return $this->cache = null;
+        }
+    }
+}
