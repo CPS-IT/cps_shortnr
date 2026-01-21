@@ -22,6 +22,11 @@ class EncoderService extends AbstractUrlService
      */
     public function encode(EncoderDemandInterface $demand): ?string
     {
+        // be_user session detected, auto disable cache
+        if ($GLOBALS['BE_USER']?->user !== null) {
+            $demand->setNoCache(true);
+        }
+
         if ($demand->noCache() || ($cacheKey = $demand->getCacheKey()) === null) {
             return $this->encodeWithDemand($demand);
         }

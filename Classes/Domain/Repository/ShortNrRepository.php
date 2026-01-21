@@ -44,6 +44,10 @@ class ShortNrRepository
         }
 
         $qb = $this->getQueryBuilder($tableName);
+        $qb->getRestrictions()
+            ->removeByType(HiddenRestriction::class)
+            ->removeByType(StartTimeRestriction::class)
+            ->removeByType(EndTimeRestriction::class);
         $qb->select(...$existingValidFields);
         $qb->from($tableName);
 
@@ -82,6 +86,10 @@ class ShortNrRepository
         }
 
         $qb = $this->getQueryBuilder($tableName);
+        $qb->getRestrictions()
+            ->removeByType(HiddenRestriction::class)
+            ->removeByType(StartTimeRestriction::class)
+            ->removeByType(EndTimeRestriction::class);
         $qb->select(...$existingValidFields);
         $qb->from($tableName);
         $qb->where(
@@ -164,6 +172,10 @@ class ShortNrRepository
     private function fetchRowForLanguageUidBase(string $table, array $fields, string $uidField, string $languageParentField, int $uid): array
     {
         $qb = $this->getQueryBuilder($table);
+        $qb->getRestrictions()
+            ->removeByType(HiddenRestriction::class)
+            ->removeByType(StartTimeRestriction::class)
+            ->removeByType(EndTimeRestriction::class);
         $qb->select(...$fields)
             ->from($table)
             ->where(
