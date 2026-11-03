@@ -283,7 +283,8 @@ shortNr:
 
 - Decoded and encoded URLs are cached for at most one week in the TYPO3 cache `cps_shortnr`.
 - A decode entry expires early at the next starttime/endtime of the record or one of its
-  translations (embargoed records become reachable on time).
+  translations (embargoed records become reachable on time). A notFound answer lives at most one
+  hour (safety net for writes no invalidation sees).
 - The decode cache key is built from the parsed values: `p0200` and `p200` share one entry.
 - Entries are tagged per table they read and dropped when such a record changes:
   - DataHandler saves (backend, any command): automatic

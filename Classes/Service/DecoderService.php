@@ -19,6 +19,9 @@ use Generator;
 class DecoderService extends AbstractUrlService
 {
     private const CACHE_LIFETIME = 604_800; // one week
+    // a notFound answer is cheap to recompute and may be wrong after writes no hook sees
+    // (plain SQL importers): short lifetime as a safety net
+    private const NOT_FOUND_CACHE_LIFETIME = 3_600;
 
     public function __construct(
         private readonly LanguageOverlayService $languageOverlayService,
@@ -96,7 +99,7 @@ class DecoderService extends AbstractUrlService
     {
         $candidates = iterator_to_array($demand->getCandidates(), false);
         if ($demand->noCache() || $demand->getCacheKey() === null || empty($candidates)) {
-            return $this->decodeWithDemand($demand);
+            return $this->decodeWithDemand($demand)[0];
         }
 
         $cacheKey = $this->buildCacheKey($candidates);
@@ -105,9 +108,12 @@ class DecoderService extends AbstractUrlService
             return $cached;
         }
 
-        $uri = $this->decodeWithDemand($demand);
+        [$uri, $isNotFound] = $this->decodeWithDemand($demand);
         if (is_string($uri) && $uri !== '') {
             [$ttl, $tags] = $this->getCacheLifetimeAndTags($candidates);
+            if ($isNotFound) {
+                $ttl = min($ttl, self::NOT_FOUND_CACHE_LIFETIME);
+            }
             $this->getCacheManager()->set($cacheKey, $uri, $ttl, $tags);
         }
 
@@ -159,9 +165,9 @@ class DecoderService extends AbstractUrlService
     /**
      *
      * @param DecoderDemandInterface $demand
-     * @return string|null null if no decoder url, string decoded url
+     * @return array{string|null, bool} [uri (null: not ours, pass on), true if the uri is the notFound target]
      */
-    private function decodeWithDemand(DecoderDemandInterface $demand): ?string
+    private function decodeWithDemand(DecoderDemandInterface $demand): array
     {
         $anyCandidatesExecuted = false;
         $errors = [];
@@ -182,7 +188,7 @@ class DecoderService extends AbstractUrlService
 
             // candidate gives us a valid answer, get the first one we can find
             if (!empty($uri)) {
-                return $uri;
+                return [$uri, false];
             }
             $anyCandidatesExecuted = true;
         }
@@ -194,17 +200,17 @@ class DecoderService extends AbstractUrlService
             foreach ($demand->getCandidates() as $candidate) {
                 $notFoundUri = $this->getNotFoundProcessor($candidate->getConfigItem())?->decode($candidate->getConfigItem(), $candidate->getMatchResult());
                 if (!empty($notFoundUri)) {
-                    return $notFoundUri;
+                    return [$notFoundUri, true];
                 }
             }
 
             // notFound "" (or none configured): not ours to answer, the TYPO3 stack renders its 404.
             // Throwing here made the middleware answer 500 for every hidden or unknown record.
-            return null;
+            return [null, true];
         }
 
         // no candidate was processed at this point, give up
-        return null;
+        return [null, false];
     }
 
     /**

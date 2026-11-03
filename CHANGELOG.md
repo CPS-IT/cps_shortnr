@@ -15,7 +15,8 @@ Decode now answers for an anonymous visitor, and cached answers follow record ch
 - **Sysfolders and spacers** are not found.
 - **`notFound: ""`** passes the request on to TYPO3 (404). Before: uncaught exception (500).
 - **Caching.** Entries are dropped when a record of their table changes (DataHandler, Extbase)
-  and expire at the next starttime/endtime. Before: cached for a week regardless.
+  and expire at the next starttime/endtime; a cached notFound answer lives at most one hour.
+  Before: cached for a week regardless.
 
 ### New
 

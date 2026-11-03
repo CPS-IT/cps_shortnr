@@ -151,6 +151,32 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
     }
 
     #[Test]
+    public function notFoundAnswerExpiresAfterOneHour(): void
+    {
+        // safety net for writes no hook sees (plain SQL importers that do not call the invalidator)
+        self::assertSame(self::NOT_FOUND, $this->decode('REC260'));
+        $this->getConnectionPool()->getConnectionForTable('tx_shortnrtest_record')
+            ->update('tx_shortnrtest_record', ['hidden' => 0], ['uid' => 260]);
+
+        $this->travelTo(self::NOW + 3601);
+
+        self::assertSame('/records#260', $this->decode('REC260'));
+    }
+
+    #[Test]
+    public function foundAnswerKeepsItsLifetime(): void
+    {
+        // found answers stay cached (bots and printed links hit them, flushes keep them correct)
+        self::assertSame('/records#200', $this->decode('REC200'));
+        $this->getConnectionPool()->getConnectionForTable('tx_shortnrtest_record')
+            ->update('tx_shortnrtest_record', ['hidden' => 1], ['uid' => 200]);
+
+        $this->travelTo(self::NOW + 3601);
+
+        self::assertSame('/records#200', $this->decode('REC200'), 'cached answer expected');
+    }
+
+    #[Test]
     public function equivalentSpellingsShareOneCacheEntry(): void
     {
         // bots can produce unbounded spellings of one number (REC0200, REC00200, ...): each one a
