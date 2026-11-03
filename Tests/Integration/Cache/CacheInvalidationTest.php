@@ -165,6 +165,18 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
     }
 
     #[Test]
+    public function encodeIsServedFromTheCache(): void
+    {
+        // share links render on every page: a hit must not recompute (plain SQL, no flush: the
+        // cached answer proves the hit)
+        self::assertSame('/REC200', $this->encode('record', 200));
+        $this->getConnectionPool()->getConnectionForTable('tx_shortnrtest_record')
+            ->update('tx_shortnrtest_record', ['record_type' => 1], ['uid' => 200]);
+
+        self::assertSame('/REC200', $this->encode('record', 200));
+    }
+
+    #[Test]
     public function changingAConditionFieldIsEncodedOnTheNextRequest(): void
     {
         self::assertSame('/REC200', $this->encode('record', 200));
