@@ -11,22 +11,33 @@ use CPSIT\ShortNr\Event\ShortNrConfigLoadedEvent;
 use CPSIT\ShortNr\Event\ShortNrConfigPathEvent;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
+use CPSIT\ShortNr\Exception\ShortNrInvalidConfigException;
 use CPSIT\ShortNr\Service\PlatformAdapter\FileSystem\FileSystemInterface;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PathResolverInterface;
 use CPSIT\ShortNr\Traits\ArrayPackTrait;
 use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\LoggerAwareTrait;
+use Throwable;
 use Symfony\Component\Yaml\Yaml;
 use TypedPatternEngine\Heuristic\HeuristicPatternInterface;
 use TypedPatternEngine\TypedPatternEngine;
 
-class ConfigLoader
+class ConfigLoader implements LoggerAwareInterface
 {
     use ArrayPackTrait;
+    use LoggerAwareTrait;
 
     // Cache keys
     private const CONFIG_KEY = 'config';
     private const CONFIG_OBJ_KEY = 'configObj';
     private const HEURISTIC_KEY = 'heuristic';
+    // a failed build is cached like a successful one, under this key, holding the logged message
+    private const FAILURE_KEY = '__buildFailure';
+    private const FAILED_AT_KEY = '__failedAt';
+    // a remembered failure is retried (and logged again) after this many seconds: transient causes
+    // heal without a cache flush, persistent ones are reported every 5 minutes per node, not per request
+    private const FAILURE_RETRY_SECONDS = 300;
     private readonly TypedPatternEngine $patternEngine;
 
     private array $runtimeCache = [];
@@ -175,6 +186,10 @@ class ConfigLoader
         }
 
         $suffix = $prefix . '_' . $this->getYamlConfigFileSuffix();
+        if (isset($this->runtimeCache[self::FAILURE_KEY][$suffix])) {
+            // failed earlier in this request (the validity check above is memoized as "invalid")
+            throw new ShortNrInvalidConfigException($this->runtimeCache[self::FAILURE_KEY][$suffix]);
+        }
 
         // Check cache validity
         if (!$this->isConfigCacheValid($suffix)) {
@@ -182,6 +197,14 @@ class ConfigLoader
         } else {
             // Try to load from cache
             $cached = $this->cacheManager->getArrayFileCache()->readArrayFileCache($suffix);
+            if (isset($cached[self::FAILURE_KEY])) {
+                if ($this->now() - (int)($cached[self::FAILED_AT_KEY] ?? 0) < self::FAILURE_RETRY_SECONDS) {
+                    // remembered failure: already logged when it was detected
+                    throw new ShortNrInvalidConfigException((string)$cached[self::FAILURE_KEY]);
+                }
+                // retry below
+                $cached = null;
+            }
             if ($cached !== null) {
                 $this->runtimeCache[$prefix] = $cached;
                 return $cached;
@@ -193,7 +216,14 @@ class ConfigLoader
             throw new ShortNrConfigException('Config datasource must be callable');
         }
 
-        $result = $datasource();
+        try {
+            $result = $datasource();
+        } catch (ShortNrInvalidConfigException $e) {
+            // failure of a config this one is built from, handled where it happened
+            throw $e;
+        } catch (Throwable $e) {
+            throw $this->rememberBuildFailure($suffix, $prefix, $e);
+        }
         if (!is_array($result)) {
             throw new ShortNrConfigException(
                 'Config datasource must return an array, ' . gettype($result) . ' given.'
@@ -212,6 +242,37 @@ class ConfigLoader
         }
 
         return $result;
+    }
+
+    /**
+     * A broken YAML (syntax, invalid pattern, failing event listener) must neither be parsed again
+     * on every request nor disable short numbers silently: log it once, cache the failure like a
+     * successful build (valid until a YAML file changes or caches are flushed).
+     *
+     * @throws ShortNrCacheException
+     * @throws ShortNrConfigException
+     */
+    private function rememberBuildFailure(string $suffix, string $prefix, Throwable $cause): ShortNrInvalidConfigException
+    {
+        $message = sprintf(
+            '[ShortNr] %s could not be built from %s, short numbers are disabled until the YAML is fixed: %s',
+            $prefix,
+            implode(', ', $this->getAllConfigurationFiles()),
+            $cause->getMessage()
+        );
+        $this->logger?->error($message, ['exception' => $cause::class]);
+        $this->runtimeCache[self::FAILURE_KEY][$suffix] = $message;
+        $this->cacheManager->getArrayFileCache()->writeArrayFileCache(
+            [self::FAILURE_KEY => $message, self::FAILED_AT_KEY => $this->now()],
+            $suffix
+        );
+
+        return new ShortNrInvalidConfigException($message, previous: $cause);
+    }
+
+    private function now(): int
+    {
+        return (int)($GLOBALS['EXEC_TIME'] ?? time());
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Tests\Integration;
 
+use CPSIT\ShortNr\Cache\CacheAdapter\FastArrayFileCache;
 use CPSIT\ShortNr\Cache\CacheManager;
 use CPSIT\ShortNr\Config\ConfigLoader;
 use CPSIT\ShortNr\Config\DTO\Config;
@@ -60,6 +61,9 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
         ],
     ];
 
+    /** false: the real ConfigLoader reads YAML (see ConfigPathListener in the fixture extension) */
+    protected bool $stubConfigLoader = true;
+
     private ?Config $config = null;
 
     protected function setUp(): void
@@ -99,6 +103,8 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
         $siteFinder->method('getAllSites')->willReturn(['test' => $site]);
 
         $cacheManager = $this->createStub(CacheManager::class);
+        // compiled config cache stays real (the real ConfigLoader needs it), the TYPO3 cache is pass-through
+        $cacheManager->method('getArrayFileCache')->willReturn($this->get(FastArrayFileCache::class));
         $cacheManager->method('getType3CacheValue')->willReturnCallback(
             static fn(string $cacheKey, callable $processBlock, ?int $ttl = null, array $tags = []): mixed => $processBlock()
         );
@@ -113,7 +119,9 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
         );
 
         $container = $this->getContainer();
-        $container->set(ConfigLoader::class, $configLoader);
+        if ($this->stubConfigLoader) {
+            $container->set(ConfigLoader::class, $configLoader);
+        }
         $container->set(CacheManager::class, $cacheManager);
         $container->set(SiteFinder::class, $siteFinder);
 
