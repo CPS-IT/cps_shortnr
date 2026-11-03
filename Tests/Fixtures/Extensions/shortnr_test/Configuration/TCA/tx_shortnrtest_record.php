@@ -7,6 +7,7 @@ return [
         'delete' => 'deleted',
         'languageField' => 'sys_language_uid',
         'transOrigPointerField' => 'l10n_parent',
+        'versioningWS' => true,
         'enablecolumns' => [
             'disabled' => 'hidden',
             'starttime' => 'starttime',

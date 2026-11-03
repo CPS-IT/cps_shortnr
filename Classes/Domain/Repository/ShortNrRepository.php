@@ -14,9 +14,11 @@ use Throwable;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Database\Query\Restriction\EndTimeRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\StartTimeRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 
 class ShortNrRepository
 {
@@ -50,6 +52,7 @@ class ShortNrRepository
         }
 
         $qb = $this->getQueryBuilder($tableName);
+        $this->restrictToLive($qb);
         $qb->select(...$existingValidFields);
         $qb->from($tableName);
 
@@ -177,7 +180,9 @@ class ShortNrRepository
     private function fetchLanguageFamily(string $table, array $fields, string $uidField, string $languageParentField, int $uid, bool $visibleOnly, array $excludeValues = []): array
     {
         $qb = $this->getQueryBuilder($table);
-        if (!$visibleOnly) {
+        if ($visibleOnly) {
+            $this->restrictToLive($qb);
+        } else {
             // only respect deleted
             $qb->getRestrictions()
                 ->removeByType(HiddenRestriction::class)
@@ -200,6 +205,15 @@ class ShortNrRepository
         } catch (Throwable $e) {
             throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Visible to an anonymous visitor: on top of the default restrictions (deleted, hidden, starttime,
+     * endtime) only live rows, no workspace versions (no-op for tables without versioningWS).
+     */
+    private function restrictToLive(QueryBuilder $qb): void
+    {
+        $qb->getRestrictions()->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, 0));
     }
 
     /**

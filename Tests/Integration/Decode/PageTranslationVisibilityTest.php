@@ -20,6 +20,7 @@ final class PageTranslationVisibilityTest extends AbstractShortNrIntegrationTest
     {
         yield 'default language' => ['PAGE20', '/p20'];
         yield 'explicit default language' => ['PAGE20-0', '/p20'];
+        // 19 exists only in a workspace (lowest uid): never live
         yield 'visible translation before a hidden one' => ['PAGE20-1', '/en/p20-visible'];
         yield 'hidden translation with the lower uid is skipped' => ['PAGE30-1', '/en/p30-visible'];
         yield 'translation with future starttime is skipped' => ['PAGE40-1', '/en/p40-visible'];

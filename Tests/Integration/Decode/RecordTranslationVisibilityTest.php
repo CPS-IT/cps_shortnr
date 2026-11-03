@@ -23,6 +23,7 @@ final class RecordTranslationVisibilityTest extends AbstractShortNrIntegrationTe
     public static function fallbackEnabledProvider(): \Generator
     {
         yield 'default language' => ['REC200', '/records#200'];
+        // 198 exists only in a workspace (lowest uid): never live
         yield 'visible translation before a hidden one' => ['REC200-1', '/en/records-en#201'];
         yield 'hidden translation with the lower uid is skipped' => ['REC210-1', '/en/records-en#212'];
         yield 'translation with future starttime is skipped' => ['REC220-1', '/en/records-en#222'];
