@@ -10,6 +10,7 @@ use CPSIT\ShortNr\Exception\ShortNrProcessorException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
 use CPSIT\ShortNr\Service\Condition\ConditionService;
 use CPSIT\ShortNr\Service\Condition\Operators\DTO\DirectOperatorContext;
+use CPSIT\ShortNr\Service\Language\LanguageOverlayService;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\SiteResolverInterface;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
@@ -63,9 +64,14 @@ class PageProcessor extends AbstractProcessor implements ProcessorInterface
 
         try {
             // we need to fetch it since we must include potential other conditions from the configItem
-            $rows = $this->repository->resolveTable([$uidKey, $languageKey], $configItem->getTableName(), $conditions + $configItem->getCondition());
-        } catch (Throwable) {
-            throw new ShortNrNotFoundException();
+            $rows = $this->repository->resolveTable(
+                [$uidKey, $languageKey],
+                $configItem->getTableName(),
+                $conditions + $configItem->getCondition(),
+                ['doktype' => LanguageOverlayService::NON_RENDERABLE_DOKTYPES]
+            );
+        } catch (Throwable $e) {
+            throw new ShortNrNotFoundException(previous: $e);
         }
 
         foreach ($rows as $row) {

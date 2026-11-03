@@ -10,7 +10,7 @@ use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
 use CPSIT\ShortNr\Service\DecoderService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
-use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\MockObject\Stub;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use TypedPatternEngine\Heuristic\HeuristicPatternInterface;
@@ -36,16 +36,16 @@ class ShortNumberMiddlewareIntegrationTest extends FunctionalTestCase
     ];
 
     protected ShortNumberMiddleware $middleware;
-    protected ConfigLoader|MockObject $configLoader;
-    protected SiteFinder|MockObject $siteFinder;
+    protected ConfigLoader&Stub $configLoader;
+    protected SiteFinder&Stub $siteFinder;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $cacheManager = $this->createMock(CacheManager::class);
-        $this->configLoader = $this->createMock(ConfigLoader::class);
-        $this->siteFinder = $this->createMock(SiteFinder::class);
+        $cacheManager = $this->createStub(CacheManager::class);
+        $this->configLoader = $this->createStub(ConfigLoader::class);
+        $this->siteFinder = $this->createStub(SiteFinder::class);
 
         // Override services in container with mocks
         $container = $this->getContainer();
@@ -53,12 +53,10 @@ class ShortNumberMiddlewareIntegrationTest extends FunctionalTestCase
         $container->set(CacheManager::class, $cacheManager);
         $container->set(SiteFinder::class, $this->siteFinder);
 
-        $this->siteFinder->expects($this->any())
-            ->method('getSiteByRootPageId')
+        $this->siteFinder->method('getSiteByRootPageId')
             ->willReturn(new Site('test', 1, []));
 
-        $cacheManager->expects($this->any())
-            ->method('getType3CacheValue')
+        $cacheManager->method('getType3CacheValue')
             ->willReturnCallback(
                 function (string $cacheKey, callable $processBlock, ?int $ttl = null, array $tags = []) {
                     return $processBlock();
@@ -112,7 +110,7 @@ class ShortNumberMiddlewareIntegrationTest extends FunctionalTestCase
 
         // Create mock handler to verify it was called
         $handler = $this->createMock(RequestHandlerInterface::class);
-        $expectedResponse = $this->createMock(ResponseInterface::class);
+        $expectedResponse = $this->createStub(ResponseInterface::class);
 
         if ($expectsPassThrough) {
             // Expect handler->handle() to be called exactly once
@@ -129,8 +127,7 @@ class ShortNumberMiddlewareIntegrationTest extends FunctionalTestCase
         }
 
         $patternEngine = new TypedPatternEngine();
-        $this->configLoader->expects($this->any())
-            ->method('getConfig')
+        $this->configLoader->method('getConfig')
             ->willReturn(new Config(
                 [
                     ConfigEnum::ENTRYPOINT->value => [
@@ -152,13 +149,11 @@ class ShortNumberMiddlewareIntegrationTest extends FunctionalTestCase
                 ]
                 ));
 
-        $heuristicMock = $this->createMock(HeuristicPatternInterface::class);
-        $heuristicMock->expects($this->any())
-            ->method('support')
+        $heuristicMock = $this->createStub(HeuristicPatternInterface::class);
+        $heuristicMock->method('support')
             ->willReturn(true);
 
-        $this->configLoader->expects($this->any())
-            ->method('getHeuristicPattern')
+        $this->configLoader->method('getHeuristicPattern')
             ->willReturn($heuristicMock);
 
         // Act: Process the request through middleware FROM CONTAINER

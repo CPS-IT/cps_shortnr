@@ -3,10 +3,12 @@
 namespace CPSIT\ShortNr\Listener;
 
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Cache\ShortNrCacheInvalidator;
 use Throwable;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Cache\Event\CacheFlushEvent;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 #[AsEventListener(
@@ -18,8 +20,33 @@ class ClearCacheDataHandlerHook
 {
     private ?CacheManager $cacheManager = null;
 
+    /**
+     * tables already flushed per DataHandler run; WeakMap, not spl_object_id(): ids of freed
+     * objects are reused, a later DataHandler in the same process (imports, CLI) would skip its flush
+     *
+     * @var \WeakMap<DataHandler, array<string, true>>|null
+     */
+    private ?\WeakMap $flushedTables = null;
+
+    /**
+     * Called by DataHandler for every changed record (params table/uid, also with TSconfig
+     * clearCache_disable) and for clear cache commands (param cacheCmd).
+     */
     public function clearCache(array $params, DataHandler $dataHandler): void
     {
+        if (!isset($params['cacheCmd']) && is_string($params['table'] ?? null)) {
+            try {
+                $this->invalidateTable($params['table'], $dataHandler);
+            } catch (Throwable $e) {
+                // never break the editor's save, never stay silent: stale answers live up to a week
+                GeneralUtility::makeInstance(LogManager::class)->getLogger(self::class)->error(
+                    '[ShortNr] could not invalidate cached short numbers of table ' . $params['table'] . ': ' . $e->getMessage(),
+                    ['exception' => $e::class]
+                );
+            }
+            return;
+        }
+
         $eventType = $params['cacheCmd'] ?? null;
         try {
             match($eventType) {
@@ -46,6 +73,24 @@ class ClearCacheDataHandlerHook
     private function invalidatePageCaches(): void
     {
         $this->getCacheManager()->invalidateByTag('all');
+    }
+
+    /**
+     * Decode and encode results that read this table: created, changed, hidden, deleted, moved or
+     * translated records change them. Once per table and DataHandler run: on FileBackend every
+     * flushByTag reads every cache file. Which tables count: ShortNrCacheInvalidator.
+     */
+    private function invalidateTable(string $table, DataHandler $dataHandler): void
+    {
+        $this->flushedTables ??= new \WeakMap();
+        $flushed = $this->flushedTables[$dataHandler] ?? [];
+        if (isset($flushed[$table])) {
+            return;
+        }
+        $flushed[$table] = true;
+        $this->flushedTables[$dataHandler] = $flushed;
+
+        GeneralUtility::makeInstance(ShortNrCacheInvalidator::class)->invalidateTable($table);
     }
 
     private function invalidatePageCache(int $pageId): void

@@ -100,6 +100,17 @@ interface ConfigItemInterface
     public function canLanguageOverlay(): bool;
 
     /**
+     * What to do when the requested language has no visible translation
+     *
+     * true (default): serve the default language record, as the TYPO3 site fallback would.
+     * false: treat the short number as not found.
+     * Set per item or once in _default; the item value wins.
+     *
+     * @return bool
+     */
+    public function isLanguageFallbackEnabled(): bool;
+
+    /**
      * @return CompiledPattern
      */
     public function getPattern(): CompiledPattern;
