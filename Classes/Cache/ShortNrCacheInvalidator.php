@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Cache;
 
 use CPSIT\ShortNr\Config\ConfigLoader;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 /**
@@ -21,6 +22,7 @@ class ShortNrCacheInvalidator
     public function __construct(
         private readonly CacheManager $cacheManager,
         private readonly ConfigLoader $configLoader,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -73,8 +75,8 @@ class ShortNrCacheInvalidator
         foreach ($tables as $table) {
             try {
                 $this->invalidateTable($table);
-            } catch (Throwable) {
-                // shutdown: nothing left to report to
+            } catch (Throwable $e) {
+                $this->logger->error('[ShortNr] could not invalidate cached short numbers of table ' . $table . ': ' . $e->getMessage());
             }
         }
     }

@@ -8,6 +8,7 @@ use Throwable;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Cache\Event\CacheFlushEvent;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 #[AsEventListener(
@@ -36,7 +37,13 @@ class ClearCacheDataHandlerHook
         if (!isset($params['cacheCmd']) && is_string($params['table'] ?? null)) {
             try {
                 $this->invalidateTable($params['table'], $dataHandler);
-            } catch (Throwable) {}
+            } catch (Throwable $e) {
+                // never break the editor's save, never stay silent: stale answers live up to a week
+                GeneralUtility::makeInstance(LogManager::class)->getLogger(self::class)->error(
+                    '[ShortNr] could not invalidate cached short numbers of table ' . $params['table'] . ': ' . $e->getMessage(),
+                    ['exception' => $e::class]
+                );
+            }
             return;
         }
 

@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Listener;
 
 use CPSIT\ShortNr\Cache\ShortNrCacheInvalidator;
+use Psr\Log\LoggerInterface;
 use Throwable;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Extbase\Event\Persistence\EntityAddedToPersistenceEvent;
@@ -19,6 +20,7 @@ final class ExtbasePersistenceListener
     public function __construct(
         private readonly DataMapFactory $dataMapFactory,
         private readonly ShortNrCacheInvalidator $invalidator,
+        private readonly LoggerInterface $logger,
     ) {}
 
     #[AsEventListener('shortnr/extbase-entity-added')]
@@ -43,8 +45,9 @@ final class ExtbasePersistenceListener
     {
         try {
             $this->invalidator->invalidateTableDeferred($this->dataMapFactory->buildDataMap($object::class)->getTableName());
-        } catch (Throwable) {
-            // never break a write because of a cache
+        } catch (Throwable $e) {
+            // never break a write because of a cache, never stay silent
+            $this->logger->error('[ShortNr] could not register ' . $object::class . ' for cache invalidation: ' . $e->getMessage());
         }
     }
 }
