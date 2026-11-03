@@ -8,6 +8,8 @@ return [
         'languageField' => 'sys_language_uid',
         'transOrigPointerField' => 'l10n_parent',
         'versioningWS' => true,
+        // editors create these on standard pages (like news records), DataHandler refuses otherwise
+        'security' => ['ignorePageTypeRestriction' => true],
         'enablecolumns' => [
             'disabled' => 'hidden',
             'starttime' => 'starttime',

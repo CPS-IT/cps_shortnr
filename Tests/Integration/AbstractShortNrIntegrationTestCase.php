@@ -64,6 +64,9 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
     /** false: the real ConfigLoader reads YAML (see ConfigPathListener in the fixture extension) */
     protected bool $stubConfigLoader = true;
 
+    /** false: the real CacheManager with the extension's cache configuration (FileBackend) */
+    protected bool $stubCacheManager = true;
+
     private ?Config $config = null;
 
     protected function setUp(): void
@@ -122,7 +125,9 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
         if ($this->stubConfigLoader) {
             $container->set(ConfigLoader::class, $configLoader);
         }
-        $container->set(CacheManager::class, $cacheManager);
+        if ($this->stubCacheManager) {
+            $container->set(CacheManager::class, $cacheManager);
+        }
         $container->set(SiteFinder::class, $siteFinder);
 
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/pages.csv');
