@@ -91,7 +91,6 @@ class DecoderService extends AbstractUrlService
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
-     * @throws ShortNrNotFoundException
      */
     public function decode(DecoderDemandInterface $demand): ?string
     {
@@ -161,7 +160,6 @@ class DecoderService extends AbstractUrlService
      *
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
-     * @throws ShortNrNotFoundException
      */
     private function decodeWithDemand(DecoderDemandInterface $demand): ?string
     {
@@ -200,8 +198,9 @@ class DecoderService extends AbstractUrlService
                 }
             }
 
-            // no NotFound config could be processed, fatal exception
-            throw new ShortNrNotFoundException('Could not match ANY pattern, invalid config?');
+            // notFound "" (or none configured): not ours to answer, the TYPO3 stack renders its 404.
+            // Throwing here made the middleware answer 500 for every hidden or unknown record.
+            return null;
         }
 
         // no candidate was processed at this point, give up

@@ -37,6 +37,18 @@ final class DecodeLoggingTest extends AbstractShortNrIntegrationTestCase
     }
 
     #[Test]
+    public function emptyNotFoundPassesTheRequestOnToTypo3(): void
+    {
+        // notFound "" means: no redirect, let the TYPO3 stack answer (404 page), not a 500
+        $this->configure(['record' => self::recordItem()], ['notFound' => '']);
+
+        self::assertNull($this->decode('REC260'), 'hidden record');
+        self::assertNull($this->decode('REC999'), 'unknown record');
+        self::assertSame('/records#200', $this->decode('REC200'));
+        self::assertSame([], self::summarize(CapturingLogWriter::problems()));
+    }
+
+    #[Test]
     public function brokenProcessorConfigIsLoggedAsErrorWithoutStackTrace(): void
     {
         $item = self::recordItem();
