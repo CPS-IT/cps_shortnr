@@ -259,12 +259,49 @@ $fullUri = $demand ? $this->decoderService->decode($demand) : null;
 **Encoding** compiles record data into short URL using configured pattern.
 **Decoding** extracts UID from short URL, queries database with conditions, generates full URL.
 
+## Which record a short number serves
+
+Decoding runs before backend authentication, so it answers for an anonymous visitor:
+
+- Only visible records count: not deleted, not hidden, starttime reached, endtime not passed
+  (TCA `enablecolumns`), live workspace only. Encoding ignores visibility, so editors can copy the
+  short link of a record before publishing it.
+- Several visible translations in one language (left-over drafts): the lowest uid wins.
+- The default language record is not visible: not found, also for its translations.
+- Pages: sysfolders and spacers are never a target.
+- The requested language has no visible translation: `languageFallback` decides.
+
+```yaml
+shortNr:
+  _default:
+    languageFallback: true    # default: serve the default language record
+  press:
+    languageFallback: false   # this item only: missing translation = not found
+```
+
 ## Caching
 
-- Compiled patterns cached to filesystem
-- Encoded/decoded URLs cached with 1 week TTL
-- Cache cleared on `cache:all` or `cache:pages` flush
-- Cache tags: `all`, `uri`, `encode`, `decode`
+- Decoded and encoded URLs are cached for at most one week in the TYPO3 cache `cps_shortnr`.
+- A decode entry expires early at the next starttime/endtime of the record or one of its
+  translations (embargoed records become reachable on time).
+- The decode cache key is built from the parsed values: `p0200` and `p200` share one entry.
+- Entries are tagged per table they read and dropped when such a record changes:
+  - DataHandler saves (backend, any command): automatic
+  - Extbase persistence (importers, forms): automatic, once per table at the end of the request
+  - plain SQL writers must call
+    `GeneralUtility::makeInstance(ShortNrCacheInvalidator::class)->invalidateTable('my_table')`
+  Only tables used by a config item are flushed.
+- Cache tags: `all`, `uri`, `encode`, `decode`, `tree`, `shortnr_table_<table>`. `cache:flush`
+  and "flush frontend caches" clear everything.
+- The default backend is `FileBackend`: one cache per web node, and every tag flush reads every
+  cache file. With several web nodes or many short numbers, configure a shared backend:
+  ```php
+  $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations']['cps_shortnr']['backend']
+      = \TYPO3\CMS\Core\Cache\Backend\RedisBackend::class; // or Typo3DatabaseBackend
+  ```
+- Compiled config is cached in `var/cache/code/cps_shortnr` and rebuilt when a YAML file changes.
+  A broken YAML is logged once (error), short numbers pass through to TYPO3 until it is fixed;
+  the failure is retried every 5 minutes.
 
 ## NotFound Handling
 
@@ -277,8 +314,11 @@ shortNr:
     # or
     notFound: "/404"      # URI string
     # or
-    notFound: ""          # Disable (continue to TYPO3 routing)
+    notFound: ""          # Disable (continue to TYPO3 routing, TYPO3 answers 404)
 ```
+
+A not found is logged at debug level only (bots probing number ranges are normal); query errors
+and broken processor configuration are logged as errors.
 
 ## Extension Setup
 
