@@ -263,8 +263,9 @@ class PluginProcessor extends AbstractProcessor implements ProcessorInterface
         try {
             // we need to fetch it since we must include potential other conditions from the configItem
             $rows = $this->repository->resolveTable([$uidKey, $languageKey], $configItem->getTableName(), $conditions + $configItem->getCondition());
-        } catch (Throwable) {
-            throw new ShortNrNotFoundException();
+        } catch (Throwable $e) {
+            // keep the cause: a query error is a problem worth logging, an empty result is not
+            throw new ShortNrNotFoundException(previous: $e);
         }
 
         $pluginConfig = $configItem->getPluginConfig() ?? throw new ShortNrProcessorException('Missing Plugin Processor Config '. ConfigEnum::Plugin->value . ' in config: ' . $configItem->getName());

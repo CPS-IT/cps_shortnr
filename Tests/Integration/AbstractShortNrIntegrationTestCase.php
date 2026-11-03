@@ -7,6 +7,7 @@ use CPSIT\ShortNr\Config\ConfigLoader;
 use CPSIT\ShortNr\Config\DTO\Config;
 use CPSIT\ShortNr\Config\Enums\ConfigEnum;
 use CPSIT\ShortNr\Middleware\ShortNumberMiddleware;
+use CPSIT\ShortNr\Tests\Integration\Support\CapturingLogWriter;
 use Psr\Http\Server\RequestHandlerInterface;
 use TypedPatternEngine\Heuristic\HeuristicPatternInterface;
 use TypedPatternEngine\TypedPatternEngine;
@@ -46,11 +47,25 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
         __DIR__ . '/../Fixtures/Extensions/shortnr_test',
     ];
 
+    /** every log record of the extension lands in CapturingLogWriter::$records */
+    protected array $configurationToUseInTestInstance = [
+        'LOG' => [
+            'CPSIT' => [
+                'ShortNr' => [
+                    'writerConfiguration' => [
+                        \Psr\Log\LogLevel::DEBUG => [CapturingLogWriter::class => []],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
     private ?Config $config = null;
 
     protected function setUp(): void
     {
         parent::setUp();
+        CapturingLogWriter::$records = [];
 
         $GLOBALS['EXEC_TIME'] = self::NOW;
         $GLOBALS['SIM_EXEC_TIME'] = self::NOW;

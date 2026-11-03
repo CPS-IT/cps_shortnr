@@ -78,4 +78,17 @@ final class RecordTranslationVisibilityTest extends AbstractShortNrIntegrationTe
 
         self::assertSame('/records#250', $this->decode('REC250-1'));
     }
+
+    #[Test]
+    public function patternWithAnAdditionalNamedGroupStillResolvesTheTranslation(): void
+    {
+        // record_type is a third named group: it reaches the decode query as a condition and must
+        // survive the language overlay untouched
+        $this->configure(['record' => self::recordItem([
+            'pattern' => 'T{record_type:int(min=0)}R{uid:int(min=1)}(-{sys_language_uid:int(min=0,default=0)})',
+        ])]);
+
+        self::assertSame('/en/records-en#201', $this->decode('T0R200-1'));
+        self::assertSame(self::NOT_FOUND, $this->decode('T1R200-1'), 'record_type condition still applies');
+    }
 }

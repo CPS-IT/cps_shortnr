@@ -133,16 +133,7 @@ class DecoderService extends AbstractUrlService
             $anyCandidatesExecuted = true;
         }
 
-        // log errors
-        foreach ($errors as $error) {
-            $this->logger->error('[ShortNr] '.$error->getMessage(), [
-                // let's be safe since that is user generated code injected into the logs
-                'shortNr' => htmlentities(strip_tags($demand->getShortNr())),
-                'line' => $error->getLine(),
-                'file' => $error->getFile(),
-                'trace' => $error->getTrace()
-            ]);
-        }
+        $this->logCandidateErrors($demand, $errors);
 
         // no candidate satisfied, process NotFound
         if ($anyCandidatesExecuted) {
@@ -159,5 +150,33 @@ class DecoderService extends AbstractUrlService
 
         // no candidate was processed at this point, give up
         return null;
+    }
+
+    /**
+     * Not found is the normal answer (unknown or unpublished record, bots probing number ranges):
+     * debug only. A not found caused by something else (query error, broken processor config) and
+     * every other exception is an error, logged without the stack trace: one entry per request must
+     * stay readable, the trace holds no more than file and line here.
+     *
+     * @param list<Throwable> $errors
+     */
+    private function logCandidateErrors(DecoderDemandInterface $demand, array $errors): void
+    {
+        // let's be safe since that is user generated code injected into the logs
+        $shortNr = htmlentities(strip_tags($demand->getShortNr()));
+        foreach ($errors as $error) {
+            $cause = $error instanceof ShortNrNotFoundException ? $error->getPrevious() : $error;
+            if ($cause === null) {
+                $this->logger->debug('[ShortNr] not found: ' . $error->getMessage(), ['shortNr' => $shortNr]);
+                continue;
+            }
+
+            $this->logger->error('[ShortNr] ' . $cause->getMessage(), [
+                'shortNr' => $shortNr,
+                'exception' => $cause::class,
+                'file' => $cause->getFile(),
+                'line' => $cause->getLine(),
+            ]);
+        }
     }
 }
