@@ -68,6 +68,7 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
     protected bool $stubCacheManager = true;
 
     private ?Config $config = null;
+    private ?\Throwable $configFailure = null;
 
     protected function setUp(): void
     {
@@ -117,21 +118,42 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
 
         $configLoader = $this->createStub(ConfigLoader::class);
         $configLoader->method('getHeuristicPattern')->willReturn($heuristic);
-        $configLoader->method('getConfig')->willReturnCallback(
-            fn(): Config => $this->config ?? throw new \LogicException('call configure() in the test first')
-        );
+        $configLoader->method('getConfig')->willReturnCallback(function (): Config {
+            if ($this->configFailure !== null) {
+                throw $this->configFailure;
+            }
+            return $this->config ?? throw new \LogicException('call configure() in the test first');
+        });
 
         $container = $this->getContainer();
         if ($this->stubConfigLoader) {
             $container->set(ConfigLoader::class, $configLoader);
         }
-        if ($this->stubCacheManager) {
+        if (($override = $this->createCacheManager()) !== null) {
+            $container->set(CacheManager::class, $override);
+        } elseif ($this->stubCacheManager) {
             $container->set(CacheManager::class, $cacheManager);
         }
         $container->set(SiteFinder::class, $siteFinder);
 
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/pages.csv');
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/records.csv');
+    }
+
+    /**
+     * From now on the (stubbed) config loader fails like a broken YAML does.
+     */
+    protected function breakConfig(\Throwable $failure): void
+    {
+        $this->configFailure = $failure;
+    }
+
+    /**
+     * A CacheManager of the test's own (e.g. a spy); null: stub or real, see $stubCacheManager.
+     */
+    protected function createCacheManager(): ?CacheManager
+    {
+        return null;
     }
 
     /**
