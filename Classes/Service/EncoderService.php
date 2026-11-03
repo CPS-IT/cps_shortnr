@@ -2,6 +2,8 @@
 
 namespace CPSIT\ShortNr\Service;
 
+use CPSIT\ShortNr\Cache\CacheTags;
+use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\EncoderDemandInterface;
@@ -28,27 +30,35 @@ class EncoderService extends AbstractUrlService
             $demand->setNoCache(true);
         }
 
+        $configItems = $this->configNormalizerService->getConfigItemForDemand($demand);
         if ($demand->noCache() || ($cacheKey = $demand->getCacheKey()) === null) {
-            return $this->encodeWithDemand($demand);
+            return $this->encodeWithConfigItems($demand, $configItems);
+        }
+
+        // a save on a table of these config items can change the short number (pattern or
+        // condition fields), ClearCacheDataHandlerHook flushes by these tags
+        $tags = [CacheTags::ALL, CacheTags::URI, CacheTags::ENCODE];
+        foreach ($configItems as $configItem) {
+            if ($table = $configItem->getTableName()) {
+                $tags[] = CacheTags::forTable($table);
+            }
         }
 
         return $this->getCacheManager()->getType3CacheValue(
             sprintf('encode-%s', $cacheKey),
-            fn() => $this->encodeWithDemand($demand),
+            fn() => $this->encodeWithConfigItems($demand, $configItems),
             ttl: 604_800, // one week
-            tags: ['all', 'uri', 'encode']
+            tags: array_values(array_unique($tags))
         );
     }
 
     /**
      * @param EncoderDemandInterface $demand
+     * @param array<ConfigItemInterface> $configItems
      * @return string|null
-     * @throws ShortNrCacheException
-     * @throws ShortNrConfigException
      */
-    private function encodeWithDemand(EncoderDemandInterface $demand): ?string
+    private function encodeWithConfigItems(EncoderDemandInterface $demand, array $configItems): ?string
     {
-        $configItems = $this->configNormalizerService->getConfigItemForDemand($demand);
         foreach ($configItems as $configItem) {
             $result = $this->getProcessor($configItem)->encode($configItem, $demand);
 

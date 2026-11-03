@@ -2,6 +2,7 @@
 
 namespace CPSIT\ShortNr\Service;
 
+use CPSIT\ShortNr\Cache\CacheTags;
 use CPSIT\ShortNr\Exception\ShortNrCacheException;
 use CPSIT\ShortNr\Exception\ShortNrConfigException;
 use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
@@ -17,6 +18,8 @@ use Generator;
 
 class DecoderService extends AbstractUrlService
 {
+    private const CACHE_LIFETIME = 604_800; // one week
+
     public function __construct(
         private readonly LanguageOverlayService $languageOverlayService,
         private readonly LoggerInterface $logger,
@@ -81,6 +84,10 @@ class DecoderService extends AbstractUrlService
     }
 
     /**
+     * Cached per parsed short number. An entry lives at most a week, ends early when a record of the
+     * answer (or a competing candidate) gets a scheduled start/end, and is dropped when an editor saves
+     * a record of a candidate's table (ClearCacheDataHandlerHook).
+     *
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
      * @throws ShortNrCacheException
@@ -88,17 +95,66 @@ class DecoderService extends AbstractUrlService
      */
     public function decode(DecoderDemandInterface $demand): ?string
     {
-        if ($demand->noCache() || ($cacheKey = $demand->getCacheKey()) === null) {
+        $candidates = iterator_to_array($demand->getCandidates(), false);
+        if ($demand->noCache() || $demand->getCacheKey() === null || empty($candidates)) {
             return $this->decodeWithDemand($demand);
         }
 
-        // cache for one day
-        return $this->getCacheManager()->getType3CacheValue(
-            sprintf('decode-%s', $cacheKey),
-            fn() => $this->decodeWithDemand($demand),
-            ttl: 604_800, // one week
-            tags: ['all', 'uri', 'decode']
-        );
+        $cacheKey = $this->buildCacheKey($candidates);
+        $cached = $this->getCacheManager()->get($cacheKey);
+        if (is_string($cached)) {
+            return $cached;
+        }
+
+        $uri = $this->decodeWithDemand($demand);
+        if (is_string($uri) && $uri !== '') {
+            [$ttl, $tags] = $this->getCacheLifetimeAndTags($candidates);
+            $this->getCacheManager()->set($cacheKey, $uri, $ttl, $tags);
+        }
+
+        return $uri;
+    }
+
+    /**
+     * Keyed by what the patterns parsed, not by the raw input: REC200, REC0200, REC00200 ... are one
+     * entry, so bots cannot grow the cache (and with it the cost of every flush) without bounds.
+     *
+     * @param list<ConfigCandidateInterface> $candidates
+     */
+    private function buildCacheKey(array $candidates): string
+    {
+        $parsed = [];
+        foreach ($candidates as $candidate) {
+            $values = $candidate->getMatchResult()->toArray();
+            unset($values['input']);
+            $parsed[$candidate->getConfigItem()->getName()] = $values;
+        }
+
+        return 'decode-' . json_encode($parsed);
+    }
+
+    /**
+     * @param list<ConfigCandidateInterface> $candidates
+     * @return array{int, list<string>}
+     */
+    private function getCacheLifetimeAndTags(array $candidates): array
+    {
+        $now = (int)($GLOBALS['SIM_ACCESS_TIME'] ?? $GLOBALS['EXEC_TIME'] ?? time());
+        $ttl = self::CACHE_LIFETIME;
+        $tags = [CacheTags::ALL, CacheTags::URI, CacheTags::DECODE];
+        foreach ($candidates as $candidate) {
+            $configItem = $candidate->getConfigItem();
+            // every candidate: a save on a losing candidate's table can change which one wins
+            if ($table = $configItem->getTableName()) {
+                $tags[] = CacheTags::forTable($table);
+            }
+            $nextChange = $this->languageOverlayService->getNextVisibilityChange($configItem, $candidate->getMatchResult(), $now);
+            if ($nextChange !== null) {
+                $ttl = min($ttl, $nextChange - $now);
+            }
+        }
+
+        return [$ttl, array_values(array_unique($tags))];
     }
 
     /**

@@ -65,6 +65,30 @@ class CacheManager
         return null;
     }
 
+    /**
+     * @return string|array|null null on a miss
+     */
+    public function get(string $cacheKey): null|string|array
+    {
+        $cacheValue = $this->getCache()?->get(md5($cacheKey));
+        if (is_string($cacheValue) && str_starts_with($cacheValue, 'a:') && str_ends_with($cacheValue, '}')) {
+            $cacheValue = unserialize($cacheValue, ['allowed_classes' => false]);
+        }
+
+        return is_string($cacheValue) || is_array($cacheValue) ? $cacheValue : null;
+    }
+
+    /**
+     * For values whose lifetime is only known after computing them (see DecoderService).
+     *
+     * @param int $ttl seconds, > 0
+     * @param list<string> $tags
+     */
+    public function set(string $cacheKey, string|array $value, int $ttl, array $tags = []): void
+    {
+        $this->getCache()?->set(md5($cacheKey), is_array($value) ? serialize($value) : $value, $tags, max(1, $ttl));
+    }
+
     public function invalidateByTag(string $tag): void
     {
         $this->getCache()->flushByTag($tag);

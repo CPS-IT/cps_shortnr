@@ -147,20 +147,10 @@ class ShortNrRepository
         int    $uid,
         array  $excludeValues = []
     ): array {
-        $rows = $this->fetchLanguageFamily($table, [$uidField, $languageParentField], $uidField, $languageParentField, $uid, false);
-        if (empty($rows)) {
+        $baseUid = $this->resolveBaseUid($table, $uidField, $languageParentField, $uid);
+        if ($baseUid === null) {
             return [];
         }
-
-        $baseUid = null;
-        foreach ($rows as $row) {
-            if ((int)($row[$languageParentField] ?? 0) === 0) {
-                $baseUid = (int)($row[$uidField] ?? 0);
-                break;
-            }
-        }
-        // the requested uid is a translation, follow its parent
-        $baseUid ??= (int)($rows[0][$languageParentField] ?? 0);
 
         $variants = $this->fetchLanguageFamily($table, [$uidField, $languageField], $uidField, $languageParentField, $baseUid, true, $excludeValues);
         $list = [];
@@ -169,6 +159,62 @@ class ShortNrRepository
         }
 
         return $list;
+    }
+
+    /**
+     * The earliest starttime or endtime after $now in the language family of $uid (any visibility):
+     * the moment a decode answer for it can change without anybody saving a record.
+     *
+     * @return int|null timestamp, null if nothing is scheduled (or the table has no such enablecolumns)
+     * @throws ShortNrQueryException
+     */
+    public function findNextVisibilityChange(string $table, string $uidField, string $languageParentField, int $uid, int $now): ?int
+    {
+        $enableColumns = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns'] ?? [];
+        $timeFields = array_values(array_filter([$enableColumns['starttime'] ?? null, $enableColumns['endtime'] ?? null]));
+        if (empty($timeFields)) {
+            return null;
+        }
+
+        $baseUid = $this->resolveBaseUid($table, $uidField, $languageParentField, $uid);
+        if ($baseUid === null) {
+            return null;
+        }
+
+        $next = null;
+        foreach ($this->fetchLanguageFamily($table, $timeFields, $uidField, $languageParentField, $baseUid, false) as $row) {
+            foreach ($timeFields as $field) {
+                $time = (int)($row[$field] ?? 0);
+                if ($time > $now && ($next === null || $time < $next)) {
+                    $next = $time;
+                }
+            }
+        }
+
+        return $next;
+    }
+
+    /**
+     * Default language uid of $uid, ignoring visibility: a short number may carry the uid of a
+     * hidden translation.
+     *
+     * @throws ShortNrQueryException
+     */
+    private function resolveBaseUid(string $table, string $uidField, string $languageParentField, int $uid): ?int
+    {
+        $rows = $this->fetchLanguageFamily($table, [$uidField, $languageParentField], $uidField, $languageParentField, $uid, false);
+        if (empty($rows)) {
+            return null;
+        }
+
+        foreach ($rows as $row) {
+            if ((int)($row[$languageParentField] ?? 0) === 0) {
+                return (int)($row[$uidField] ?? 0);
+            }
+        }
+
+        // the requested uid is a translation, follow its parent
+        return (int)($rows[0][$languageParentField] ?? 0);
     }
 
     /**

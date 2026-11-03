@@ -91,6 +91,27 @@ class LanguageOverlayService
     }
 
     /**
+     * When the decode answer for this match can change on its own (scheduled start/end of the
+     * record or one of its translations); null if nothing is scheduled.
+     */
+    public function getNextVisibilityChange(ConfigItemInterface $configItem, MatchResult $result, int $now): ?int
+    {
+        $uidField = $configItem->getRecordIdentifier();
+        $languageParentField = $configItem->getLanguageParentField();
+        $table = $configItem->getTableName();
+        $uid = $result->get($uidField ?? '');
+        if ($uid === null || !$table || !$uidField || !$languageParentField) {
+            return null;
+        }
+
+        try {
+            return $this->repository->findNextVisibilityChange($table, $uidField, $languageParentField, (int)$uid, $now);
+        } catch (ShortNrQueryException) {
+            return null;
+        }
+    }
+
+    /**
      * @param array<int, int> $variants [languageId => uid] of the visible variants
      * @return array{int, int} [uid, languageId]
      * @throws ShortNrNotFoundException

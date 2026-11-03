@@ -3,6 +3,7 @@
 namespace CPSIT\ShortNr\Listener;
 
 use CPSIT\ShortNr\Cache\CacheManager;
+use CPSIT\ShortNr\Cache\CacheTags;
 use Throwable;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Cache\Event\CacheFlushEvent;
@@ -18,8 +19,27 @@ class ClearCacheDataHandlerHook
 {
     private ?CacheManager $cacheManager = null;
 
+    /**
+     * tables already flushed per DataHandler run; WeakMap, not spl_object_id(): ids of freed
+     * objects are reused, a later DataHandler in the same process (imports, CLI) would skip its flush
+     *
+     * @var \WeakMap<DataHandler, array<string, true>>|null
+     */
+    private ?\WeakMap $flushedTables = null;
+
+    /**
+     * Called by DataHandler for every changed record (params table/uid, also with TSconfig
+     * clearCache_disable) and for clear cache commands (param cacheCmd).
+     */
     public function clearCache(array $params, DataHandler $dataHandler): void
     {
+        if (!isset($params['cacheCmd']) && is_string($params['table'] ?? null)) {
+            try {
+                $this->invalidateTable($params['table'], $dataHandler);
+            } catch (Throwable) {}
+            return;
+        }
+
         $eventType = $params['cacheCmd'] ?? null;
         try {
             match($eventType) {
@@ -46,6 +66,27 @@ class ClearCacheDataHandlerHook
     private function invalidatePageCaches(): void
     {
         $this->getCacheManager()->invalidateByTag('all');
+    }
+
+    /**
+     * Decode and encode results that read this table: created, changed, hidden, deleted, moved or
+     * translated records change them. Once per table and DataHandler run, flushByTag is not free.
+     */
+    private function invalidateTable(string $table, DataHandler $dataHandler): void
+    {
+        $this->flushedTables ??= new \WeakMap();
+        $flushed = $this->flushedTables[$dataHandler] ?? [];
+        if (isset($flushed[$table])) {
+            return;
+        }
+        $flushed[$table] = true;
+        $this->flushedTables[$dataHandler] = $flushed;
+
+        $this->getCacheManager()->invalidateByTag(CacheTags::forTable($table));
+        if ($table === 'pages') {
+            // moves change the site root of every page below
+            $this->getCacheManager()->invalidateByTag(CacheTags::PAGE_TREE);
+        }
     }
 
     private function invalidatePageCache(int $pageId): void

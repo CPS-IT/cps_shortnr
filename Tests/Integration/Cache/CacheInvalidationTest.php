@@ -31,6 +31,8 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
     {
         parent::setUp();
         $this->importCSVDataSet(__DIR__ . '/../../Fixtures/Visibility/be_users.csv');
+        // the database is reset per test, the cache files in var/ are not
+        $this->get(\TYPO3\CMS\Core\Cache\CacheManager::class)->getCache('cps_shortnr')->flush();
         $this->configure([
             'pages' => self::pageItem(),
             'record' => self::recordItem(['condition' => ['record_type' => 0]]),
@@ -45,6 +47,19 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
         $this->asEditor(fn(ActionService $editor) => $editor->modifyRecord('tx_shortnrtest_record', 260, ['hidden' => 0]));
 
         self::assertSame('/records#260', $this->decode('REC260'));
+    }
+
+    #[Test]
+    public function everyDataHandlerRunInOneProcessFlushes(): void
+    {
+        // imports, scheduler tasks and CLI commands run several DataHandler instances in one process
+        self::assertSame(self::NOT_FOUND, $this->decode('REC260'));
+        $this->asEditor(fn(ActionService $editor) => $editor->modifyRecord('tx_shortnrtest_record', 260, ['hidden' => 0]));
+        self::assertSame('/records#260', $this->decode('REC260'));
+
+        $this->asEditor(fn(ActionService $editor) => $editor->modifyRecord('tx_shortnrtest_record', 260, ['hidden' => 1]));
+
+        self::assertSame(self::NOT_FOUND, $this->decode('REC260'), 'second DataHandler run did not flush');
     }
 
     #[Test]
@@ -178,6 +193,9 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
         $editor = new ActionService();
         $change($editor);
         self::assertSame([], $editor->getDataHandler()->errorLog, 'DataHandler refused the change');
+        // free the DataHandler like a long running process eventually does (object ids get reused)
+        unset($editor);
+        gc_collect_cycles();
         unset($GLOBALS['BE_USER']);
         GeneralUtility::makeInstance(Context::class)->unsetAspect('backend.user');
     }
