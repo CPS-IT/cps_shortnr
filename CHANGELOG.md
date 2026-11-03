@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (4.1.0)
+## 4.1.0 (2026-11-04)
 
 Decode now answers for an anonymous visitor, and cached answers follow record changes.
 
