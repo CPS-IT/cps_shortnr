@@ -134,6 +134,20 @@ class ConfigItem implements ConfigItemInterface
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public function isLanguageFallbackEnabled(): bool
+    {
+        // read raw: YAML delivers a bool, getValue() is typed ?string
+        $value = $this->config->getValue($this->name, ConfigEnum::LanguageFallback);
+        if ($value === null) {
+            return true;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true;
+    }
+
+    /**
      * @return array
      */
     public function getCondition(): array

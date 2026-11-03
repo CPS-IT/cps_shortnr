@@ -4,12 +4,32 @@ namespace CPSIT\ShortNr\Service\Language;
 
 use CPSIT\ShortNr\Config\DTO\ConfigItemInterface;
 use CPSIT\ShortNr\Domain\Repository\ShortNrRepository;
+use CPSIT\ShortNr\Exception\ShortNrCacheException;
+use CPSIT\ShortNr\Exception\ShortNrNotFoundException;
 use CPSIT\ShortNr\Exception\ShortNrQueryException;
+use CPSIT\ShortNr\Exception\ShortNrTreeProcessorException;
 use CPSIT\ShortNr\Service\PlatformAdapter\Typo3\PageTreeResolverInterface;
 use TypedPatternEngine\Compiler\MatchResult;
+use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 
+/**
+ * Decode: replaces the uid/language of a short number match with the record that should be served.
+ *
+ * Only records an anonymous visitor can see now count (hidden, starttime, endtime). Among visible
+ * translations in the requested language the lowest uid wins. No visible translation: the default
+ * language record (languageFallback, default) or notFound. Default record not visible: notFound.
+ */
 class LanguageOverlayService
 {
+    /**
+     * Doktypes the frontend cannot render; a short number to them is not found.
+     * Links, shortcuts and backend user sections still redirect (the target page decides).
+     */
+    public const NON_RENDERABLE_DOKTYPES = [
+        PageRepository::DOKTYPE_SPACER,
+        PageRepository::DOKTYPE_SYSFOLDER,
+    ];
+
     public function __construct(
         private readonly PageTreeResolverInterface $pageTreeResolver,
         private readonly ShortNrRepository $repository
@@ -19,127 +39,80 @@ class LanguageOverlayService
      * @param ConfigItemInterface $configItem
      * @param MatchResult $result
      * @return MatchResult
+     * @throws ShortNrNotFoundException nothing visible to serve
+     * @throws ShortNrCacheException|ShortNrTreeProcessorException|ShortNrQueryException page tree unavailable
      */
     public function resolveLanguageOverlay(ConfigItemInterface $configItem, MatchResult $result): MatchResult
     {
-        // special pages optimization
-        if ($configItem->getTableName() === 'pages') {
-            return $this->overlayPage($configItem, $result);
-        }
-
-        return $this->overlayGeneric($configItem, $result);
-    }
-
-    /**
-     * @param ConfigItemInterface $configItem
-     * @param MatchResult $result
-     * @return MatchResult
-     */
-    private function overlayPage(ConfigItemInterface $configItem, MatchResult $result): MatchResult
-    {
-        $uid = $result->get($configItem->getRecordIdentifier() ?? '');
-        if ($uid === null) {
-            return $result;
-        }
-        $langUid = $result->get($configItem->getLanguageField() ?? '');
-        if ($langUid === null) {
-            return $result;
-        }
-
-        $pageTree = $this->pageTreeResolver->getPageTree();
-        if ($pageTree->isMultiTreeLanguageSetup() || ($pageItem = $pageTree->getItem($uid)) === null) {
-            // skip multi tree setups or not found in tree
-            return $result;
-        }
-
-        // language resolving
-        if (!$this->isPageSupportLanguageUid($uid, $langUid)) {
-            $langUid = $this->getPageDefaultLanguageIdForPageUid($uid);
-        }
-
-        $currentLanguagePageItem = $pageItem->getTranslation($langUid);
-        $newResult = new MatchResult($result->getInput());
-        foreach ($result->getGroups() as $name => $group) {
-            ['value' => $value, 'type' => $type, 'constraints' => $constraints] = $group;
-            $value = match ($name) {
-                $configItem->getRecordIdentifier() => $currentLanguagePageItem?->getPrimaryId() ?? $value,
-                $configItem->getLanguageField() => $currentLanguagePageItem?->getLanguageId() ?? $value
-            };
-            $newResult->addGroup($name, $value, $type, $constraints ?? []);
-        }
-
-        return $newResult;
-    }
-
-    /**
-     * @param int $pageUid
-     * @return int|null
-     */
-    private function getPageDefaultLanguageIdForPageUid(int $pageUid): ?int
-    {
-        return $this->pageTreeResolver->getPageTree()->getItem($pageUid)?->getBaseTranslation()->getLanguageId();
-    }
-
-    /**
-     * @param int $pageUid
-     * @param int $languageUid
-     * @return bool
-     */
-    private function isPageSupportLanguageUid(int $pageUid, int $languageUid): bool
-    {
-        return ($this->pageTreeResolver->getPageTree()->getItem($pageUid)?->getTranslation($languageUid) !== null);
-    }
-
-    /**
-     * @param ConfigItemInterface $configItem
-     * @param MatchResult $result
-     * @return MatchResult
-     */
-    private function overlayGeneric(ConfigItemInterface $configItem, MatchResult $result): MatchResult
-    {
-        $uid = $result->get($configItem->getRecordIdentifier() ?? '');
-        if ($uid === null) {
-            return $result;
-        }
-
-        // lang ID extraction
-        $langUid = $result->get($configItem->getLanguageField() ?? '');
-        if (!$langUid) {
-            // default language
-            $langUid = 0;
-        }
-
-        $table = $configItem->getTableName();
         $uidField = $configItem->getRecordIdentifier();
         $languageField = $configItem->getLanguageField();
         $languageParentField = $configItem->getLanguageParentField();
-        if (!$table || !$languageParentField || !$languageField) {
+        $table = $configItem->getTableName();
+        $uid = $result->get($uidField ?? '');
+        if ($uid === null || !$table || !$languageField || !$languageParentField) {
             return $result;
         }
 
+        $isPages = $table === 'pages';
+        if ($isPages && $this->pageTreeResolver->getPageTree()->isMultiTreeLanguageSetup()) {
+            // one tree per language: pages are not translations of each other, nothing to overlay
+            return $result;
+        }
+
+        $requestedLanguage = (int)($result->get($languageField) ?? 0);
         try {
-            $resolvment = $this->repository->resolveCorrectUidWithLanguageUid($table, $uidField, $languageField, $languageParentField, $uid);
+            $variants = $this->repository->findVisibleLanguageVariants(
+                $table,
+                $uidField,
+                $languageField,
+                $languageParentField,
+                (int)$uid,
+                $isPages ? ['doktype' => self::NON_RENDERABLE_DOKTYPES] : []
+            );
         } catch (ShortNrQueryException) {
+            // table does not follow the translation pointer pattern, decode the short number as is
             return $result;
         }
 
-        $resolvedUid = $resolvment[$langUid] ?? $resolvment[-1] ?? null;
-        if ($resolvedUid === null) {
-            // language not available -> fall back to base (0)
-            $resolvedUid = $resolvment[0] ?? $resolvment[-1] ?? $uid;
-            $langUid = 0;
-        }
+        [$resolvedUid, $resolvedLanguage] = $this->chooseVariant($configItem, $variants, $requestedLanguage);
 
         $newResult = new MatchResult($result->getInput());
         foreach ($result->getGroups() as $name => $group) {
             ['value' => $value, 'type' => $type, 'constraints' => $constraints] = $group;
             $value = match ($name) {
-                $configItem->getRecordIdentifier() => $resolvedUid ?? $value,
-                $configItem->getLanguageField() => $langUid ?? $value
+                $uidField => $resolvedUid,
+                $languageField => $resolvedLanguage,
+                default => $value,
             };
             $newResult->addGroup($name, $value, $type, $constraints ?? []);
         }
 
         return $newResult;
+    }
+
+    /**
+     * @param array<int, int> $variants [languageId => uid] of the visible variants
+     * @return array{int, int} [uid, languageId]
+     * @throws ShortNrNotFoundException
+     */
+    private function chooseVariant(ConfigItemInterface $configItem, array $variants, int $requestedLanguage): array
+    {
+        if (!isset($variants[0]) && !isset($variants[-1])) {
+            // the core does not serve translations of an invisible default record either
+            throw new ShortNrNotFoundException('default language record not visible');
+        }
+
+        if (isset($variants[$requestedLanguage])) {
+            return [$variants[$requestedLanguage], $requestedLanguage];
+        }
+        if (isset($variants[-1])) {
+            // "all languages" record serves the requested language
+            return [$variants[-1], $requestedLanguage];
+        }
+        if ($configItem->isLanguageFallbackEnabled()) {
+            return [$variants[0], 0];
+        }
+
+        throw new ShortNrNotFoundException('no visible translation for language ' . $requestedLanguage . ', languageFallback disabled');
     }
 }

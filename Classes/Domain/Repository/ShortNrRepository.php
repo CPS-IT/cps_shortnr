@@ -28,14 +28,20 @@ class ShortNrRepository
     {}
 
     /**
-     * @param array $fields
+     * Decode lookup: the records matching the short number and the config conditions that an
+     * anonymous visitor can see now (deleted, hidden, starttime, endtime from TCA enablecolumns,
+     * via the core default restrictions). Decode runs before backend authentication, so there is
+     * no preview context to honour; see findVisibleLanguageVariants().
+     *
+     * @param array $fields identifier field first
      * @param string $tableName
      * @param array<string, string|int|mixed> $condition
-     * @return array return all matching records that are active
+     * @param array<string, list<int>> $excludeValues [field => values] rows to drop, e.g. non-renderable doktypes
+     * @return array return all matching records that are visible
      * @throws ShortNrQueryException
      * @throws ShortNrCacheException
      */
-    public function resolveTable(array $fields, string $tableName, array $condition): array
+    public function resolveTable(array $fields, string $tableName, array $condition, array $excludeValues = []): array
     {
         // normalize Conditions
         $existingValidFields = $this->validateAndPrepareFields($fields, $condition, $tableName);
@@ -44,10 +50,6 @@ class ShortNrRepository
         }
 
         $qb = $this->getQueryBuilder($tableName);
-        $qb->getRestrictions()
-            ->removeByType(HiddenRestriction::class)
-            ->removeByType(StartTimeRestriction::class)
-            ->removeByType(EndTimeRestriction::class);
         $qb->select(...$existingValidFields);
         $qb->from($tableName);
 
@@ -55,7 +57,11 @@ class ShortNrRepository
         if (empty($queryConditions)) {
             throw new ShortNrQueryException('table: ' . $tableName.', must have at least one VALID condition');
         } else {
-            $qb->where(...$queryConditions);
+            $qb->where(...$queryConditions, ...$this->buildExclusions($qb, $excludeValues));
+        }
+        // callers pass the identifier field first: several matches -> lowest uid first, deterministic
+        if (in_array($fields[0] ?? null, $existingValidFields, true)) {
+            $qb->orderBy($fields[0], 'ASC');
         }
 
         try {
@@ -114,27 +120,35 @@ class ShortNrRepository
     }
 
     /**
-     * Returns an array  [sys_language_uid => uid]  for the requested page and
-     * all its translations.  Works for any table that uses the “translation pointer”
-     * pattern (uid, sys_language_uid, l10n_parent).
+     * [languageId => uid] of a record and its translations, limited to what an anonymous visitor
+     * can see now. Works for any table with the translation pointer pattern (uid, language, parent).
      *
+     * - The base uid is resolved without visibility: a short number may carry the uid of a hidden
+     *   translation and must still find its default language record.
+     * - The variants honour deleted, hidden, starttime and endtime from TCA enablecolumns (core default
+     *   restrictions, time from $GLOBALS['SIM_ACCESS_TIME']).
+     * - Several visible rows in one language (left over drafts, see DataHandler::localize() duplicate
+     *   check being pid-restricted): the lowest uid wins, the same row the core overlay picks in practice.
+     * - The default language record appears under its own language (0, or -1 for "all languages");
+     *   a missing 0/-1 key means the default record is not visible.
+     *
+     * @param array<string, list<int>> $excludeValues [field => values] rows to drop, e.g. non-renderable doktypes
+     * @return array<int, int>
      * @throws ShortNrQueryException
      */
-    public function resolveCorrectUidWithLanguageUid(
+    public function findVisibleLanguageVariants(
         string $table,
         string $uidField,
         string $languageField,
         string $languageParentField,
-        int    $uid
+        int    $uid,
+        array  $excludeValues = []
     ): array {
-
-        /* ---------- 1st query: find the base uid ------------------------------ */
-        $rows = $this->fetchRowForLanguageUidBase($table, [$uidField, $languageParentField], $uidField, $languageParentField, $uid);
+        $rows = $this->fetchLanguageFamily($table, [$uidField, $languageParentField], $uidField, $languageParentField, $uid, false);
         if (empty($rows)) {
             return [];
         }
 
-        // Determine the real base uid
         $baseUid = null;
         foreach ($rows as $row) {
             if ((int)($row[$languageParentField] ?? 0) === 0) {
@@ -142,54 +156,66 @@ class ShortNrRepository
                 break;
             }
         }
-        if ($baseUid === null) {
-            // row 203 itself is a translation; find its parent
-            $baseUid = (int)($rows[0][$languageParentField] ?? 0);
-        }
+        // the requested uid is a translation, follow its parent
+        $baseUid ??= (int)($rows[0][$languageParentField] ?? 0);
 
-        /* ---------- 2nd query: load all language variants --------------------- */
-        $result = $this->fetchRowForLanguageUidBase($table, [$uidField, $languageField], $uidField, $languageParentField, $baseUid);
-        /* ---------- build [sys_language_uid => uid] map ----------------------- */
+        $variants = $this->fetchLanguageFamily($table, [$uidField, $languageField], $uidField, $languageParentField, $baseUid, true, $excludeValues);
         $list = [];
-        foreach ($result as $row) {
-            $lang = (int)($row[$languageField] ?? 0);
-            $id   = (int)($row[$uidField]     ?? 0);
-            $list[$lang] = $id;
+        foreach ($variants as $row) {
+            $list[(int)($row[$languageField] ?? 0)] ??= (int)($row[$uidField] ?? 0);
         }
 
         return $list;
     }
 
     /**
-     * @param string $table
-     * @param array $fields
-     * @param string $uidField
-     * @param string $languageParentField
-     * @param int $uid
-     * @return array
+     * The record $uid and all rows pointing to it as language parent, ordered by uid.
+     *
+     * @param array<string, list<int>> $excludeValues
      * @throws ShortNrQueryException
      */
-    private function fetchRowForLanguageUidBase(string $table, array $fields, string $uidField, string $languageParentField, int $uid): array
+    private function fetchLanguageFamily(string $table, array $fields, string $uidField, string $languageParentField, int $uid, bool $visibleOnly, array $excludeValues = []): array
     {
         $qb = $this->getQueryBuilder($table);
-        $qb->getRestrictions()
-            ->removeByType(HiddenRestriction::class)
-            ->removeByType(StartTimeRestriction::class)
-            ->removeByType(EndTimeRestriction::class);
+        if (!$visibleOnly) {
+            // only respect deleted
+            $qb->getRestrictions()
+                ->removeByType(HiddenRestriction::class)
+                ->removeByType(StartTimeRestriction::class)
+                ->removeByType(EndTimeRestriction::class);
+        }
         $qb->select(...$fields)
             ->from($table)
             ->where(
                 $qb->expr()->or(
                     $qb->expr()->eq($uidField, $uidParam = $qb->createNamedParameter($uid, ParameterType::INTEGER)),
                     $qb->expr()->eq($languageParentField, $uidParam)
-                )
-            );
+                ),
+                ...$this->buildExclusions($qb, $excludeValues)
+            )
+            ->orderBy($uidField, 'ASC');
 
         try {
             return $qb->executeQuery()->fetchAllAssociative();
         } catch (Throwable $e) {
             throw new ShortNrQueryException($e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * @param array<string, list<int>> $excludeValues [field => values]
+     * @return list<string>
+     */
+    private function buildExclusions(QueryBuilder $qb, array $excludeValues): array
+    {
+        $constraints = [];
+        foreach ($excludeValues as $field => $values) {
+            if (!empty($values)) {
+                $constraints[] = $qb->expr()->notIn($field, $qb->createNamedParameter(array_map('intval', $values), ArrayParameterType::INTEGER));
+            }
+        }
+
+        return $constraints;
     }
 
     /**

@@ -23,7 +23,8 @@ class EncoderService extends AbstractUrlService
     public function encode(EncoderDemandInterface $demand): ?string
     {
         // be_user session detected, auto disable cache
-        if ($GLOBALS['BE_USER']?->user !== null) {
+        // CLI, scheduler and early middlewares have no BE_USER global at all
+        if (($GLOBALS['BE_USER'] ?? null)?->user !== null) {
             $demand->setNoCache(true);
         }
 

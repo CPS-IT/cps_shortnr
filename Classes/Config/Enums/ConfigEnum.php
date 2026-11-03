@@ -31,6 +31,8 @@ enum ConfigEnum: string
     case LanguageParentField = 'languageParentField';
     case LanguageField = 'languageField';
     case IdentifierField = 'identifierField';
+    // missing or invisible translation: true = serve the default language record, false = notFound
+    case LanguageFallback = 'languageFallback';
 
     // condition operators
     case ConditionContains = 'contains';
