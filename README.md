@@ -266,15 +266,19 @@ Decoding runs before backend authentication, so it answers for an anonymous visi
 - Only visible records count: not deleted, not hidden, starttime reached, endtime not passed
   (TCA `enablecolumns`), live workspace only. Encoding ignores visibility, so editors can copy the
   short link of a record before publishing it.
-- Several visible translations in one language (left-over drafts): the lowest uid wins.
-- The default language record is not visible: not found, also for its translations.
+- The short number names a visible translation in the requested language: exactly that one.
+  Otherwise, several visible translations in one language (left-over drafts): the lowest uid wins.
+- The base record (the row without language parent, usually the default language) is not visible:
+  not found, also for its translations. Records that exist only in another language (free mode,
+  `l10n_parent = 0`) are their own base record.
 - Pages: sysfolders and spacers are never a target.
-- The requested language has no visible translation: `languageFallback` decides.
+- The requested language has no visible translation: `languageFallback` decides (fallback = the
+  base record in its own language).
 
 ```yaml
 shortNr:
   _default:
-    languageFallback: true    # default: serve the default language record
+    languageFallback: true    # default: serve the base record in its own language
   press:
     languageFallback: false   # this item only: missing translation = not found
 ```

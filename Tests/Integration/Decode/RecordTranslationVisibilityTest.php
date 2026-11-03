@@ -37,6 +37,12 @@ final class RecordTranslationVisibilityTest extends AbstractShortNrIntegrationTe
         yield 'default record with future starttime: notFound' => ['REC280', self::NOT_FOUND];
         yield 'default record with passed endtime: notFound' => ['REC295', self::NOT_FOUND];
         yield 'unknown uid: notFound' => ['REC999', self::NOT_FOUND];
+        yield 'short number naming a visible translation serves exactly that one' => ['REC242-1', '/en/records-en#242'];
+        yield 'short number naming a translation, other language requested: via its parent' => ['REC242', '/records#240'];
+        // records that exist only in a non-default language (l10n_parent = 0, free mode)
+        yield 'English-only record in its language' => ['REC310-1', '/en/records-en#310'];
+        yield 'English-only record, default language requested: fall back to the record' => ['REC310', '/en/records-en#310'];
+        yield 'hidden English-only record: notFound' => ['REC311-1', self::NOT_FOUND];
     }
 
     #[Test]
@@ -53,6 +59,8 @@ final class RecordTranslationVisibilityTest extends AbstractShortNrIntegrationTe
         yield 'only a hidden translation: notFound' => ['REC250-1', self::NOT_FOUND];
         yield 'visible translation still resolves' => ['REC210-1', '/en/records-en#212'];
         yield 'default language unaffected' => ['REC250', '/records#250'];
+        yield 'English-only record, default language requested: notFound' => ['REC310', self::NOT_FOUND];
+        yield 'English-only record in its language still resolves' => ['REC310-1', '/en/records-en#310'];
     }
 
     #[Test]

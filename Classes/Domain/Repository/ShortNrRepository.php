@@ -124,20 +124,13 @@ class ShortNrRepository
 
     /**
      * [languageId => uid] of a record and its translations, limited to what an anonymous visitor
-     * can see now. Works for any table with the translation pointer pattern (uid, language, parent).
-     *
-     * - The base uid is resolved without visibility: a short number may carry the uid of a hidden
-     *   translation and must still find its default language record.
-     * - The variants honour deleted, hidden, starttime and endtime from TCA enablecolumns (core default
-     *   restrictions, time from $GLOBALS['SIM_ACCESS_TIME']).
-     * - Several visible rows in one language (left over drafts, see DataHandler::localize() duplicate
-     *   check being pid-restricted): the lowest uid wins, the same row the core overlay picks in practice.
-     * - The default language record appears under its own language (0, or -1 for "all languages");
-     *   a missing 0/-1 key means the default record is not visible.
+     * can see now; several visible rows in one language: the lowest uid.
+     * A missing key for the base record's language means the base record is not visible.
      *
      * @param array<string, list<int>> $excludeValues [field => values] rows to drop, e.g. non-renderable doktypes
      * @return array<int, int>
      * @throws ShortNrQueryException
+     * @see findVisibleLanguageFamily() for the base uid and all visible rows
      */
     public function findVisibleLanguageVariants(
         string $table,
@@ -147,18 +140,48 @@ class ShortNrRepository
         int    $uid,
         array  $excludeValues = []
     ): array {
-        $baseUid = $this->resolveBaseUid($table, $uidField, $languageParentField, $uid);
-        if ($baseUid === null) {
-            return [];
-        }
-
-        $variants = $this->fetchLanguageFamily($table, [$uidField, $languageField], $uidField, $languageParentField, $baseUid, true, $excludeValues);
         $list = [];
-        foreach ($variants as $row) {
-            $list[(int)($row[$languageField] ?? 0)] ??= (int)($row[$uidField] ?? 0);
+        foreach ($this->findVisibleLanguageFamily($table, $uidField, $languageField, $languageParentField, $uid, $excludeValues)['rows'] as $row) {
+            $list[$row['language']] ??= $row['uid'];
         }
 
         return $list;
+    }
+
+    /**
+     * The language family of $uid (its base record and all translations pointing to it), limited to
+     * what an anonymous visitor can see now. Works for any table with the translation pointer pattern.
+     *
+     * - The base uid is resolved without visibility: a short number may carry the uid of a hidden
+     *   translation and must still find its base record.
+     * - The base record is the row without language parent. Usually language 0, but a record may exist
+     *   only in another language (l10n_parent = 0, "free mode"), then that row is the base.
+     * - Visible rows honour deleted, hidden, starttime and endtime from TCA enablecolumns (core default
+     *   restrictions, time from $GLOBALS['SIM_ACCESS_TIME']) and the live workspace only.
+     *
+     * @param array<string, list<int>> $excludeValues [field => values] rows to drop, e.g. non-renderable doktypes
+     * @return array{baseUid: int|null, rows: list<array{uid: int, language: int}>} rows ordered by uid
+     * @throws ShortNrQueryException
+     */
+    public function findVisibleLanguageFamily(
+        string $table,
+        string $uidField,
+        string $languageField,
+        string $languageParentField,
+        int    $uid,
+        array  $excludeValues = []
+    ): array {
+        $baseUid = $this->resolveBaseUid($table, $uidField, $languageParentField, $uid);
+        if ($baseUid === null) {
+            return ['baseUid' => null, 'rows' => []];
+        }
+
+        $rows = [];
+        foreach ($this->fetchLanguageFamily($table, [$uidField, $languageField], $uidField, $languageParentField, $baseUid, true, $excludeValues) as $row) {
+            $rows[] = ['uid' => (int)($row[$uidField] ?? 0), 'language' => (int)($row[$languageField] ?? 0)];
+        }
+
+        return ['baseUid' => $baseUid, 'rows' => $rows];
     }
 
     /**

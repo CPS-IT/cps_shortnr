@@ -1,5 +1,22 @@
 # Changelog
 
+## 4.1.1 (2026-11-04)
+
+### Fixed
+
+- Records that exist only in a non-default language (`l10n_parent = 0`, free mode) are decoded
+  again. 4.1.0 treated them as "default language record not visible" and answered not found.
+  With `languageFallback`, a short number in another language serves such a record in its own
+  language.
+- A short number that names a visible translation (e.g. `p5253-1`, the uid of one of two English
+  translations) serves exactly that translation again, as 4.0.x did; the lowest-uid rule only
+  decides when the short number names the base record or an invisible translation.
+
+### New
+
+- `ShortNrRepository::findVisibleLanguageFamily()` (base uid + all visible rows);
+  `findVisibleLanguageVariants()` is kept.
+
 ## 4.1.0 (2026-11-04)
 
 Decode now answers for an anonymous visitor, and cached answers follow record changes.

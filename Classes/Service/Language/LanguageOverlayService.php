@@ -15,9 +15,11 @@ use TYPO3\CMS\Core\Domain\Repository\PageRepository;
 /**
  * Decode: replaces the uid/language of a short number match with the record that should be served.
  *
- * Only records an anonymous visitor can see now count (hidden, starttime, endtime). Among visible
- * translations in the requested language the lowest uid wins. No visible translation: the default
- * language record (languageFallback, default) or notFound. Default record not visible: notFound.
+ * Only records an anonymous visitor can see now count (hidden, starttime, endtime, live workspace).
+ * The named record wins if it is visible in the requested language, otherwise the lowest visible uid
+ * in that language. No visible translation: the base record in its own language (languageFallback,
+ * default) or notFound. Base record (the row without language parent, usually language 0) not
+ * visible: notFound.
  */
 class LanguageOverlayService
 {
@@ -61,7 +63,7 @@ class LanguageOverlayService
 
         $requestedLanguage = (int)($result->get($languageField) ?? 0);
         try {
-            $variants = $this->repository->findVisibleLanguageVariants(
+            $family = $this->repository->findVisibleLanguageFamily(
                 $table,
                 $uidField,
                 $languageField,
@@ -74,7 +76,7 @@ class LanguageOverlayService
             return $result;
         }
 
-        [$resolvedUid, $resolvedLanguage] = $this->chooseVariant($configItem, $variants, $requestedLanguage);
+        [$resolvedUid, $resolvedLanguage] = $this->chooseVariant($configItem, $family, (int)$uid, $requestedLanguage);
 
         $newResult = new MatchResult($result->getInput());
         foreach ($result->getGroups() as $name => $group) {
@@ -112,26 +114,45 @@ class LanguageOverlayService
     }
 
     /**
-     * @param array<int, int> $variants [languageId => uid] of the visible variants
+     * In this order:
+     * 1. the record the short number names, if visible and in the requested language (or all languages)
+     * 2. the lowest visible uid in the requested language
+     * 3. an all-languages (-1) base record, served in the requested language
+     * 4. languageFallback: the base record in its own language (0, or e.g. 1 for a record that exists
+     *    only in English)
+     *
+     * @param array{baseUid: int|null, rows: list<array{uid: int, language: int}>} $family visible rows, by uid
      * @return array{int, int} [uid, languageId]
      * @throws ShortNrNotFoundException
      */
-    private function chooseVariant(ConfigItemInterface $configItem, array $variants, int $requestedLanguage): array
+    private function chooseVariant(ConfigItemInterface $configItem, array $family, int $requestedUid, int $requestedLanguage): array
     {
-        if (!isset($variants[0]) && !isset($variants[-1])) {
-            // the core does not serve translations of an invisible default record either
-            throw new ShortNrNotFoundException('default language record not visible');
+        $visible = array_column($family['rows'], 'language', 'uid');
+        $baseUid = $family['baseUid'];
+        if ($baseUid === null || !isset($visible[$baseUid])) {
+            // the core does not serve translations of an invisible base record either
+            throw new ShortNrNotFoundException('base record not visible');
         }
 
-        if (isset($variants[$requestedLanguage])) {
-            return [$variants[$requestedLanguage], $requestedLanguage];
+        $namedLanguage = $visible[$requestedUid] ?? null;
+        if ($namedLanguage === $requestedLanguage) {
+            return [$requestedUid, $requestedLanguage];
         }
-        if (isset($variants[-1])) {
-            // "all languages" record serves the requested language
-            return [$variants[-1], $requestedLanguage];
+        if ($namedLanguage === -1) {
+            return [$requestedUid, $requestedLanguage];
+        }
+
+        foreach ($family['rows'] as $row) {
+            if ($row['language'] === $requestedLanguage) {
+                return [$row['uid'], $requestedLanguage];
+            }
+        }
+
+        if ($visible[$baseUid] === -1) {
+            return [$baseUid, $requestedLanguage];
         }
         if ($configItem->isLanguageFallbackEnabled()) {
-            return [$variants[0], 0];
+            return [$baseUid, $visible[$baseUid]];
         }
 
         throw new ShortNrNotFoundException('no visible translation for language ' . $requestedLanguage . ', languageFallback disabled');
