@@ -29,3 +29,5 @@
 ,281,3,0,0,1767229200,0,0,0,0,"r281 starts in 1h",0
 ,285,3,0,0,0,1767229200,0,0,0,"r285 ends in 1h",0
 ,300,3,0,0,0,0,0,0,0,"r300 no translation",0
+,310,3,0,0,0,0,1,0,0,"r310 English only, no default language record",0
+,311,3,0,1,0,0,1,0,0,"r311 English only, hidden",0
