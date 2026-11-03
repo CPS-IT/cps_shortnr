@@ -3,8 +3,7 @@
 namespace CPSIT\ShortNr\Listener;
 
 use CPSIT\ShortNr\Cache\CacheManager;
-use CPSIT\ShortNr\Cache\CacheTags;
-use CPSIT\ShortNr\Config\ConfigLoader;
+use CPSIT\ShortNr\Cache\ShortNrCacheInvalidator;
 use Throwable;
 use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Cache\Event\CacheFlushEvent;
@@ -71,38 +70,20 @@ class ClearCacheDataHandlerHook
 
     /**
      * Decode and encode results that read this table: created, changed, hidden, deleted, moved or
-     * translated records change them. Only tables of the short number config, once per table and
-     * DataHandler run: on FileBackend every flushByTag reads every cache file.
+     * translated records change them. Once per table and DataHandler run: on FileBackend every
+     * flushByTag reads every cache file. Which tables count: ShortNrCacheInvalidator.
      */
     private function invalidateTable(string $table, DataHandler $dataHandler): void
     {
         $this->flushedTables ??= new \WeakMap();
         $flushed = $this->flushedTables[$dataHandler] ?? [];
-        if (isset($flushed[$table]) || isset($flushed['*'])) {
-            return;
-        }
-
-        try {
-            // only tables a short number config reads (pages: always, the tree resolves site roots)
-            $relevant = $table === 'pages'
-                || !empty($this->getConfigLoader()->getConfig()->getConfigItemsByTableName($table));
-        } catch (Throwable) {
-            // config unreadable: which entries depend on this table is unknown, flush all once
-            $this->flushedTables[$dataHandler] = $flushed + ['*' => true];
-            $this->getCacheManager()->invalidateByTag(CacheTags::ALL);
+        if (isset($flushed[$table])) {
             return;
         }
         $flushed[$table] = true;
         $this->flushedTables[$dataHandler] = $flushed;
-        if (!$relevant) {
-            return;
-        }
 
-        $this->getCacheManager()->invalidateByTag(CacheTags::forTable($table));
-        if ($table === 'pages') {
-            // moves change the site root of every page below
-            $this->getCacheManager()->invalidateByTag(CacheTags::PAGE_TREE);
-        }
+        GeneralUtility::makeInstance(ShortNrCacheInvalidator::class)->invalidateTable($table);
     }
 
     private function invalidatePageCache(int $pageId): void
@@ -112,11 +93,6 @@ class ClearCacheDataHandlerHook
         }
         // for now all ... since we don't know what cache is on what page
         $this->getCacheManager()->invalidateByTag('all');
-    }
-
-    private function getConfigLoader(): ConfigLoader
-    {
-        return GeneralUtility::makeInstance(ConfigLoader::class);
     }
 
     private function getCacheManager(): CacheManager

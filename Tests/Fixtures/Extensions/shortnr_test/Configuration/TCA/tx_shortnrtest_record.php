@@ -21,6 +21,10 @@ return [
             'label' => 'Title',
             'config' => ['type' => 'input'],
         ],
+        'hidden' => [
+            'label' => 'Hidden',
+            'config' => ['type' => 'check'],
+        ],
         'record_type' => [
             'label' => 'Type',
             'config' => ['type' => 'number'],

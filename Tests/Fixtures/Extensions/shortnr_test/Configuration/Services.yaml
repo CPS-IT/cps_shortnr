@@ -5,3 +5,7 @@ services:
       - name: event.listener
         identifier: 'shortnr-test/config-path'
         event: CPSIT\ShortNr\Event\ShortNrConfigPathEvent
+
+  CPSIT\ShortNr\Tests\Fixtures\Extensions\shortnr_test\Classes\Domain\Repository\RecordRepository:
+    autowire: true
+    public: true
