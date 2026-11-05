@@ -4,8 +4,8 @@ Routing alias enhancer via middleware for TYPO3 CMS. Generates and resolves shor
 
 ## Requirements
 
-- PHP ^8.2
-- TYPO3 ^13.4
+- PHP 8.2 - 8.5 (tested in CI)
+- TYPO3 13.4
 
 ## Dependencies
 
@@ -14,7 +14,7 @@ Routing alias enhancer via middleware for TYPO3 CMS. Generates and resolves shor
 ## Installation
 
 ```bash
-composer require cpsit/shortnr
+composer require cpsit/cps-shortnr
 ```
 
 The extension auto-registers its middleware and cache configuration.

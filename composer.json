@@ -1,5 +1,5 @@
 {
-    "name": "cpsit/shortnr",
+    "name": "cpsit/cps-shortnr",
     "description": "routing alias enhancer over middleware",
     "type": "typo3-cms-extension",
     "keywords": ["TYPO3", "extension", "routing"],

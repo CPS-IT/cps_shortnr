@@ -1,5 +1,19 @@
 # Changelog
 
+## 4.1.2 (2026-11-05)
+
+### Fixed
+
+- PHP 8.2 and 8.3: `ExtensionSetup` used PHP 8.4 syntax (`new X()->method()`), a parse error on
+  every request although `composer.json` allows `^8.2`.
+- Package name in `composer.json` is `cpsit/cps-shortnr`, as on Packagist (was `cpsit/shortnr`;
+  the README install command failed).
+- `ext_emconf.php`: version `4.1.2`, state `stable`, PHP constraint.
+
+### New
+
+- CI: lint and the integration tests run on PHP 8.2, 8.3, 8.4 and 8.5 for every pull request.
+
 ## 4.1.1 (2026-11-04)
 
 ### Fixed
