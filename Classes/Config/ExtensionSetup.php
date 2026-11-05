@@ -41,6 +41,6 @@ class ExtensionSetup
 
     private static function registerHooks(): void
     {
-        $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tcemain.php']['clearCachePostProc'][static::CACHE_KEY] = new ClearCacheDataHandlerHook()->clearCache(...);
+        $GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tcemain.php']['clearCachePostProc'][static::CACHE_KEY] = (new ClearCacheDataHandlerHook())->clearCache(...);
     }
 }
