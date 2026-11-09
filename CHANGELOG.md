@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (branch typo3v14)
+
+### Changed
+
+- TYPO3 14.3 only: `typo3/minimal ^14.3`, `ext_emconf.php` depends on TYPO3 14.3.
+
 ## 4.1.2 (2026-11-05)
 
 ### Fixed
