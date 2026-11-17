@@ -1,11 +1,20 @@
 # Changelog
 
-## Unreleased (branch typo3v14)
+## 14.0.0 (2026-11-18)
 
 ### Changed
 
 - TYPO3 14.3 only: `typo3/minimal ^14.3`, `ext_emconf.php` depends on TYPO3 14.3.
-- Includes the fixes of 4.2.0 (below).
+- Version numbers follow the TYPO3 major from now on: 14.x for TYPO3 14. TYPO3 13 stays on 4.x
+  (`^4.2`).
+- Includes the fixes of 4.2.0 (below): short links follow slug and visibility changes, decode
+  caches only notFound answers.
+
+### Tests
+
+- The backend user is authenticated on the real clock: TYPO3 14 checks the session against the
+  current time, the pinned test clock (2026-01-01) made every DataHandler test fail with
+  "Can not initialize backend user".
 
 ## 4.2.0 (2026-11-18)
 

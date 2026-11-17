@@ -12,6 +12,7 @@ use CPSIT\ShortNr\Tests\Integration\Support\CapturingLogWriter;
 use Psr\Http\Server\RequestHandlerInterface;
 use TypedPatternEngine\Heuristic\HeuristicPatternInterface;
 use TypedPatternEngine\TypedPatternEngine;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\DateTimeAspect;
 use TYPO3\CMS\Core\Http\Response;
@@ -121,6 +122,33 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
 
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/pages.csv');
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/records.csv');
+    }
+
+    /**
+     * TYPO3 14 checks the backend user session against the current time, and the pinned test
+     * clock (self::NOW) lies before the moment the session is created: authentication fails with
+     * "Can not initialize backend user". Authenticate on the real clock, then restore whatever
+     * time the test had pinned (tests travel in time).
+     */
+    protected function setUpBackendUser(int $userUid): BackendUserAuthentication
+    {
+        $context = GeneralUtility::makeInstance(Context::class);
+        $pinnedGlobals = [];
+        foreach (['EXEC_TIME', 'SIM_EXEC_TIME', 'ACCESS_TIME', 'SIM_ACCESS_TIME'] as $name) {
+            $pinnedGlobals[$name] = $GLOBALS[$name];
+            $GLOBALS[$name] = time();
+        }
+        $pinnedDate = $context->getAspect('date');
+        $context->setAspect('date', new DateTimeAspect(new \DateTimeImmutable('@' . time())));
+
+        try {
+            return parent::setUpBackendUser($userUid);
+        } finally {
+            foreach ($pinnedGlobals as $name => $value) {
+                $GLOBALS[$name] = $value;
+            }
+            $context->setAspect('date', $pinnedDate);
+        }
     }
 
     /**
