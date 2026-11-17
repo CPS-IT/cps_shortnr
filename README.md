@@ -285,12 +285,28 @@ shortNr:
 
 ## Caching
 
-- Decoded and encoded URLs are cached for at most one week in the TYPO3 cache `cps_shortnr`.
-- A decode entry expires early at the next starttime/endtime of the record or one of its
-  translations (embargoed records become reachable on time). A notFound answer lives at most one
-  hour (safety net for writes no invalidation sees).
+Everything lives in the TYPO3 cache `cps_shortnr`.
+
+- **Decoding a short number that resolves (a redirect to the record) is never cached.** The record
+  is looked up and the URL is built on every request. The URL depends on the slug of the record,
+  of the plugin page and its parents, on the site configuration and on the visibility of the
+  record and its translations. Importers, plain SQL, upgrade wizards and page renames change these
+  without any hook seeing it, and a correct check of a cached answer costs the same queries as
+  resolving it. Measured on a TYPO3 13.4 site with Extbase route enhancers (local development
+  machine, 1080 redirects): building the URL takes about 0.3 ms; a redirect takes about 10 ms
+  longer than a 4.1 cache hit (median 31 ms instead of 20 ms).
+  Up to 4.1 the finished URL was cached for a week, so short links kept redirecting to the old URL
+  after such changes (even after renaming the detail page in the backend).
+- **A notFound answer is cached**, because bots probe number ranges. It lives at most one hour,
+  ends early at the next starttime of a record (embargoed records become reachable on time), and is
+  dropped when a record of the table changes (see below). Only the answer is cached; the URL of
+  the notFound page is built per request. A record that becomes visible through plain SQL without
+  `invalidateTable()` is served after that hour at the latest.
+- **Encoded short URLs** (ViewHelper, `EncoderService`) are cached for at most one week; they only
+  depend on the record's identifiers, the config condition fields and the site base.
 - The decode cache key is built from the parsed values: `p0200` and `p200` share one entry.
-- Entries are tagged per table they read and dropped when such a record changes:
+- Entries are tagged per table they read and dropped when such a record changes (this keeps
+  encoded short URLs and notFound answers current):
   - DataHandler saves (backend, any command): automatic
   - Extbase persistence (importers, forms): automatic, once per table at the end of the request
   - plain SQL writers must call

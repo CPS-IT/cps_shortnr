@@ -18,10 +18,12 @@ use Generator;
 
 class DecoderService extends AbstractUrlService
 {
-    private const CACHE_LIFETIME = 604_800; // one week
-    // a notFound answer is cheap to recompute and may be wrong after writes no hook sees
-    // (plain SQL importers): short lifetime as a safety net
+    // a notFound answer may be wrong after writes no hook sees (plain SQL importers): short
+    // lifetime as a safety net
     private const NOT_FOUND_CACHE_LIFETIME = 3_600;
+    // v2 (4.2): only notFound answers, as a marker; 4.1 cached the finished URL under "decode-"
+    private const CACHE_KEY_PREFIX = 'decode-v2-';
+    private const NOT_FOUND_MARKER = 'notFound';
 
     public function __construct(
         private readonly LanguageOverlayService $languageOverlayService,
@@ -87,9 +89,16 @@ class DecoderService extends AbstractUrlService
     }
 
     /**
-     * Cached per parsed short number. An entry lives at most a week, ends early when a record of the
-     * answer (or a competing candidate) gets a scheduled start/end, and is dropped when an editor saves
-     * a record of a candidate's table (ClearCacheDataHandlerHook).
+     * A found answer is resolved on every request and never cached: its URL is built from the slug
+     * of the record, of the plugin page and its parents, from the site configuration and from the
+     * visibility of the record and its translations. Importers, plain SQL, upgrade wizards and
+     * page renames change these without the cache hearing of it, and checking a cached answer
+     * correctly costs the same queries as resolving it.
+     *
+     * A notFound answer is cached per parsed short number (bots probe number ranges): at most an
+     * hour, until a record of a candidate's table gets a scheduled start/end, or until a record of
+     * a candidate's table changes (DataHandler, Extbase, ShortNrCacheInvalidator). Only the answer
+     * is cached; the URL of the notFound target is built per request.
      *
      * @param DecoderDemandInterface $demand
      * @return string|null null if no decoder url, string decoded url
@@ -103,18 +112,18 @@ class DecoderService extends AbstractUrlService
         }
 
         $cacheKey = $this->buildCacheKey($candidates);
-        $cached = $this->getCacheManager()->get($cacheKey);
-        if (is_string($cached)) {
-            return $cached;
+        if ($this->getCacheManager()->get($cacheKey) === self::NOT_FOUND_MARKER) {
+            $uri = $this->resolveNotFound($demand);
+            if ($uri !== null) {
+                return $uri;
+            }
+            // notFound target no longer resolvable (config changed): decode as if not cached
         }
 
         [$uri, $isNotFound] = $this->decodeWithDemand($demand);
-        if (is_string($uri) && $uri !== '') {
+        if ($isNotFound && is_string($uri) && $uri !== '') {
             [$ttl, $tags] = $this->getCacheLifetimeAndTags($candidates);
-            if ($isNotFound) {
-                $ttl = min($ttl, self::NOT_FOUND_CACHE_LIFETIME);
-            }
-            $this->getCacheManager()->set($cacheKey, $uri, $ttl, $tags);
+            $this->getCacheManager()->set($cacheKey, self::NOT_FOUND_MARKER, $ttl, $tags);
         }
 
         return $uri;
@@ -135,17 +144,19 @@ class DecoderService extends AbstractUrlService
             $parsed[$candidate->getConfigItem()->getName()] = $values;
         }
 
-        return 'decode-' . json_encode($parsed);
+        return self::CACHE_KEY_PREFIX . json_encode($parsed);
     }
 
     /**
+     * Lifetime and tags of a notFound answer.
+     *
      * @param list<ConfigCandidateInterface> $candidates
      * @return array{int, list<string>}
      */
     private function getCacheLifetimeAndTags(array $candidates): array
     {
         $now = (int)($GLOBALS['SIM_ACCESS_TIME'] ?? $GLOBALS['EXEC_TIME'] ?? time());
-        $ttl = self::CACHE_LIFETIME;
+        $ttl = self::NOT_FOUND_CACHE_LIFETIME;
         $tags = [CacheTags::ALL, CacheTags::URI, CacheTags::DECODE];
         foreach ($candidates as $candidate) {
             $configItem = $candidate->getConfigItem();
@@ -197,20 +208,30 @@ class DecoderService extends AbstractUrlService
 
         // no candidate satisfied, process NotFound
         if ($anyCandidatesExecuted) {
-            foreach ($demand->getCandidates() as $candidate) {
-                $notFoundUri = $this->getNotFoundProcessor($candidate->getConfigItem())?->decode($candidate->getConfigItem(), $candidate->getMatchResult());
-                if (!empty($notFoundUri)) {
-                    return [$notFoundUri, true];
-                }
-            }
-
-            // notFound "" (or none configured): not ours to answer, the TYPO3 stack renders its 404.
-            // Throwing here made the middleware answer 500 for every hidden or unknown record.
-            return [null, true];
+            // null: notFound "" (or none configured), not ours to answer, the TYPO3 stack renders
+            // its 404. Throwing here made the middleware answer 500 for every hidden or unknown record.
+            return [$this->resolveNotFound($demand), true];
         }
 
         // no candidate was processed at this point, give up
         return [null, false];
+    }
+
+    /**
+     * The notFound target of the first candidate that has one (page uid or absolute URL).
+     *
+     * @return string|null null if no candidate has a notFound target
+     */
+    private function resolveNotFound(DecoderDemandInterface $demand): ?string
+    {
+        foreach ($demand->getCandidates() as $candidate) {
+            $notFoundUri = $this->getNotFoundProcessor($candidate->getConfigItem())?->decode($candidate->getConfigItem(), $candidate->getMatchResult());
+            if (!empty($notFoundUri)) {
+                return $notFoundUri;
+            }
+        }
+
+        return null;
     }
 
     /**

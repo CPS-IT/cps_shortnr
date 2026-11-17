@@ -1,10 +1,45 @@
 # Changelog
 
-## Unreleased (branch typo3v14)
+## 14.0.0 (2026-11-18)
 
 ### Changed
 
 - TYPO3 14.3 only: `typo3/minimal ^14.3`, `ext_emconf.php` depends on TYPO3 14.3.
+- Version numbers follow the TYPO3 major from now on: 14.x for TYPO3 14. TYPO3 13 stays on 4.x
+  (`^4.2`).
+- Includes the fixes of 4.2.0 (below): short links follow slug and visibility changes, decode
+  caches only notFound answers.
+
+### Tests
+
+- The backend user is authenticated on the real clock: TYPO3 14 checks the session against the
+  current time, the pinned test clock (2026-01-01) made every DataHandler test fail with
+  "Can not initialize backend user".
+
+## 4.2.0 (2026-11-18)
+
+### Fixed
+
+- Short links no longer redirect to an outdated URL after the target changed. The decoder cached
+  the finished URL for up to a week, and only a backend save of a record of the configured table
+  dropped it. These stayed stale:
+  - renaming the detail page or one of its parents, even in the backend
+  - renaming, hiding or deleting records through plain SQL, importers or upgrade wizards
+  - changes to the site configuration until the next cache flush
+- The notFound page is linked with its current URL; it was cached for up to an hour.
+
+### Changed
+
+- Found decode answers are not cached any more: the record is looked up and the URL is built on
+  every request. Correctly checking a cached answer needs the same queries as resolving it.
+  Measured on a TYPO3 13.4 site with Extbase route enhancers (local development machine, 1080
+  redirects): building the URL takes about 0.3 ms; a redirect takes about 10 ms longer than a 4.1
+  cache hit (median 31 ms instead of 20 ms).
+- notFound answers are still cached (at most an hour, bots probe number ranges), now as an answer
+  only. The cache key changed (`decode-v2-…`), so entries written by 4.1 are never read; they
+  expire on their own.
+- Encoded short URLs are cached as before. `ShortNrCacheInvalidator::invalidateTable()` is still
+  the way for plain SQL writers to update them and notFound answers immediately.
 
 ## 4.1.2 (2026-11-05)
 
