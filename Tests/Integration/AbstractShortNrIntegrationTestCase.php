@@ -82,24 +82,7 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
         GeneralUtility::makeInstance(Context::class)
             ->setAspect('date', new DateTimeAspect(new \DateTimeImmutable('@' . self::NOW)));
 
-        $site = new Site('test', 1, [
-            'base' => 'https://example.com/',
-            'languages' => [
-                [
-                    'languageId' => 0,
-                    'title' => 'Deutsch',
-                    'base' => '/',
-                    'locale' => 'de_DE.UTF-8',
-                ],
-                [
-                    'languageId' => 1,
-                    'title' => 'English',
-                    'base' => '/en/',
-                    'locale' => 'en_US.UTF-8',
-                    'fallbackType' => 'strict',
-                ],
-            ],
-        ]);
+        $site = new Site('test', 1, $this->siteConfiguration());
         $siteFinder = $this->createStub(SiteFinder::class);
         $siteFinder->method('getSiteByRootPageId')->willReturn($site);
         $siteFinder->method('getSiteByPageId')->willReturn($site);
@@ -138,6 +121,31 @@ abstract class AbstractShortNrIntegrationTestCase extends FunctionalTestCase
 
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/pages.csv');
         $this->importCSVDataSet(__DIR__ . '/../Fixtures/Visibility/records.csv');
+    }
+
+    /**
+     * The one test site; override to add e.g. routeEnhancers.
+     */
+    protected function siteConfiguration(): array
+    {
+        return [
+            'base' => 'https://example.com/',
+            'languages' => [
+                [
+                    'languageId' => 0,
+                    'title' => 'Deutsch',
+                    'base' => '/',
+                    'locale' => 'de_DE.UTF-8',
+                ],
+                [
+                    'languageId' => 1,
+                    'title' => 'English',
+                    'base' => '/en/',
+                    'locale' => 'en_US.UTF-8',
+                    'fallbackType' => 'strict',
+                ],
+            ],
+        ];
     }
 
     /**

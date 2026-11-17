@@ -2,10 +2,12 @@
 
 namespace CPSIT\ShortNr\Tests\Integration\Cache;
 
+use CPSIT\ShortNr\Cache\CacheManager;
 use CPSIT\ShortNr\Service\EncoderService;
 use CPSIT\ShortNr\Service\Url\Demand\Encode\ConfigNameEncoderDemand;
 use CPSIT\ShortNr\Tests\Integration\AbstractShortNrIntegrationTestCase;
 use PHPUnit\Framework\Attributes\Test;
+use TypedPatternEngine\TypedPatternEngine;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\DateTimeAspect;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -14,8 +16,10 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\Framework\DataHandling\ActionService;
 
 /**
- * Decode and encode results are cached for a week. An editor's change must show up on the next
- * request anyway, and so must a record whose starttime/endtime passes, without anyone flushing caches.
+ * Encode results and notFound answers are cached (a week / an hour); found decode answers are not,
+ * their URL depends on slugs and visibility that writes outside DataHandler change too. An editor's
+ * change must show up on the next request, and so must a record whose starttime/endtime passes,
+ * without anyone flushing caches.
  *
  * Runs on the real cps_shortnr cache (the extension's default configuration). Every test first puts
  * the old answer into the cache, then changes the data the way an editor does (DataHandler).
@@ -164,30 +168,76 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
     }
 
     #[Test]
-    public function foundAnswerKeepsItsLifetime(): void
+    public function recordHiddenThroughPlainSqlIsNotServedOnTheNextRequest(): void
     {
-        // found answers stay cached (bots and printed links hit them, flushes keep them correct)
+        // found answers are not cached: a write no hook sees (plain SQL importer) shows up at once
         self::assertSame('/records#200', $this->decode('REC200'));
         $this->getConnectionPool()->getConnectionForTable('tx_shortnrtest_record')
             ->update('tx_shortnrtest_record', ['hidden' => 1], ['uid' => 200]);
+        $this->nextRequest();
 
-        $this->travelTo(self::NOW + 3601);
+        self::assertSame(self::NOT_FOUND, $this->decode('REC200'));
+    }
 
-        self::assertSame('/records#200', $this->decode('REC200'), 'cached answer expected');
+    #[Test]
+    public function detailPageSlugChangeIsServedOnTheNextRequest(): void
+    {
+        // the redirect target contains the slug of the plugin page: renaming that page in the
+        // backend must not leave short links pointing to the old path (4.1: up to a week)
+        self::assertSame('/records#200', $this->decode('REC200'));
+
+        $this->asEditor(fn(ActionService $editor) => $editor->modifyRecord('pages', 3, ['slug' => '/records-moved']));
+        $this->nextRequest();
+
+        self::assertSame('/records-moved#200', $this->decode('REC200'));
+    }
+
+    #[Test]
+    public function detailPageSlugChangedThroughPlainSqlIsServedOnTheNextRequest(): void
+    {
+        self::assertSame('/records#200', $this->decode('REC200'));
+        $this->getConnectionPool()->getConnectionForTable('pages')
+            ->update('pages', ['slug' => '/records-moved'], ['uid' => 3]);
+        $this->nextRequest();
+
+        self::assertSame('/records-moved#200', $this->decode('REC200'));
+    }
+
+    #[Test]
+    public function notFoundTargetFollowsItsPageSlug(): void
+    {
+        // a notFound answer stays cached for up to an hour, but its URL is built per request
+        self::assertSame(self::NOT_FOUND, $this->decode('REC260'));
+        $this->getConnectionPool()->getConnectionForTable('pages')
+            ->update('pages', ['slug' => '/gone'], ['uid' => 2]);
+        $this->nextRequest();
+
+        self::assertSame('/gone', $this->decode('REC260'));
+    }
+
+    #[Test]
+    public function decodeEntriesOfVersion41AreNotServed(): void
+    {
+        // 4.1 cached the finished URL for a week: updating without a cache flush must not serve them
+        $values = (new TypedPatternEngine())->getPatternCompiler()->compile(self::RECORD_PATTERN)->match('REC200')->toArray();
+        unset($values['input']);
+        $this->get(CacheManager::class)->set('decode-' . json_encode(['record' => $values]), 'https://example.com/stale-4-1-url', 3600, ['all']);
+
+        self::assertSame('/records#200', $this->decode('REC200'));
     }
 
     #[Test]
     public function equivalentSpellingsShareOneCacheEntry(): void
     {
-        // bots can produce unbounded spellings of one number (REC0200, REC00200, ...): each one a
-        // separate cache file makes every flushByTag slower; they must share the entry of REC200.
-        // Proven via a change the cache cannot know about (plain SQL, no DataHandler): the second
-        // spelling must still get the cached answer of the first.
-        self::assertSame('/records#200', $this->decode('REC200'));
+        // bots can produce unbounded spellings of one number (REC0260, REC00260, ...): each one a
+        // separate cache file makes every flushByTag slower; they must share the entry of REC260.
+        // Only notFound answers are cached. Proven via a change the cache cannot know about (plain
+        // SQL, no invalidation): the second spelling must still get the cached answer of the first.
+        self::assertSame(self::NOT_FOUND, $this->decode('REC260'));
         $this->getConnectionPool()->getConnectionForTable('tx_shortnrtest_record')
-            ->update('tx_shortnrtest_record', ['hidden' => 1], ['uid' => 200]);
+            ->update('tx_shortnrtest_record', ['hidden' => 0], ['uid' => 260]);
 
-        self::assertSame('/records#200', $this->decode('REC0200'));
+        self::assertSame(self::NOT_FOUND, $this->decode('REC0260'));
     }
 
     #[Test]
@@ -236,6 +286,15 @@ final class CacheInvalidationTest extends AbstractShortNrIntegrationTestCase
         gc_collect_cycles();
         unset($GLOBALS['BE_USER']);
         GeneralUtility::makeInstance(Context::class)->unsetAspect('backend.user');
+    }
+
+    /**
+     * A new request starts with an empty runtime cache (page records, rootlines); only the
+     * cps_shortnr cache survives between requests.
+     */
+    private function nextRequest(): void
+    {
+        $this->get(\TYPO3\CMS\Core\Cache\CacheManager::class)->getCache('runtime')->flush();
     }
 
     private function travelTo(int $timestamp): void
