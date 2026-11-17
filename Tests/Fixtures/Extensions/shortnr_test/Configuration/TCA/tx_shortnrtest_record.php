@@ -29,6 +29,10 @@ return [
             'label' => 'Type',
             'config' => ['type' => 'number'],
         ],
+        'slug' => [
+            'label' => 'Slug',
+            'config' => ['type' => 'input'],
+        ],
     ],
     'types' => [
         '0' => ['showitem' => 'title, record_type'],

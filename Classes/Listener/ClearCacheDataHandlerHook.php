@@ -38,7 +38,8 @@ class ClearCacheDataHandlerHook
             try {
                 $this->invalidateTable($params['table'], $dataHandler);
             } catch (Throwable $e) {
-                // never break the editor's save, never stay silent: stale answers live up to a week
+                // never break the editor's save, never stay silent: stale encode answers live up to
+                // a week, decode notFound answers up to an hour
                 GeneralUtility::makeInstance(LogManager::class)->getLogger(self::class)->error(
                     '[ShortNr] could not invalidate cached short numbers of table ' . $params['table'] . ': ' . $e->getMessage(),
                     ['exception' => $e::class]
